@@ -13,18 +13,18 @@ All tools are designed to run as **Dataverse HTML web resources** so they can us
 
 | Tool | Repository path |
 |---|---|
-| User Effective Security Roles | `tools\user-effective-security-roles\src\UserEffectiveSecurityRoles.html` |
-| Role Table Permission Copier | `tools\role-table-permission-copier\src\RoleTablePermissionCopier.html` |
-| Team Role and People Manager | `tools\team-role-people-manager\src\TeamRolePeopleManager.html` |
-| Flow Dependency Viewer | `tools\flow-dependency-viewer\solution\src\WebResources\fdv_\flowdependencyviewer.htm` |
-| User Effective Security Roles unmanaged solution | `packages\user-effective-security-roles\UserEffectiveSecurityRolesSolution.zip` |
-| User Effective Security Roles managed solution | `packages\user-effective-security-roles\UserEffectiveSecurityRolesSolution_managed.zip` |
-| Role Table Permission Copier unmanaged solution | `packages\role-table-permission-copier\RoleTablePermissionCopierSolution.zip` |
-| Role Table Permission Copier managed solution | `packages\role-table-permission-copier\RoleTablePermissionCopierSolution_managed.zip` |
-| Team Role and People Manager unmanaged solution | `packages\team-role-people-manager\TeamRolePeopleManagerSolution.zip` |
-| Team Role and People Manager managed solution | `packages\team-role-people-manager\TeamRolePeopleManagerSolution_managed.zip` |
-| Flow Dependency Viewer unmanaged solution | `packages\flow-dependency-viewer\FlowDependencyViewerSolution.zip` |
-| Flow Dependency Viewer managed solution | `packages\flow-dependency-viewer\FlowDependencyViewerSolution_managed.zip` |
+| User Effective Security Roles | [HTML](../tools/user-effective-security-roles/src/UserEffectiveSecurityRoles.html) |
+| Role Table Permission Copier | [HTML](../tools/role-table-permission-copier/src/RoleTablePermissionCopier.html) |
+| Team Role and People Manager | [HTML](../tools/team-role-people-manager/src/TeamRolePeopleManager.html) |
+| Flow Dependency Viewer | [HTML web resource](../tools/flow-dependency-viewer/solution/src/WebResources/fdv_/flowdependencyviewer.htm) |
+| User Effective Security Roles unmanaged solution | [ZIP](../packages/user-effective-security-roles/UserEffectiveSecurityRolesSolution.zip) |
+| User Effective Security Roles managed solution | [ZIP](../packages/user-effective-security-roles/UserEffectiveSecurityRolesSolution_managed.zip) |
+| Role Table Permission Copier unmanaged solution | [ZIP](../packages/role-table-permission-copier/RoleTablePermissionCopierSolution.zip) |
+| Role Table Permission Copier managed solution | [ZIP](../packages/role-table-permission-copier/RoleTablePermissionCopierSolution_managed.zip) |
+| Team Role and People Manager unmanaged solution | [ZIP](../packages/team-role-people-manager/TeamRolePeopleManagerSolution.zip) |
+| Team Role and People Manager managed solution | [ZIP](../packages/team-role-people-manager/TeamRolePeopleManagerSolution_managed.zip) |
+| Flow Dependency Viewer unmanaged solution | [ZIP](../packages/flow-dependency-viewer/FlowDependencyViewerSolution.zip) |
+| Flow Dependency Viewer managed solution | [ZIP](../packages/flow-dependency-viewer/FlowDependencyViewerSolution_managed.zip) |
 
 ## Recommended deployment
 
@@ -57,5 +57,5 @@ For Entra-backed teams, membership is shown read-only and managed through Micros
 - [Role Table Permission Copier](RoleTablePermissionCopier.md)
 - [Team Role and People Manager](TeamRolePeopleManager.md)
 - [Flow Dependency Viewer](FlowDependencyViewer.md)
-- [LinkedIn article draft](LinkedInArticle.md)
-- [LinkedIn copy/paste text](LinkedInArticle_CopyPaste.txt)
+- [LinkedIn article draft](articles/LinkedInArticle.md)
+- [LinkedIn copy/paste text](articles/LinkedInArticle_CopyPaste.txt)
