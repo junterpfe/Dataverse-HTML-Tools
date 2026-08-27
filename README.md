@@ -8,19 +8,19 @@ These tools run in the signed-in user's Dataverse context through `Xrm.WebApi`. 
 
 | Tool | Source | Documentation |
 |---|---|---|
-| User Effective Security Roles | `tools\user-effective-security-roles\src\UserEffectiveSecurityRoles.html` | `tools\user-effective-security-roles\README.md` |
-| Role Table Permission Copier | `tools\role-table-permission-copier\src\RoleTablePermissionCopier.html` | `tools\role-table-permission-copier\README.md` |
-| Team Role and People Manager | `tools\team-role-people-manager\src\TeamRolePeopleManager.html` | `tools\team-role-people-manager\README.md` |
-| Flow Dependency Viewer | `tools\flow-dependency-viewer\solution\src\WebResources\fdv_\flowdependencyviewer.htm` | `tools\flow-dependency-viewer\README.md` |
+| [User Effective Security Roles](tools/user-effective-security-roles/README.md) | [HTML](tools/user-effective-security-roles/src/UserEffectiveSecurityRoles.html) | [Docs](tools/user-effective-security-roles/README.md) |
+| [Role Table Permission Copier](tools/role-table-permission-copier/README.md) | [HTML](tools/role-table-permission-copier/src/RoleTablePermissionCopier.html) | [Docs](tools/role-table-permission-copier/README.md) |
+| [Team Role and People Manager](tools/team-role-people-manager/README.md) | [HTML](tools/team-role-people-manager/src/TeamRolePeopleManager.html) | [Docs](tools/team-role-people-manager/README.md) |
+| [Flow Dependency Viewer](tools/flow-dependency-viewer/README.md) | [HTML web resource](tools/flow-dependency-viewer/solution/src/WebResources/fdv_/flowdependencyviewer.htm) | [Docs](tools/flow-dependency-viewer/README.md) |
 
 ## Packages
 
 | Tool | Unmanaged package | Managed package |
 |---|---|---|
-| User Effective Security Roles | `packages\user-effective-security-roles\UserEffectiveSecurityRolesSolution.zip` | `packages\user-effective-security-roles\UserEffectiveSecurityRolesSolution_managed.zip` |
-| Role Table Permission Copier | `packages\role-table-permission-copier\RoleTablePermissionCopierSolution.zip` | `packages\role-table-permission-copier\RoleTablePermissionCopierSolution_managed.zip` |
-| Team Role and People Manager | `packages\team-role-people-manager\TeamRolePeopleManagerSolution.zip` | `packages\team-role-people-manager\TeamRolePeopleManagerSolution_managed.zip` |
-| Flow Dependency Viewer | `packages\flow-dependency-viewer\FlowDependencyViewerSolution.zip` | `packages\flow-dependency-viewer\FlowDependencyViewerSolution_managed.zip` |
+| User Effective Security Roles | [Unmanaged ZIP](packages/user-effective-security-roles/UserEffectiveSecurityRolesSolution.zip) | [Managed ZIP](packages/user-effective-security-roles/UserEffectiveSecurityRolesSolution_managed.zip) |
+| Role Table Permission Copier | [Unmanaged ZIP](packages/role-table-permission-copier/RoleTablePermissionCopierSolution.zip) | [Managed ZIP](packages/role-table-permission-copier/RoleTablePermissionCopierSolution_managed.zip) |
+| Team Role and People Manager | [Unmanaged ZIP](packages/team-role-people-manager/TeamRolePeopleManagerSolution.zip) | [Managed ZIP](packages/team-role-people-manager/TeamRolePeopleManagerSolution_managed.zip) |
+| Flow Dependency Viewer | [Unmanaged ZIP](packages/flow-dependency-viewer/FlowDependencyViewerSolution.zip) | [Managed ZIP](packages/flow-dependency-viewer/FlowDependencyViewerSolution_managed.zip) |
 
 ## Repository layout
 
@@ -45,8 +45,8 @@ Use `themeOption=darkmode` when a model-driven app URL should force dark mode. T
 
 The tools do not bypass Dataverse or Power Platform security. All reads and writes run as the currently signed-in user. Restrict access with model-driven app access, web resource visibility, and Dataverse security roles.
 
-See `SECURITY.md` for implementation notes and review guidance.
+See [SECURITY.md](SECURITY.md) for implementation notes and review guidance.
 
 ## Adding future tools
 
-Add each new tool under `tools\<tool-slug>` with its own `README.md`, source files, and optional packaging project. Update this README and `docs\README.md` when adding a tool.
+Add each new tool under `tools\<tool-slug>` with its own `README.md`, source files, and optional packaging project. Update this README and [`docs\README.md`](docs/README.md) when adding a tool.
