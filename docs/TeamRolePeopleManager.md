@@ -16,13 +16,17 @@ It is designed for scenarios like:
 
 Repository path:
 
-`tools\team-role-people-manager\src\TeamRolePeopleManager.html`
+[tools\team-role-people-manager\src\TeamRolePeopleManager.html](../tools/team-role-people-manager/src/TeamRolePeopleManager.html)
 
 Package paths:
 
-`packages\team-role-people-manager\TeamRolePeopleManagerSolution.zip`
+[Unmanaged ZIP](../packages/team-role-people-manager/TeamRolePeopleManagerSolution.zip)
 
-`packages\team-role-people-manager\TeamRolePeopleManagerSolution_managed.zip`
+[Managed ZIP](../packages/team-role-people-manager/TeamRolePeopleManagerSolution_managed.zip)
+
+## Screenshot
+
+![Team Role and People Manager screenshot](assets/screenshots/team-role-people-manager.png)
 
 ## Where to use it
 

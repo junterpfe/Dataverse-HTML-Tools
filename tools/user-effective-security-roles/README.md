@@ -16,13 +16,17 @@ It combines:
 
 Repository path:
 
-`src\UserEffectiveSecurityRoles.html`
+[src\UserEffectiveSecurityRoles.html](src/UserEffectiveSecurityRoles.html)
 
 Package paths:
 
-`..\..\packages\user-effective-security-roles\UserEffectiveSecurityRolesSolution.zip`
+[Unmanaged ZIP](../../packages/user-effective-security-roles/UserEffectiveSecurityRolesSolution.zip)
 
-`..\..\packages\user-effective-security-roles\UserEffectiveSecurityRolesSolution_managed.zip`
+[Managed ZIP](../../packages/user-effective-security-roles/UserEffectiveSecurityRolesSolution_managed.zip)
+
+## Screenshot
+
+![User Effective Security Roles screenshot](../../docs/assets/screenshots/user-effective-security-roles.png)
 
 ## Where to use it
 
@@ -134,6 +138,6 @@ If a user can see data but cannot complete an add/remove action, check their Dat
 
 ## Related tools
 
-- [Role Table Permission Copier](RoleTablePermissionCopier.md)
-- [Team Role and People Manager](TeamRolePeopleManager.md)
-- [Flow Dependency Viewer](FlowDependencyViewer.md)
+- [Role Table Permission Copier](../role-table-permission-copier/README.md)
+- [Team Role and People Manager](../team-role-people-manager/README.md)
+- [Flow Dependency Viewer](../flow-dependency-viewer/README.md)

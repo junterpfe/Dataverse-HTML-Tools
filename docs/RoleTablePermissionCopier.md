@@ -16,13 +16,17 @@ It is designed for scenarios like:
 
 Repository path:
 
-`tools\role-table-permission-copier\src\RoleTablePermissionCopier.html`
+[tools\role-table-permission-copier\src\RoleTablePermissionCopier.html](../tools/role-table-permission-copier/src/RoleTablePermissionCopier.html)
 
 Package paths:
 
-`packages\role-table-permission-copier\RoleTablePermissionCopierSolution.zip`
+[Unmanaged ZIP](../packages/role-table-permission-copier/RoleTablePermissionCopierSolution.zip)
 
-`packages\role-table-permission-copier\RoleTablePermissionCopierSolution_managed.zip`
+[Managed ZIP](../packages/role-table-permission-copier/RoleTablePermissionCopierSolution_managed.zip)
+
+## Screenshot
+
+![Role Table Permission Copier screenshot](assets/screenshots/role-table-permission-copier.png)
 
 ## Where to use it
 

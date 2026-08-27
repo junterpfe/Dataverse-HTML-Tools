@@ -6,10 +6,53 @@
   <title>Role Table Permission Copier</title>
   <script>
     (() => {
-      const param = new URLSearchParams(window.location.search).get("scoutTheme");
-      const theme =
-        param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      const theme = hasDarkModeFlag() ? "dark" : "light";
       document.documentElement.setAttribute("data-theme", theme);
+
+      function hasDarkModeFlag() {
+        return getUrlCandidates().some(urlHasDarkModeFlag);
+      }
+
+      function getUrlCandidates() {
+        const urls = [window.location.href, document.referrer];
+
+        try {
+          urls.push(window.parent.location.href);
+        } catch (error) {
+          // Parent can be cross-origin in some host shells.
+        }
+
+        try {
+          urls.push(window.top.location.href);
+        } catch (error) {
+          // Top can be cross-origin in some host shells.
+        }
+
+        return urls.filter(Boolean);
+      }
+
+      function urlHasDarkModeFlag(url) {
+        const text = normalizeUrlText(url);
+        return text.includes("themeoption=darkmode") || text.includes("themeoption%3ddarkmode");
+      }
+
+      function normalizeUrlText(value) {
+        let text = String(value || "").toLowerCase();
+
+        for (let index = 0; index < 3; index += 1) {
+          try {
+            const decoded = decodeURIComponent(text);
+            if (decoded === text) {
+              break;
+            }
+            text = decoded;
+          } catch (error) {
+            break;
+          }
+        }
+
+        return text;
+      }
     })();
   </script>
   <style>

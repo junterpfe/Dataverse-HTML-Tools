@@ -26,6 +26,17 @@ All tools are designed to run as **Dataverse HTML web resources** so they can us
 | Flow Dependency Viewer unmanaged solution | [ZIP](../packages/flow-dependency-viewer/FlowDependencyViewerSolution.zip) |
 | Flow Dependency Viewer managed solution | [ZIP](../packages/flow-dependency-viewer/FlowDependencyViewerSolution_managed.zip) |
 
+## Screenshots
+
+Screenshots use sanitized sample data.
+
+| Tool | Screenshot |
+|---|---|
+| User Effective Security Roles | ![User Effective Security Roles screenshot](assets/screenshots/user-effective-security-roles.png) |
+| Role Table Permission Copier | ![Role Table Permission Copier screenshot](assets/screenshots/role-table-permission-copier.png) |
+| Team Role and People Manager | ![Team Role and People Manager screenshot](assets/screenshots/team-role-people-manager.png) |
+| Flow Dependency Viewer | ![Flow Dependency Viewer screenshot](assets/screenshots/flow-dependency-viewer.png) |
+
 ## Recommended deployment
 
 1. Open **make.powerapps.com**.

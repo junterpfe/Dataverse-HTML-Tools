@@ -16,13 +16,17 @@ It combines:
 
 Repository path:
 
-`tools\user-effective-security-roles\src\UserEffectiveSecurityRoles.html`
+[tools\user-effective-security-roles\src\UserEffectiveSecurityRoles.html](../tools/user-effective-security-roles/src/UserEffectiveSecurityRoles.html)
 
 Package paths:
 
-`packages\user-effective-security-roles\UserEffectiveSecurityRolesSolution.zip`
+[Unmanaged ZIP](../packages/user-effective-security-roles/UserEffectiveSecurityRolesSolution.zip)
 
-`packages\user-effective-security-roles\UserEffectiveSecurityRolesSolution_managed.zip`
+[Managed ZIP](../packages/user-effective-security-roles/UserEffectiveSecurityRolesSolution_managed.zip)
+
+## Screenshot
+
+![User Effective Security Roles screenshot](assets/screenshots/user-effective-security-roles.png)
 
 ## Where to use it
 

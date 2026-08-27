@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Power Platform and MSBuild outputs
+**/bin/
+**/obj/
+**/out/
+**/generated/
+*.binlog
+
+# Visual Studio and editor state
+.vs/
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.log

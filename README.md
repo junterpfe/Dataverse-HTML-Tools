@@ -13,6 +13,18 @@ These tools run in the signed-in user's Dataverse context through `Xrm.WebApi`. 
 | [Team Role and People Manager](tools/team-role-people-manager/README.md) | [HTML](tools/team-role-people-manager/src/TeamRolePeopleManager.html) | [Docs](tools/team-role-people-manager/README.md) |
 | [Flow Dependency Viewer](tools/flow-dependency-viewer/README.md) | [HTML web resource](tools/flow-dependency-viewer/solution/src/WebResources/fdv_/flowdependencyviewer.htm) | [Docs](tools/flow-dependency-viewer/README.md) |
 
+## Screenshots
+
+Screenshots use sanitized sample data.
+
+| User Effective Security Roles | Role Table Permission Copier |
+|---|---|
+| ![User Effective Security Roles screenshot](docs/assets/screenshots/user-effective-security-roles.png) | ![Role Table Permission Copier screenshot](docs/assets/screenshots/role-table-permission-copier.png) |
+
+| Team Role and People Manager | Flow Dependency Viewer |
+|---|---|
+| ![Team Role and People Manager screenshot](docs/assets/screenshots/team-role-people-manager.png) | ![Flow Dependency Viewer screenshot](docs/assets/screenshots/flow-dependency-viewer.png) |
+
 ## Packages
 
 | Tool | Unmanaged package | Managed package |
@@ -46,3 +58,7 @@ Use `themeOption=darkmode` when a model-driven app URL should force dark mode. T
 The tools do not bypass Dataverse or Power Platform security. All reads and writes run as the currently signed-in user. Restrict access with model-driven app access, web resource visibility, and Dataverse security roles.
 
 See [SECURITY.md](SECURITY.md) for implementation notes and review guidance.
+
+## Adding future tools
+
+Add each new tool under `tools\<tool-slug>` with its own `README.md`, source files, and optional packaging project. Update this README and [`docs\README.md`](docs/README.md) when adding a tool.

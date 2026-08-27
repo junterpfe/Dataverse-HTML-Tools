@@ -16,13 +16,17 @@ It is designed for scenarios like:
 
 Repository path:
 
-`src\RoleTablePermissionCopier.html`
+[src\RoleTablePermissionCopier.html](src/RoleTablePermissionCopier.html)
 
 Package paths:
 
-`..\..\packages\role-table-permission-copier\RoleTablePermissionCopierSolution.zip`
+[Unmanaged ZIP](../../packages/role-table-permission-copier/RoleTablePermissionCopierSolution.zip)
 
-`..\..\packages\role-table-permission-copier\RoleTablePermissionCopierSolution_managed.zip`
+[Managed ZIP](../../packages/role-table-permission-copier/RoleTablePermissionCopierSolution_managed.zip)
+
+## Screenshot
+
+![Role Table Permission Copier screenshot](../../docs/assets/screenshots/role-table-permission-copier.png)
 
 ## Where to use it
 
@@ -175,6 +179,6 @@ It should be hosted inside the same environment where the roles are being edited
 
 ## Related tools
 
-- [User Effective Security Roles](UserEffectiveSecurityRoles.md)
-- [Team Role and People Manager](TeamRolePeopleManager.md)
-- [Flow Dependency Viewer](FlowDependencyViewer.md)
+- [User Effective Security Roles](../user-effective-security-roles/README.md)
+- [Team Role and People Manager](../team-role-people-manager/README.md)
+- [Flow Dependency Viewer](../flow-dependency-viewer/README.md)

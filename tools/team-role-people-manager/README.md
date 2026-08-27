@@ -16,13 +16,17 @@ It is designed for scenarios like:
 
 Repository path:
 
-`src\TeamRolePeopleManager.html`
+[src\TeamRolePeopleManager.html](src/TeamRolePeopleManager.html)
 
 Package paths:
 
-`..\..\packages\team-role-people-manager\TeamRolePeopleManagerSolution.zip`
+[Unmanaged ZIP](../../packages/team-role-people-manager/TeamRolePeopleManagerSolution.zip)
 
-`..\..\packages\team-role-people-manager\TeamRolePeopleManagerSolution_managed.zip`
+[Managed ZIP](../../packages/team-role-people-manager/TeamRolePeopleManagerSolution_managed.zip)
+
+## Screenshot
+
+![Team Role and People Manager screenshot](../../docs/assets/screenshots/team-role-people-manager.png)
 
 ## Where to use it
 
@@ -145,6 +149,6 @@ For Entra-backed teams, the current user also needs the appropriate Entra permis
 
 ## Related tools
 
-- [User Effective Security Roles](UserEffectiveSecurityRoles.md)
-- [Role Table Permission Copier](RoleTablePermissionCopier.md)
-- [Flow Dependency Viewer](FlowDependencyViewer.md)
+- [User Effective Security Roles](../user-effective-security-roles/README.md)
+- [Role Table Permission Copier](../role-table-permission-copier/README.md)
+- [Flow Dependency Viewer](../flow-dependency-viewer/README.md)

@@ -17,15 +17,21 @@ It is designed for scenarios like:
 
 Repository paths:
 
-`solution\src\WebResources\fdv_\flowdependencyviewer.htm`
+[solution\src\WebResources\fdv_\flowdependencyviewer.htm](solution/src/WebResources/fdv_/flowdependencyviewer.htm)
 
-`..\..\packages\flow-dependency-viewer\FlowDependencyViewerSolution.zip`
+[Unmanaged ZIP](../../packages/flow-dependency-viewer/FlowDependencyViewerSolution.zip)
 
-`..\..\packages\flow-dependency-viewer\FlowDependencyViewerSolution_managed.zip`
+[Managed ZIP](../../packages/flow-dependency-viewer/FlowDependencyViewerSolution_managed.zip)
 
 Use the unmanaged ZIP in development environments. Use the managed ZIP for test or production after validating the behavior in your tenant.
 
 The packaged solution contains the HTML web resource only.
+
+## Screenshots
+
+![Flow Dependency Viewer screenshot](../../docs/assets/screenshots/flow-dependency-viewer.png)
+
+![Environment variable editor screenshot](../../docs/assets/screenshots/flow-dependency-viewer-variable-editor.png)
 
 ## Where to use it
 
@@ -152,6 +158,6 @@ In GCC, flow links open in `https://make.gov.powerautomate.us`, and environment 
 
 ## Related tools
 
-- [User Effective Security Roles](UserEffectiveSecurityRoles.md)
-- [Role Table Permission Copier](RoleTablePermissionCopier.md)
-- [Team Role and People Manager](TeamRolePeopleManager.md)
+- [User Effective Security Roles](../user-effective-security-roles/README.md)
+- [Role Table Permission Copier](../role-table-permission-copier/README.md)
+- [Team Role and People Manager](../team-role-people-manager/README.md)
