@@ -1,0 +1,2922 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flow Dependency Viewer</title>
+  <script src="../ClientGlobalContext.js.aspx" type="text/javascript"></script>
+  <script>
+    (() => {
+      const theme = hasDarkModeFlag() ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", theme);
+
+      function hasDarkModeFlag() {
+        return getUrlCandidates().some(urlHasDarkModeFlag);
+      }
+
+      function getUrlCandidates() {
+        const urls = [window.location.href, document.referrer];
+
+        try {
+          urls.push(window.parent.location.href);
+        } catch (error) {
+          // Parent can be cross-origin in some host shells.
+        }
+
+        try {
+          urls.push(window.top.location.href);
+        } catch (error) {
+          // Top can be cross-origin in some host shells.
+        }
+
+        return urls.filter(Boolean);
+      }
+
+      function urlHasDarkModeFlag(url) {
+        const text = normalizeUrlText(url);
+        return text.includes("themeoption=darkmode") || text.includes("themeoption%3ddarkmode");
+      }
+
+      function normalizeUrlText(value) {
+        let text = String(value || "").toLowerCase();
+
+        for (let index = 0; index < 3; index += 1) {
+          try {
+            const decoded = decodeURIComponent(text);
+            if (decoded === text) {
+              break;
+            }
+            text = decoded;
+          } catch (error) {
+            break;
+          }
+        }
+
+        return text;
+      }
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --cp-bg: #f7f4ef;
+      --cp-bg-elevated: #fcfbf8;
+      --cp-surface: #ffffff;
+      --cp-surface-soft: #f5f5f5;
+      --cp-border: #dedede;
+      --cp-border-strong: #919191;
+      --cp-text: #242424;
+      --cp-text-muted: #5c5c5c;
+      --cp-text-soft: #6f6f6f;
+      --cp-accent: #b11f4b;
+      --cp-accent-hover: #9a1a41;
+      --cp-accent-soft: rgba(177, 31, 75, 0.08);
+      --cp-accent-fg: #ffffff;
+      --cp-success: #16a34a;
+      --cp-danger: #dc2626;
+      --cp-warning: #f59e0b;
+      --cp-link: #0078d4;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+      --cp-overlay: rgba(255, 255, 255, 0.8);
+      --cp-panel: rgba(255, 255, 255, 0.86);
+      --cp-panel-strong: rgba(255, 255, 255, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.55);
+      --cp-highlight: rgba(177, 31, 75, 0.12);
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --cp-bg: #3d3b3a;
+      --cp-bg-elevated: #343231;
+      --cp-surface: #292929;
+      --cp-surface-soft: #2e2e2e;
+      --cp-border: #474747;
+      --cp-border-strong: #5f5f5f;
+      --cp-text: #dedede;
+      --cp-text-muted: #919191;
+      --cp-text-soft: #b0b0b0;
+      --cp-accent: #fd8ea1;
+      --cp-accent-hover: #fb7b91;
+      --cp-accent-soft: rgba(253, 142, 161, 0.14);
+      --cp-accent-fg: #1a1a1a;
+      --cp-success: #4ade80;
+      --cp-danger: #f87171;
+      --cp-warning: #fbbf24;
+      --cp-link: #4da6ff;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      --cp-overlay: rgba(41, 41, 41, 0.88);
+      --cp-panel: rgba(41, 41, 41, 0.72);
+      --cp-panel-strong: rgba(41, 41, 41, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.04);
+      --cp-highlight: rgba(253, 142, 161, 0.12);
+    }
+    html,
+    body {
+      background: var(--cp-bg);
+      color: var(--cp-text);
+      font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+      height: 100%;
+      margin: 0;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+    .fdv-root {
+      min-height: 100%;
+      padding: 0.5rem;
+    }
+    .fdv-shell {
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      min-height: calc(100vh - 1rem);
+      padding: 0.75rem;
+    }
+    .fdv-header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      justify-content: space-between;
+    }
+    .fdv-title-block {
+      min-width: 16rem;
+    }
+    .fdv-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      line-height: 1.3;
+      margin: 0;
+    }
+    .fdv-subtitle {
+      color: var(--cp-text-muted);
+      font-size: 0.875rem;
+      margin: 0.25rem 0 0;
+    }
+    .fdv-toolbar {
+      align-items: flex-end;
+      display: flex;
+      flex: 1 1 40rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: flex-end;
+    }
+    .fdv-field {
+      display: flex;
+      flex: 1 1 18rem;
+      flex-direction: column;
+      gap: 0.25rem;
+      max-width: 28rem;
+    }
+    .fdv-solution-field {
+      flex: 999 1 32rem;
+      max-width: none;
+    }
+    .fdv-field label {
+      color: var(--cp-text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .fdv-input {
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      color: var(--cp-text);
+      min-height: 2.25rem;
+      padding: 0.45rem 0.65rem;
+      width: 100%;
+    }
+    .fdv-input:focus {
+      border-color: var(--cp-accent);
+      outline: 2px solid var(--cp-accent-soft);
+    }
+    .fdv-picker {
+      position: relative;
+      width: 100%;
+    }
+    .fdv-picker-panel {
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      box-shadow: var(--cp-shadow);
+      left: 0;
+      max-height: 18rem;
+      overflow: auto;
+      padding: 0.25rem;
+      position: absolute;
+      right: 0;
+      top: calc(100% + 0.25rem);
+      z-index: 10;
+    }
+    .fdv-picker-panel[hidden] {
+      display: none;
+    }
+    .fdv-picker-option {
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-surface);
+      border-radius: 0.625rem;
+      color: var(--cp-text);
+      cursor: pointer;
+      display: block;
+      padding: 0.5rem 0.6rem;
+      text-align: left;
+      width: 100%;
+    }
+    .fdv-picker-option:hover,
+    .fdv-picker-option:focus {
+      background: var(--cp-accent-soft);
+      border-color: var(--cp-accent);
+      outline: none;
+    }
+    .fdv-picker-empty {
+      color: var(--cp-text-muted);
+      font-size: 0.875rem;
+      padding: 0.6rem;
+    }
+    .fdv-button {
+      align-items: center;
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      color: var(--cp-text);
+      cursor: pointer;
+      display: inline-flex;
+      font-size: 0.875rem;
+      font-weight: 600;
+      gap: 0.35rem;
+      justify-content: center;
+      min-height: 2.25rem;
+      padding: 0.45rem 0.75rem;
+    }
+    .fdv-button:hover:not(:disabled) {
+      border-color: var(--cp-border-strong);
+    }
+    .fdv-button:disabled {
+      color: var(--cp-text-muted);
+      cursor: not-allowed;
+      opacity: 0.65;
+    }
+    .fdv-button-primary {
+      background: var(--cp-accent);
+      border-color: var(--cp-accent);
+      color: var(--cp-accent-fg);
+    }
+    .fdv-button-danger {
+      border-color: var(--cp-danger);
+      color: var(--cp-danger);
+    }
+    .fdv-message {
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      color: var(--cp-text);
+      font-size: 0.875rem;
+      padding: 0.65rem 0.75rem;
+    }
+    .fdv-message-info,
+    .fdv-message-success {
+      background: var(--cp-accent-soft);
+    }
+    .fdv-message-warning {
+      border-color: var(--cp-warning);
+    }
+    .fdv-message-error {
+      border-color: var(--cp-danger);
+    }
+    .fdv-stats {
+      display: grid;
+      gap: 0.75rem;
+      grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+    }
+    .fdv-stat {
+      background: var(--cp-surface-soft);
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      padding: 0.75rem;
+    }
+    .fdv-stat-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+    .fdv-stat-label {
+      color: var(--cp-text-muted);
+      font-size: 0.75rem;
+      margin-top: 0.15rem;
+    }
+    .fdv-content-grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .fdv-card {
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      overflow: hidden;
+    }
+    .fdv-card-header {
+      align-items: center;
+      background: var(--cp-surface-soft);
+      border-bottom: 1px solid var(--cp-border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      justify-content: space-between;
+      padding: 0.75rem;
+    }
+    .fdv-card-title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .fdv-table-wrap {
+      overflow: auto;
+    }
+    .fdv-table {
+      border-collapse: collapse;
+      min-width: 70rem;
+      width: 100%;
+    }
+    .fdv-table th,
+    .fdv-table td {
+      border-bottom: 1px solid var(--cp-border);
+      padding: 0.65rem 0.75rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    .fdv-table th:last-child,
+    .fdv-table td:last-child {
+      background: var(--cp-surface);
+      box-shadow: -1px 0 0 var(--cp-border);
+      min-width: 7rem;
+      position: sticky;
+      right: 0;
+      z-index: 2;
+    }
+    .fdv-table th:last-child {
+      background: var(--cp-surface-soft);
+      z-index: 3;
+    }
+    .fdv-table th {
+      color: var(--cp-text-muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .fdv-table tr.fd-selected td {
+      background: var(--cp-accent-soft);
+    }
+    .fdv-table tr.fd-selected td:last-child {
+      background: var(--cp-accent-soft);
+    }
+    .fdv-table tr.fd-highlight td {
+      background: var(--cp-highlight);
+    }
+    .fdv-table tr.fd-highlight td:last-child {
+      background: var(--cp-highlight);
+    }
+    .fdv-flow-name {
+      font-weight: 600;
+    }
+    .fdv-flow-link {
+      background: none;
+      border: 0;
+      color: var(--cp-link);
+      cursor: pointer;
+      font-weight: 600;
+      padding: 0;
+      text-align: left;
+      text-decoration: underline;
+    }
+    .fdv-flow-link:hover,
+    .fdv-flow-link:focus {
+      color: var(--cp-accent);
+      outline: none;
+    }
+    .fdv-flow-meta {
+      color: var(--cp-text-muted);
+      font-family: Consolas, "Courier New", Courier, monospace;
+      font-size: 0.72rem;
+      margin-top: 0.2rem;
+    }
+    .fdv-badge {
+      border: 1px solid var(--cp-border);
+      border-radius: 999rem;
+      display: inline-flex;
+      font-size: 0.75rem;
+      font-weight: 700;
+      line-height: 1;
+      padding: 0.28rem 0.45rem;
+      white-space: nowrap;
+    }
+    .fdv-badge-on {
+      border-color: var(--cp-success);
+    }
+    .fdv-badge-off {
+      border-color: var(--cp-text-muted);
+    }
+    .fdv-badge-warning {
+      border-color: var(--cp-warning);
+    }
+    .fdv-badge-error {
+      border-color: var(--cp-danger);
+    }
+    .fdv-chip-list {
+      align-items: flex-start;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+    .fdv-chip {
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-border);
+      border-radius: 999rem;
+      color: var(--cp-text);
+      cursor: pointer;
+      font-size: 0.75rem;
+      padding: 0.25rem 0.45rem;
+    }
+    .fdv-chip:hover {
+      border-color: var(--cp-accent);
+    }
+    .fdv-chip-external {
+      border-color: var(--cp-danger);
+      color: var(--cp-danger);
+    }
+    .fdv-chip-error {
+      border-color: var(--cp-danger);
+      color: var(--cp-danger);
+    }
+    .fdv-button-danger:hover:not(:disabled) {
+      border-color: var(--cp-danger);
+      font-weight: 700;
+    }
+    .fdv-muted {
+      color: var(--cp-text-muted);
+    }
+    .fdv-actions {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .fdv-empty {
+      color: var(--cp-text-muted);
+      padding: 1rem;
+    }
+    .fdv-match-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding: 0.75rem;
+    }
+    .fdv-match {
+      align-items: center;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      display: flex;
+      gap: 0.75rem;
+      justify-content: space-between;
+      padding: 0.6rem 0.75rem;
+    }
+    .fdv-dialog-backdrop {
+      align-items: center;
+      background: rgba(0, 0, 0, 0.45);
+      bottom: 0;
+      display: flex;
+      justify-content: center;
+      left: 0;
+      padding: 1rem;
+      position: fixed;
+      right: 0;
+      top: 0;
+      z-index: 1000;
+    }
+    .fdv-dialog {
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-border);
+      border-radius: 0.75rem;
+      box-shadow: var(--cp-shadow);
+      max-height: calc(100vh - 2rem);
+      max-width: 42rem;
+      overflow: auto;
+      width: min(42rem, 100%);
+    }
+    .fdv-dialog-header,
+    .fdv-dialog-footer {
+      align-items: center;
+      display: flex;
+      gap: 0.5rem;
+      justify-content: space-between;
+      padding: 0.75rem;
+    }
+    .fdv-dialog-header {
+      border-bottom: 1px solid var(--cp-border);
+    }
+    .fdv-dialog-footer {
+      border-top: 1px solid var(--cp-border);
+      flex-wrap: wrap;
+    }
+    .fdv-dialog-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 0;
+    }
+    .fdv-dialog-body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding: 0.75rem;
+    }
+    .fdv-detail-grid {
+      display: grid;
+      gap: 0.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    }
+    .fdv-detail {
+      background: var(--cp-surface-soft);
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      padding: 0.6rem;
+    }
+    .fdv-detail-label {
+      color: var(--cp-text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .fdv-detail-value {
+      font-size: 0.875rem;
+      margin-top: 0.15rem;
+      overflow-wrap: anywhere;
+    }
+    .fdv-textarea {
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      color: var(--cp-text);
+      min-height: 7rem;
+      padding: 0.55rem 0.65rem;
+      resize: vertical;
+      width: 100%;
+    }
+    .fdv-textarea:focus {
+      border-color: var(--cp-accent);
+      outline: 2px solid var(--cp-accent-soft);
+    }
+    @media (max-width: 62rem) {
+      .fdv-header,
+      .fdv-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+      .fdv-title-block,
+      .fdv-toolbar,
+      .fdv-picker,
+      .fdv-input {
+        min-width: 0;
+      }
+      .fdv-toolbar {
+        flex: 0 1 auto;
+      }
+      .fdv-field,
+      .fdv-solution-field {
+        flex-basis: auto;
+        max-width: none;
+        width: 100%;
+      }
+      .fdv-button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="app" class="fdv-root"></main>
+  <script>
+    (() => {
+      "use strict";
+
+      const WORKFLOW_COMPONENT_TYPE = 29;
+      const ENVIRONMENT_VARIABLE_DEFINITION_COMPONENT_TYPE = 380;
+      const ENVIRONMENT_VARIABLE_VALUE_COMPONENT_TYPE = 381;
+      const ENVIRONMENT_VARIABLE_TYPE_NUMBER = 100000001;
+      const ENVIRONMENT_VARIABLE_TYPE_SECRET = 100000005;
+      const CLOUD_FLOW_CATEGORY = 5;
+      const ACTIVE_STATE = 1;
+      const ACTIVE_STATUS = 2;
+      const DRAFT_STATE = 0;
+      const DRAFT_STATUS = 1;
+      const DEFAULT_PAGE_SIZE = 5000;
+      const FETCH_CHUNK_SIZE = 80;
+
+      const state = {
+        solutionQuery: "",
+        searchQuery: "",
+        currentSolution: null,
+        solutionMatches: [],
+        solutionPickerResults: [],
+        solutionPickerError: "",
+        isSolutionPickerOpen: false,
+        isSearchingSolutions: false,
+        solutionSearchTimer: 0,
+        solutionSearchRequestId: 0,
+        defaultSolution: null,
+        flows: new Map(),
+        dependencies: [],
+        environmentVariables: new Map(),
+        environmentVariableDependencies: [],
+        environmentVariableEditor: null,
+        selectedFlowId: null,
+        highlightedFlowId: null,
+        highlightTimer: 0,
+        environmentName: "",
+        environmentNamePromise: null,
+        isLoading: false,
+        isWorking: false,
+        workingText: "",
+        enableActivationCommands: true,
+        message: {
+          severity: "info",
+          text: "Enter a Dataverse solution unique name, friendly name, or solution ID to load cloud flow dependencies."
+        }
+      };
+
+      const app = document.getElementById("app");
+      const initialOptions = readInitialOptions();
+      state.solutionQuery = initialOptions.solutionReference || "";
+      state.enableActivationCommands = initialOptions.enableActivationCommands;
+      state.environmentName = initialOptions.environmentName || "";
+
+      render();
+      if (initialOptions.autoLoad && state.solutionQuery) {
+        void loadSolution(state.solutionQuery);
+      }
+
+      function readInitialOptions() {
+        const params = new URLSearchParams(window.location.search);
+        const dataParams = new URLSearchParams();
+        const data = params.get("data") || "";
+        if (data) {
+          const decoded = safeDecode(data);
+          if (decoded.trim().startsWith("{")) {
+            try {
+              const parsed = JSON.parse(decoded);
+              Object.keys(parsed).forEach((key) => dataParams.set(key, String(parsed[key])));
+            } catch (error) {
+              dataParams.set("solutionReference", decoded);
+            }
+          } else {
+            new URLSearchParams(decoded).forEach((value, key) => dataParams.set(key, value));
+            if (!decoded.includes("=")) {
+              dataParams.set("solutionReference", decoded);
+            }
+          }
+        }
+
+        return {
+          solutionReference: params.get("solutionReference") || params.get("solution") || dataParams.get("solutionReference") || dataParams.get("solution") || "",
+          environmentName: params.get("environmentName") || params.get("environment") || dataParams.get("environmentName") || dataParams.get("environment") || "",
+          cloud: params.get("cloud") || dataParams.get("cloud") || "",
+          enableActivationCommands: readBooleanOption(params, dataParams, "enableActivationCommands", true),
+          autoLoad: readBooleanOption(params, dataParams, "autoLoad", true)
+        };
+      }
+
+      function readBooleanOption(params, dataParams, name, defaultValue) {
+        const value = params.get(name) || dataParams.get(name);
+        if (value === null || value === undefined || value === "") {
+          return defaultValue;
+        }
+
+        return !["false", "0", "no"].includes(value.toLowerCase());
+      }
+
+      function safeDecode(value) {
+        try {
+          return decodeURIComponent(value);
+        } catch (error) {
+          return value;
+        }
+      }
+
+      function getXrm() {
+        if (window.Xrm && window.Xrm.WebApi) {
+          return window.Xrm;
+        }
+
+        try {
+          if (window.parent && window.parent !== window && window.parent.Xrm && window.parent.Xrm.WebApi) {
+            return window.parent.Xrm;
+          }
+        } catch (error) {
+          return null;
+        }
+
+        try {
+          if (window.top && window.top !== window && window.top.Xrm && window.top.Xrm.WebApi) {
+            return window.top.Xrm;
+          }
+        } catch (error) {
+          return null;
+        }
+
+        return null;
+      }
+
+      function getWebApi() {
+        const xrm = getXrm();
+        if (!xrm || !xrm.WebApi || typeof xrm.WebApi.retrieveMultipleRecords !== "function") {
+          throw new Error("Dataverse Web API is not available. Open this as a model-driven app HTML web resource.");
+        }
+
+        return xrm.WebApi;
+      }
+
+      function getClientUrl() {
+        const xrm = getXrm();
+        if (xrm && xrm.Utility && typeof xrm.Utility.getGlobalContext === "function") {
+          const globalContext = xrm.Utility.getGlobalContext();
+          if (globalContext && typeof globalContext.getClientUrl === "function") {
+            return globalContext.getClientUrl();
+          }
+        }
+
+        return window.location.origin;
+      }
+
+      function scheduleSolutionSearch(query, resultsHost) {
+        window.clearTimeout(state.solutionSearchTimer);
+        state.isSolutionPickerOpen = true;
+        state.isSearchingSolutions = true;
+        state.solutionPickerError = "";
+        renderSolutionPickerResults(resultsHost);
+
+        const requestId = state.solutionSearchRequestId + 1;
+        state.solutionSearchRequestId = requestId;
+        state.solutionSearchTimer = window.setTimeout(() => {
+          void searchSolutionChoices(query, resultsHost, requestId);
+        }, 250);
+      }
+
+      async function searchSolutionChoices(query, resultsHost, requestId) {
+        try {
+          const solutions = await retrieveSolutionChoices(query);
+          if (requestId !== state.solutionSearchRequestId) {
+            return;
+          }
+
+          state.solutionPickerResults = solutions;
+          state.solutionPickerError = "";
+        } catch (error) {
+          if (requestId !== state.solutionSearchRequestId) {
+            return;
+          }
+
+          state.solutionPickerResults = [];
+          state.solutionPickerError = getErrorMessage(error);
+        } finally {
+          if (requestId === state.solutionSearchRequestId) {
+            state.isSearchingSolutions = false;
+            renderSolutionPickerResults(resultsHost);
+          }
+        }
+      }
+
+      async function retrieveSolutionChoices(query) {
+        try {
+          return await retrieveSolutionChoicesInternal(query, true);
+        } catch (error) {
+          return retrieveSolutionChoicesInternal(query, false);
+        }
+      }
+
+      async function retrieveSolutionChoicesInternal(query, includeVisibleFilter) {
+        const trimmedQuery = query.trim();
+        const filters = [];
+
+        if (includeVisibleFilter) {
+          filters.push("isvisible eq true");
+        }
+
+        if (trimmedQuery && !normalizeGuid(trimmedQuery)) {
+          const escapedQuery = escapeODataString(trimmedQuery);
+          filters.push(`(contains(uniquename,'${escapedQuery}') or contains(friendlyname,'${escapedQuery}'))`);
+        }
+
+        const filterQuery = filters.length > 0 ? `&$filter=${encodeURIComponent(filters.join(" and "))}` : "";
+        const records = await retrieveAll(
+          "solution",
+          `?$select=solutionid,uniquename,friendlyname,version,ismanaged${includeVisibleFilter ? ",isvisible" : ""}${filterQuery}&$orderby=friendlyname asc&$top=25`
+        );
+
+        return records.map(mapSolution).filter((solution) => !!solution.solutionId);
+      }
+
+      function renderSolutionPickerResults(resultsHost) {
+        if (!resultsHost || !document.body.contains(resultsHost)) {
+          return;
+        }
+
+        resultsHost.replaceChildren();
+        resultsHost.hidden = !state.isSolutionPickerOpen;
+
+        if (!state.isSolutionPickerOpen) {
+          return;
+        }
+
+        if (state.isSearchingSolutions) {
+          resultsHost.appendChild(createElement("div", "fdv-picker-empty", "Searching solutions..."));
+          return;
+        }
+
+        if (state.solutionPickerError) {
+          resultsHost.appendChild(createElement("div", "fdv-picker-empty", `Could not search solutions: ${state.solutionPickerError}`));
+          return;
+        }
+
+        if (state.solutionPickerResults.length === 0) {
+          resultsHost.appendChild(createElement("div", "fdv-picker-empty", "No matching solutions. You can still paste a solution ID or unique name and select Load."));
+          return;
+        }
+
+        state.solutionPickerResults.forEach((solution) => {
+          const option = createElement("button", "fdv-picker-option");
+          option.type = "button";
+          option.setAttribute("role", "option");
+          option.addEventListener("mousedown", (event) => {
+            event.preventDefault();
+          });
+          option.addEventListener("click", () => {
+            selectSolution(solution);
+          });
+          option.appendChild(createElement("div", "fdv-flow-name", solution.friendlyName || solution.uniqueName || solution.solutionId));
+          option.appendChild(createElement("div", "fdv-flow-meta", `${solution.uniqueName || "No unique name"} | ${solution.version || "No version"} | ${solution.isManaged ? "managed" : "unmanaged"}`));
+          resultsHost.appendChild(option);
+        });
+      }
+
+      function selectSolution(solution) {
+        state.solutionQuery = solution.uniqueName || solution.solutionId;
+        state.isSolutionPickerOpen = false;
+        state.solutionPickerResults = [];
+        render();
+        void loadSolution(solution.solutionId);
+      }
+
+      async function loadSolution(reference) {
+        const trimmedReference = reference.trim();
+        if (!trimmedReference) {
+          setMessage("warning", "Enter a solution unique name, friendly name, or solution ID before loading.");
+          return;
+        }
+
+        state.isLoading = true;
+        state.solutionMatches = [];
+        state.message = { severity: "info", text: `Loading solution "${trimmedReference}"...` };
+        render();
+
+        try {
+          const solutionResult = await resolveSolution(trimmedReference);
+          if (!solutionResult.solution) {
+            state.currentSolution = null;
+            state.flows = new Map();
+            state.dependencies = [];
+            state.environmentVariables = new Map();
+            state.environmentVariableDependencies = [];
+            state.solutionMatches = solutionResult.matches;
+            state.message = solutionResult.matches.length > 0
+              ? { severity: "warning", text: "Multiple solutions matched. Choose one to load." }
+              : { severity: "error", text: `No solution matched "${trimmedReference}".` };
+            return;
+          }
+
+          const solution = solutionResult.solution;
+          const workflowComponentIds = await retrieveSolutionWorkflowIds(solution.solutionId);
+          const solutionFlowMap = await retrieveWorkflowMap(workflowComponentIds, true);
+          const solutionFlowIds = Array.from(solutionFlowMap.keys());
+
+          if (solutionFlowIds.length === 0) {
+            state.currentSolution = solution;
+            state.flows = new Map();
+            state.dependencies = [];
+            state.environmentVariables = new Map();
+            state.environmentVariableDependencies = [];
+            state.message = { severity: "warning", text: `${getSolutionLabel(solution)} does not contain cloud flows.` };
+            return;
+          }
+
+          const dependencies = await retrieveFlowDependencies(solutionFlowIds);
+          const environmentVariableDependencies = await retrieveEnvironmentVariableDependencies(solutionFlowIds);
+          const environmentVariableMap = await retrieveEnvironmentVariableMap(
+            distinctNormalizedGuids(environmentVariableDependencies.map((dependency) => dependency.environmentVariableId))
+          );
+          const externalFlowIds = getExternalFlowIds(solutionFlowMap, dependencies);
+          const externalFlowMap = await retrieveWorkflowMap(externalFlowIds, false);
+
+          externalFlowIds.forEach((externalFlowId) => {
+            if (!externalFlowMap.has(externalFlowId)) {
+              externalFlowMap.set(externalFlowId, createMissingFlow(externalFlowId, false));
+            }
+          });
+
+          const allFlows = new Map([...solutionFlowMap, ...externalFlowMap]);
+          applyDependencies(allFlows, dependencies);
+          applyEnvironmentVariableDependencies(allFlows, environmentVariableDependencies);
+          computeActivationOrder(allFlows);
+
+          state.currentSolution = solution;
+          state.flows = allFlows;
+          state.dependencies = dependencies;
+          state.environmentVariables = environmentVariableMap;
+          state.environmentVariableDependencies = environmentVariableDependencies;
+          state.selectedFlowId = state.selectedFlowId && allFlows.has(state.selectedFlowId) ? state.selectedFlowId : solutionFlowIds[0];
+          const missingEnvironmentVariableCount = getMissingEnvironmentVariableCount(environmentVariableMap, environmentVariableDependencies);
+          state.message = {
+            severity: "success",
+            text: `Loaded ${solutionFlowIds.length} solution flow${solutionFlowIds.length === 1 ? "" : "s"}, ${dependencies.length} flow-to-flow dependenc${dependencies.length === 1 ? "y" : "ies"}, and ${environmentVariableDependencies.length} environment variable dependenc${environmentVariableDependencies.length === 1 ? "y" : "ies"} for ${getSolutionLabel(solution)}.${missingEnvironmentVariableCount > 0 ? ` ${missingEnvironmentVariableCount} environment variable${missingEnvironmentVariableCount === 1 ? " is" : "s are"} missing values.` : ""}`
+          };
+        } catch (error) {
+          state.message = { severity: "error", text: `Could not load dependencies: ${getErrorMessage(error)}` };
+        } finally {
+          state.isLoading = false;
+          render();
+        }
+      }
+
+      async function resolveSolution(reference) {
+        const solutionId = normalizeGuid(reference);
+        if (solutionId) {
+          const fetchXml = [
+            "<fetch mapping=\"logical\" top=\"1\">",
+            "  <entity name=\"solution\">",
+            "    <attribute name=\"solutionid\" />",
+            "    <attribute name=\"uniquename\" />",
+            "    <attribute name=\"friendlyname\" />",
+            "    <attribute name=\"version\" />",
+            "    <attribute name=\"ismanaged\" />",
+            "    <filter>",
+            `      <condition attribute="solutionid" operator="eq" value="${escapeXml(solutionId)}" />`,
+            "    </filter>",
+            "  </entity>",
+            "</fetch>"
+          ].join("");
+          const matches = (await retrieveAll("solution", toFetchXmlQuery(fetchXml))).map(mapSolution);
+          return { solution: matches[0] || null, matches };
+        }
+
+        const escapedReference = escapeODataString(reference);
+        const exactFilter = `uniquename eq '${escapedReference}' or friendlyname eq '${escapedReference}'`;
+        const exactMatches = (await retrieveAll(
+          "solution",
+          `?$select=solutionid,uniquename,friendlyname,version,ismanaged&$filter=${encodeURIComponent(exactFilter)}&$top=5`
+        )).map(mapSolution);
+
+        if (exactMatches.length === 1) {
+          return { solution: exactMatches[0], matches: [] };
+        }
+
+        if (exactMatches.length > 1) {
+          return { solution: null, matches: exactMatches };
+        }
+
+        const containsFilter = `contains(uniquename,'${escapedReference}') or contains(friendlyname,'${escapedReference}')`;
+        const containsMatches = (await retrieveAll(
+          "solution",
+          `?$select=solutionid,uniquename,friendlyname,version,ismanaged&$filter=${encodeURIComponent(containsFilter)}&$top=10`
+        )).map(mapSolution);
+
+        return { solution: containsMatches.length === 1 ? containsMatches[0] : null, matches: containsMatches };
+      }
+
+      async function retrieveSolutionWorkflowIds(solutionId) {
+        const fetchXml = [
+          "<fetch distinct=\"true\" mapping=\"logical\">",
+          "  <entity name=\"solutioncomponent\">",
+          "    <attribute name=\"objectid\" />",
+          "    <filter type=\"and\">",
+          `      <condition attribute="solutionid" operator="eq" value="${escapeXml(solutionId)}" />`,
+          `      <condition attribute="componenttype" operator="eq" value="${WORKFLOW_COMPONENT_TYPE}" />`,
+          "    </filter>",
+          "  </entity>",
+          "</fetch>"
+        ].join("");
+
+        const records = await retrieveAll("solutioncomponent", toFetchXmlQuery(fetchXml));
+        return distinctNormalizedGuids(records.map((record) => readString(record, "objectid")));
+      }
+
+      async function retrieveWorkflowMap(flowIds, inSolution) {
+        const flowMap = new Map();
+        const chunks = chunk(flowIds, FETCH_CHUNK_SIZE);
+
+        for (const ids of chunks) {
+          if (ids.length === 0) {
+            continue;
+          }
+
+          const fetchXml = [
+            "<fetch mapping=\"logical\">",
+            "  <entity name=\"workflow\">",
+            "    <attribute name=\"workflowid\" />",
+            "    <attribute name=\"name\" />",
+            "    <attribute name=\"uniquename\" />",
+            "    <attribute name=\"category\" />",
+            "    <attribute name=\"statecode\" />",
+            "    <attribute name=\"statuscode\" />",
+            "    <attribute name=\"resourceid\" />",
+            "    <attribute name=\"workflowidunique\" />",
+            "    <attribute name=\"modifiedon\" />",
+            "    <filter type=\"and\">",
+            `      <condition attribute="category" operator="eq" value="${CLOUD_FLOW_CATEGORY}" />`,
+            buildInCondition("workflowid", ids),
+            "    </filter>",
+            "  </entity>",
+            "</fetch>"
+          ].join("");
+
+          const records = await retrieveAll("workflow", toFetchXmlQuery(fetchXml));
+          records.forEach((record) => {
+            const flow = mapFlow(record, inSolution);
+            if (flow.id) {
+              flowMap.set(flow.id, flow);
+            }
+          });
+        }
+
+        return flowMap;
+      }
+
+      async function retrieveFlowDependencies(solutionFlowIds) {
+        const edgeMap = new Map();
+        const chunks = chunk(solutionFlowIds, FETCH_CHUNK_SIZE);
+
+        for (const ids of chunks) {
+          const fetchXml = [
+            "<fetch distinct=\"true\" mapping=\"logical\">",
+            "  <entity name=\"dependency\">",
+            "    <attribute name=\"requiredcomponentobjectid\" />",
+            "    <attribute name=\"dependentcomponentobjectid\" />",
+            "    <attribute name=\"requiredcomponenttype\" />",
+            "    <attribute name=\"dependentcomponenttype\" />",
+            "    <filter type=\"and\">",
+            `      <condition attribute="requiredcomponenttype" operator="eq" value="${WORKFLOW_COMPONENT_TYPE}" />`,
+            `      <condition attribute="dependentcomponenttype" operator="eq" value="${WORKFLOW_COMPONENT_TYPE}" />`,
+            "      <filter type=\"or\">",
+            buildInCondition("requiredcomponentobjectid", ids),
+            buildInCondition("dependentcomponentobjectid", ids),
+            "      </filter>",
+            "    </filter>",
+            "  </entity>",
+            "</fetch>"
+          ].join("");
+
+          const records = await retrieveAll("dependency", toFetchXmlQuery(fetchXml));
+          records.forEach((record) => {
+            const requiredId = normalizeGuid(readString(record, "requiredcomponentobjectid"));
+            const dependentId = normalizeGuid(readString(record, "dependentcomponentobjectid"));
+            if (!requiredId || !dependentId || requiredId === dependentId) {
+              return;
+            }
+
+            edgeMap.set(`${requiredId}|${dependentId}`, { requiredId, dependentId });
+          });
+        }
+
+        return Array.from(edgeMap.values());
+      }
+
+      async function retrieveEnvironmentVariableDependencies(solutionFlowIds) {
+        const rawDependencies = new Map();
+        const valueIds = new Set();
+        const chunks = chunk(solutionFlowIds, FETCH_CHUNK_SIZE);
+
+        for (const ids of chunks) {
+          if (ids.length === 0) {
+            continue;
+          }
+
+          const fetchXml = [
+            "<fetch distinct=\"true\" mapping=\"logical\">",
+            "  <entity name=\"dependency\">",
+            "    <attribute name=\"requiredcomponentobjectid\" />",
+            "    <attribute name=\"dependentcomponentobjectid\" />",
+            "    <attribute name=\"requiredcomponenttype\" />",
+            "    <attribute name=\"dependentcomponenttype\" />",
+            "    <filter type=\"and\">",
+            `      <condition attribute="dependentcomponenttype" operator="eq" value="${WORKFLOW_COMPONENT_TYPE}" />`,
+            buildInCondition("requiredcomponenttype", [ENVIRONMENT_VARIABLE_DEFINITION_COMPONENT_TYPE, ENVIRONMENT_VARIABLE_VALUE_COMPONENT_TYPE]),
+            buildInCondition("dependentcomponentobjectid", ids),
+            "    </filter>",
+            "  </entity>",
+            "</fetch>"
+          ].join("");
+
+          const records = await retrieveAll("dependency", toFetchXmlQuery(fetchXml));
+          records.forEach((record) => {
+            const flowId = normalizeGuid(readString(record, "dependentcomponentobjectid"));
+            const requiredId = normalizeGuid(readString(record, "requiredcomponentobjectid"));
+            const requiredType = readNumber(record, "requiredcomponenttype");
+            if (!flowId || !requiredId) {
+              return;
+            }
+
+            if (requiredType === ENVIRONMENT_VARIABLE_DEFINITION_COMPONENT_TYPE) {
+              rawDependencies.set(`${flowId}|definition|${requiredId}`, {
+                flowId,
+                requiredComponentId: requiredId,
+                requiredComponentType: requiredType
+              });
+            } else if (requiredType === ENVIRONMENT_VARIABLE_VALUE_COMPONENT_TYPE) {
+              valueIds.add(requiredId);
+              rawDependencies.set(`${flowId}|value|${requiredId}`, {
+                flowId,
+                requiredComponentId: requiredId,
+                requiredComponentType: requiredType
+              });
+            }
+          });
+        }
+
+        const valueDefinitionMap = await retrieveEnvironmentVariableValueDefinitionMap(Array.from(valueIds));
+        const dependencyMap = new Map();
+        rawDependencies.forEach((dependency) => {
+          const environmentVariableId = dependency.requiredComponentType === ENVIRONMENT_VARIABLE_VALUE_COMPONENT_TYPE
+            ? valueDefinitionMap.get(dependency.requiredComponentId)
+            : dependency.requiredComponentId;
+
+          if (environmentVariableId) {
+            dependencyMap.set(`${dependency.flowId}|${environmentVariableId}`, {
+              flowId: dependency.flowId,
+              environmentVariableId
+            });
+          }
+        });
+
+        return Array.from(dependencyMap.values());
+      }
+
+      async function retrieveEnvironmentVariableValueDefinitionMap(valueIds) {
+        const valueDefinitionMap = new Map();
+        const chunks = chunk(valueIds, FETCH_CHUNK_SIZE);
+
+        for (const ids of chunks) {
+          if (ids.length === 0) {
+            continue;
+          }
+
+          const fetchXml = [
+            "<fetch mapping=\"logical\">",
+            "  <entity name=\"environmentvariablevalue\">",
+            "    <attribute name=\"environmentvariablevalueid\" />",
+            "    <attribute name=\"environmentvariabledefinitionid\" />",
+            "    <filter type=\"and\">",
+            buildInCondition("environmentvariablevalueid", ids),
+            "    </filter>",
+            "  </entity>",
+            "</fetch>"
+          ].join("");
+
+          const records = await retrieveAll("environmentvariablevalue", toFetchXmlQuery(fetchXml));
+          records.forEach((record) => {
+            const valueId = normalizeGuid(readString(record, "environmentvariablevalueid"));
+            const definitionId = normalizeGuid(
+              readString(record, "_environmentvariabledefinitionid_value") || readString(record, "environmentvariabledefinitionid")
+            );
+            if (valueId && definitionId) {
+              valueDefinitionMap.set(valueId, definitionId);
+            }
+          });
+        }
+
+        return valueDefinitionMap;
+      }
+
+      async function retrieveEnvironmentVariableMap(environmentVariableIds) {
+        const environmentVariableMap = new Map();
+        const chunks = chunk(environmentVariableIds, FETCH_CHUNK_SIZE);
+
+        for (const ids of chunks) {
+          if (ids.length === 0) {
+            continue;
+          }
+
+          const fetchXml = [
+            "<fetch mapping=\"logical\">",
+            "  <entity name=\"environmentvariabledefinition\">",
+            "    <attribute name=\"environmentvariabledefinitionid\" />",
+            "    <attribute name=\"schemaname\" />",
+            "    <attribute name=\"displayname\" />",
+            "    <attribute name=\"type\" />",
+            "    <filter type=\"and\">",
+            buildInCondition("environmentvariabledefinitionid", ids),
+            "    </filter>",
+            "  </entity>",
+            "</fetch>"
+          ].join("");
+
+          const records = await retrieveAll("environmentvariabledefinition", toFetchXmlQuery(fetchXml));
+          records.forEach((record) => {
+            const environmentVariable = mapEnvironmentVariable(record);
+            if (environmentVariable.id) {
+              environmentVariableMap.set(environmentVariable.id, environmentVariable);
+            }
+          });
+        }
+
+        const defaultValueMap = await retrieveEnvironmentVariableDefaultValueMap(environmentVariableIds);
+        const currentValueMap = await retrieveEnvironmentVariableCurrentValueMap(environmentVariableIds);
+        environmentVariableMap.forEach((environmentVariable) => {
+          const currentValue = currentValueMap.get(environmentVariable.id);
+          environmentVariable.hasDefaultValue = defaultValueMap.get(environmentVariable.id) === true;
+          environmentVariable.currentValueId = currentValue ? currentValue.valueId : "";
+          environmentVariable.hasCurrentValue = currentValue ? currentValue.hasValue : false;
+          environmentVariable.hasValue = environmentVariable.hasCurrentValue || environmentVariable.hasDefaultValue;
+        });
+
+        environmentVariableIds.forEach((environmentVariableId) => {
+          if (!environmentVariableMap.has(environmentVariableId)) {
+            environmentVariableMap.set(environmentVariableId, createMissingEnvironmentVariable(environmentVariableId));
+          }
+        });
+
+        return environmentVariableMap;
+      }
+
+      async function retrieveEnvironmentVariableDefaultValueMap(environmentVariableIds) {
+        const defaultValueMap = new Map();
+        const chunks = chunk(environmentVariableIds, FETCH_CHUNK_SIZE);
+
+        for (const ids of chunks) {
+          if (ids.length === 0) {
+            continue;
+          }
+
+          const fetchXml = [
+            "<fetch distinct=\"true\" mapping=\"logical\">",
+            "  <entity name=\"environmentvariabledefinition\">",
+            "    <attribute name=\"environmentvariabledefinitionid\" />",
+            "    <filter type=\"and\">",
+            buildInCondition("environmentvariabledefinitionid", ids),
+            "      <condition attribute=\"defaultvalue\" operator=\"not-null\" />",
+            "    </filter>",
+            "  </entity>",
+            "</fetch>"
+          ].join("");
+
+          const records = await retrieveAll("environmentvariabledefinition", toFetchXmlQuery(fetchXml));
+          records.forEach((record) => {
+            const definitionId = normalizeGuid(readString(record, "environmentvariabledefinitionid"));
+            if (definitionId) {
+              defaultValueMap.set(definitionId, true);
+            }
+          });
+        }
+
+        return defaultValueMap;
+      }
+
+      async function retrieveEnvironmentVariableCurrentValueMap(environmentVariableIds) {
+        const currentValueMap = new Map();
+        const chunks = chunk(environmentVariableIds, FETCH_CHUNK_SIZE);
+
+        for (const ids of chunks) {
+          if (ids.length === 0) {
+            continue;
+          }
+
+          const fetchXml = [
+            "<fetch mapping=\"logical\">",
+            "  <entity name=\"environmentvariablevalue\">",
+            "    <attribute name=\"environmentvariablevalueid\" />",
+            "    <attribute name=\"environmentvariabledefinitionid\" />",
+            "    <attribute name=\"statecode\" />",
+            "    <attribute name=\"modifiedon\" />",
+            "    <filter type=\"and\">",
+            buildInCondition("environmentvariabledefinitionid", ids),
+            "      <condition attribute=\"statecode\" operator=\"eq\" value=\"0\" />",
+            "      <condition attribute=\"value\" operator=\"not-null\" />",
+            "    </filter>",
+            "  </entity>",
+            "</fetch>"
+          ].join("");
+
+          const records = await retrieveAll("environmentvariablevalue", toFetchXmlQuery(fetchXml));
+          records.forEach((record) => {
+            const valueId = normalizeGuid(readString(record, "environmentvariablevalueid"));
+            const definitionId = normalizeGuid(
+              readString(record, "_environmentvariabledefinitionid_value") || readString(record, "environmentvariabledefinitionid")
+            );
+            if (definitionId) {
+              const existing = currentValueMap.get(definitionId);
+              if (!existing || readString(record, "modifiedon") > existing.modifiedOn) {
+                currentValueMap.set(definitionId, {
+                  valueId: valueId || "",
+                  hasValue: true,
+                  modifiedOn: readString(record, "modifiedon")
+                });
+              }
+            }
+          });
+        }
+
+        return currentValueMap;
+      }
+
+      async function retrieveActiveEnvironmentVariableValue(environmentVariable, includeValue) {
+        const valueRecords = await retrieveEnvironmentVariableValueRecords(environmentVariable.id, includeValue);
+        const activeValueRecords = valueRecords
+          .filter((record) => record.stateCode !== 1)
+          .sort((left, right) => {
+            if (left.hasValue !== right.hasValue) {
+              return left.hasValue ? -1 : 1;
+            }
+
+            return right.modifiedOn.localeCompare(left.modifiedOn);
+          });
+
+        return {
+          valueRecord: activeValueRecords[0] || null,
+          activeValueCount: activeValueRecords.length
+        };
+      }
+
+      async function retrieveEnvironmentVariableValueRecords(environmentVariableId, includeValue) {
+        const valueAttribute = includeValue ? "    <attribute name=\"value\" />" : "";
+        const fetchXml = [
+          "<fetch mapping=\"logical\">",
+          "  <entity name=\"environmentvariablevalue\">",
+          "    <attribute name=\"environmentvariablevalueid\" />",
+          "    <attribute name=\"environmentvariabledefinitionid\" />",
+          "    <attribute name=\"schemaname\" />",
+          "    <attribute name=\"statecode\" />",
+          "    <attribute name=\"statuscode\" />",
+          "    <attribute name=\"modifiedon\" />",
+          valueAttribute,
+          "    <filter type=\"and\">",
+          `      <condition attribute="environmentvariabledefinitionid" operator="eq" value="${escapeXml(environmentVariableId)}" />`,
+          "    </filter>",
+          "  </entity>",
+          "</fetch>"
+        ].filter(Boolean).join("");
+
+        const records = await retrieveAll("environmentvariablevalue", toFetchXmlQuery(fetchXml));
+        return records.map((record) => mapEnvironmentVariableValue(record, includeValue));
+      }
+
+      async function retrieveAll(entityName, options) {
+        const records = [];
+        let nextOptions = options;
+
+        do {
+          const result = await getWebApi().retrieveMultipleRecords(entityName, nextOptions, DEFAULT_PAGE_SIZE);
+          result.entities.forEach((entity) => records.push(entity));
+          nextOptions = result.nextLink ? getOptionsFromNextLink(result.nextLink) : "";
+        } while (nextOptions);
+
+        return records;
+      }
+
+      function getOptionsFromNextLink(nextLink) {
+        const queryIndex = nextLink.indexOf("?");
+        return queryIndex >= 0 ? nextLink.slice(queryIndex) : nextLink;
+      }
+
+      function applyDependencies(flowMap, dependencies) {
+        flowMap.forEach((flow) => {
+          flow.dependsOn.clear();
+          flow.dependedOnBy.clear();
+          flow.environmentVariableIds.clear();
+          flow.activationOrder = null;
+          flow.hasCycle = false;
+        });
+
+        dependencies.forEach((dependency) => {
+          const requiredFlow = flowMap.get(dependency.requiredId);
+          const dependentFlow = flowMap.get(dependency.dependentId);
+          if (requiredFlow && dependentFlow) {
+            dependentFlow.dependsOn.add(requiredFlow.id);
+            requiredFlow.dependedOnBy.add(dependentFlow.id);
+          }
+        });
+      }
+
+      function applyEnvironmentVariableDependencies(flowMap, dependencies) {
+        flowMap.forEach((flow) => {
+          flow.environmentVariableIds.clear();
+        });
+
+        dependencies.forEach((dependency) => {
+          const flow = flowMap.get(dependency.flowId);
+          if (flow) {
+            flow.environmentVariableIds.add(dependency.environmentVariableId);
+          }
+        });
+      }
+
+      function computeActivationOrder(flowMap) {
+        const inDegree = new Map();
+        const dependents = new Map();
+        const levels = new Map();
+
+        flowMap.forEach((flow) => {
+          inDegree.set(flow.id, 0);
+          dependents.set(flow.id, []);
+          flow.activationOrder = null;
+          flow.hasCycle = false;
+        });
+
+        flowMap.forEach((flow) => {
+          flow.dependsOn.forEach((requiredId) => {
+            if (!flowMap.has(requiredId)) {
+              return;
+            }
+
+            inDegree.set(flow.id, (inDegree.get(flow.id) || 0) + 1);
+            dependents.get(requiredId).push(flow.id);
+          });
+        });
+
+        const queue = Array.from(flowMap.values())
+          .filter((flow) => (inDegree.get(flow.id) || 0) === 0)
+          .sort(compareFlows)
+          .map((flow) => flow.id);
+
+        queue.forEach((id) => levels.set(id, 1));
+
+        let processedCount = 0;
+        while (queue.length > 0) {
+          const currentId = queue.shift();
+          processedCount += 1;
+          const currentLevel = levels.get(currentId) || 1;
+          const flow = flowMap.get(currentId);
+          if (flow) {
+            flow.activationOrder = currentLevel;
+          }
+
+          const dependentIds = (dependents.get(currentId) || [])
+            .map((id) => flowMap.get(id))
+            .filter(Boolean)
+            .sort(compareFlows)
+            .map((dependentFlow) => dependentFlow.id);
+
+          dependentIds.forEach((dependentId) => {
+            levels.set(dependentId, Math.max(levels.get(dependentId) || 1, currentLevel + 1));
+            const nextDegree = (inDegree.get(dependentId) || 0) - 1;
+            inDegree.set(dependentId, nextDegree);
+            if (nextDegree === 0) {
+              queue.push(dependentId);
+            }
+          });
+
+          queue.sort((leftId, rightId) => {
+            const left = flowMap.get(leftId);
+            const right = flowMap.get(rightId);
+            return left && right ? compareFlows(left, right) : leftId.localeCompare(rightId);
+          });
+        }
+
+        if (processedCount === flowMap.size) {
+          return;
+        }
+
+        flowMap.forEach((flow) => {
+          if (flow.activationOrder === null) {
+            flow.hasCycle = true;
+          }
+        });
+      }
+
+      function getExternalFlowIds(solutionFlowMap, dependencies) {
+        const externalIds = new Set();
+        dependencies.forEach((dependency) => {
+          if (!solutionFlowMap.has(dependency.requiredId)) {
+            externalIds.add(dependency.requiredId);
+          }
+          if (!solutionFlowMap.has(dependency.dependentId)) {
+            externalIds.add(dependency.dependentId);
+          }
+        });
+
+        return Array.from(externalIds);
+      }
+
+      function getActivationPlan(turnOn) {
+        const orderedFlows = getSortedFlows()
+          .filter((flow) => flow.inSolution && !flow.hasCycle && flow.activationOrder !== null)
+          .filter((flow) => isFlowActive(flow) !== turnOn);
+
+        orderedFlows.sort((left, right) => {
+          const leftOrder = left.activationOrder || Number.MAX_SAFE_INTEGER;
+          const rightOrder = right.activationOrder || Number.MAX_SAFE_INTEGER;
+          if (leftOrder !== rightOrder) {
+            return turnOn ? leftOrder - rightOrder : rightOrder - leftOrder;
+          }
+
+          return compareFlows(left, right);
+        });
+
+        const blockedReasons = [];
+        const cyclicSolutionFlows = getSortedFlows().filter((flow) => flow.inSolution && flow.hasCycle);
+        if (cyclicSolutionFlows.length > 0) {
+          blockedReasons.push(`${cyclicSolutionFlows.length} solution flow${cyclicSolutionFlows.length === 1 ? " is" : "s are"} in a circular dependency and cannot be safely ordered.`);
+        }
+
+        if (turnOn) {
+          const inactiveExternalPrerequisites = getInactiveExternalPrerequisites();
+          if (inactiveExternalPrerequisites.length > 0) {
+            blockedReasons.push(`${inactiveExternalPrerequisites.length} external prerequisite flow${inactiveExternalPrerequisites.length === 1 ? " is" : "s are"} off. Turn external prerequisites on first or add them to the solution.`);
+          }
+        }
+
+        return { orderedFlows, blockedReasons };
+      }
+
+      function getInactiveExternalPrerequisites() {
+        const inactiveExternalPrerequisiteIds = new Set();
+        state.flows.forEach((flow) => {
+          if (!flow.inSolution) {
+            return;
+          }
+
+          flow.dependsOn.forEach((requiredId) => {
+            const requiredFlow = state.flows.get(requiredId);
+            if (requiredFlow && !requiredFlow.inSolution && !isFlowActive(requiredFlow)) {
+              inactiveExternalPrerequisiteIds.add(requiredFlow.id);
+            }
+          });
+        });
+
+        return Array.from(inactiveExternalPrerequisiteIds)
+          .map((id) => state.flows.get(id))
+          .filter(Boolean)
+          .sort(compareFlows);
+      }
+
+      function getInactivePrerequisites(flow) {
+        return Array.from(flow.dependsOn)
+          .map((id) => state.flows.get(id))
+          .filter((dependency) => dependency && !isFlowActive(dependency))
+          .sort(compareFlows);
+      }
+
+      async function bulkSetState(turnOn) {
+        const plan = getActivationPlan(turnOn);
+        if (plan.blockedReasons.length > 0) {
+          setMessage("error", plan.blockedReasons.join(" "));
+          return;
+        }
+
+        if (plan.orderedFlows.length === 0) {
+          setMessage("info", turnOn ? "All orderable solution flows are already on." : "All orderable solution flows are already off.");
+          return;
+        }
+
+        const confirmed = await confirmAction(
+          turnOn ? "Turn flows on in order?" : "Turn flows off?",
+          `This will ${turnOn ? "turn on" : "turn off"} ${plan.orderedFlows.length} solution flow${plan.orderedFlows.length === 1 ? "" : "s"} one at a time ${turnOn ? "in activation order" : "in reverse activation order"} and stop at the first failure.`,
+          turnOn ? "Turn on" : "Turn off"
+        );
+
+        if (!confirmed) {
+          return;
+        }
+
+        state.isWorking = true;
+        state.workingText = turnOn ? "Turning flows on in activation order..." : "Turning flows off in reverse activation order...";
+        render();
+
+        let updatedCount = 0;
+        try {
+          for (const flow of plan.orderedFlows) {
+            state.workingText = `${turnOn ? "Turning on" : "Turning off"} ${flow.name}...`;
+            render();
+            await updateFlowState(flow, turnOn);
+            updatedCount += 1;
+          }
+
+          state.message = {
+            severity: "success",
+            text: `${turnOn ? "Turned on" : "Turned off"} ${updatedCount} solution flow${updatedCount === 1 ? "" : "s"}.`
+          };
+        } catch (error) {
+          state.message = {
+            severity: "error",
+            text: `${turnOn ? "Activation" : "Deactivation"} stopped after ${updatedCount} successful update${updatedCount === 1 ? "" : "s"}: ${getFlowStateErrorMessage(error, turnOn)}`
+          };
+        } finally {
+          state.isWorking = false;
+          state.workingText = "";
+          render();
+        }
+      }
+
+      async function setSingleFlowState(flow, turnOn) {
+        if (flow.hasCycle) {
+          setMessage("error", `${flow.name} is in a circular dependency and cannot be safely ordered.`);
+          return;
+        }
+
+        if (turnOn) {
+          const inactivePrerequisites = getInactivePrerequisites(flow);
+          if (inactivePrerequisites.length > 0) {
+            setMessage("error", `Turn on prerequisite flow${inactivePrerequisites.length === 1 ? "" : "s"} first: ${inactivePrerequisites.map((dependency) => dependency.name).join(", ")}.`);
+            return;
+          }
+        }
+
+        const confirmed = await confirmAction(
+          `${turnOn ? "Turn on" : "Turn off"} ${flow.name}?`,
+          `This updates the cloud flow row in Dataverse. ${turnOn ? "Activation can fail if required connection references, environment variables, or child flows are not ready." : "Dependent flows may fail while this flow is off."}`,
+          turnOn ? "Turn on" : "Turn off"
+        );
+
+        if (!confirmed) {
+          return;
+        }
+
+        state.isWorking = true;
+        state.workingText = `${turnOn ? "Turning on" : "Turning off"} ${flow.name}...`;
+        render();
+
+        try {
+          await updateFlowState(flow, turnOn);
+          state.message = { severity: "success", text: `${flow.name} is now ${turnOn ? "on" : "off"}.` };
+        } catch (error) {
+          state.message = { severity: "error", text: `Could not ${turnOn ? "turn on" : "turn off"} ${flow.name}: ${getFlowStateErrorMessage(error, turnOn)}` };
+        } finally {
+          state.isWorking = false;
+          state.workingText = "";
+          render();
+        }
+      }
+
+      async function updateFlowState(flow, turnOn) {
+        if (!flow.inSolution) {
+          throw new Error(`${flow.name} is outside the selected solution and was not changed.`);
+        }
+
+        await getWebApi().updateRecord("workflow", flow.id, {
+          statecode: turnOn ? ACTIVE_STATE : DRAFT_STATE,
+          statuscode: turnOn ? ACTIVE_STATUS : DRAFT_STATUS
+        });
+
+        flow.stateCode = turnOn ? ACTIVE_STATE : DRAFT_STATE;
+        flow.statusCode = turnOn ? ACTIVE_STATUS : DRAFT_STATUS;
+        flow.stateLabel = turnOn ? "On" : "Off";
+        flow.statusLabel = turnOn ? "Activated" : "Draft";
+      }
+
+      async function openFlowDetails(flow) {
+        try {
+          const url = await buildFlowDetailsUrl(flow);
+          if (url) {
+            openExternalUrl(url);
+            return;
+          }
+
+          await openWorkflowRecord(flow);
+        } catch (error) {
+          try {
+            await openWorkflowRecord(flow);
+          } catch (fallbackError) {
+            setMessage("error", `Could not open ${flow.name}: ${getErrorMessage(error)} ${getErrorMessage(fallbackError)}`);
+          }
+        }
+      }
+
+      async function openEnvironmentVariable(environmentVariable) {
+        state.environmentVariableEditor = {
+          variableId: environmentVariable.id,
+          valueId: "",
+          value: "",
+          isLoading: true,
+          isSaving: false,
+          error: "",
+          multipleActiveValues: false,
+          currentValueHidden: environmentVariable.typeCode === ENVIRONMENT_VARIABLE_TYPE_SECRET
+        };
+        render();
+
+        try {
+          const valueResult = await retrieveActiveEnvironmentVariableValue(environmentVariable, environmentVariable.typeCode !== ENVIRONMENT_VARIABLE_TYPE_SECRET);
+          const editor = state.environmentVariableEditor;
+          if (!editor || editor.variableId !== environmentVariable.id) {
+            return;
+          }
+
+          editor.valueId = valueResult.valueRecord ? valueResult.valueRecord.id : "";
+          editor.value = valueResult.valueRecord ? valueResult.valueRecord.value : "";
+          editor.multipleActiveValues = valueResult.activeValueCount > 1;
+          editor.isLoading = false;
+        } catch (error) {
+          const editor = state.environmentVariableEditor;
+          if (editor && editor.variableId === environmentVariable.id) {
+            editor.error = `Could not load current value: ${getErrorMessage(error)}`;
+            editor.isLoading = false;
+          }
+        } finally {
+          render();
+        }
+      }
+
+      async function buildFlowDetailsUrl(flow) {
+        const environmentName = await getEnvironmentName();
+        const flowId = flow.resourceId || flow.workflowIdUnique || flow.id;
+
+        if (!environmentName || !flowId) {
+          return "";
+        }
+
+        const makerPortalUrl = getPowerAutomatePortalUrl();
+        const solutionSegment = state.currentSolution && flow.inSolution
+          ? `/solutions/${encodeURIComponent(state.currentSolution.solutionId)}`
+          : "";
+
+        return `${makerPortalUrl}/environments/${encodeURIComponent(environmentName)}${solutionSegment}/flows/${encodeURIComponent(flowId)}/details`;
+      }
+
+      async function saveEnvironmentVariableEditor() {
+        const editor = state.environmentVariableEditor;
+        if (!editor || editor.isLoading || editor.isSaving) {
+          return;
+        }
+
+        const environmentVariable = state.environmentVariables.get(editor.variableId);
+        if (!environmentVariable) {
+          editor.error = "Environment variable is no longer loaded.";
+          render();
+          return;
+        }
+
+        if (!hasNonEmptyValue(editor.value)) {
+          editor.error = "Enter a current value before saving.";
+          render();
+          return;
+        }
+
+        editor.isSaving = true;
+        editor.error = "";
+        render();
+
+        try {
+          const valueId = await upsertEnvironmentVariableCurrentValue(environmentVariable, editor.valueId, editor.value);
+          environmentVariable.currentValueId = valueId || editor.valueId;
+          environmentVariable.hasCurrentValue = true;
+          environmentVariable.hasValue = true;
+          state.environmentVariableEditor = null;
+          state.message = { severity: "success", text: `Saved current value for ${getEnvironmentVariableLabel(environmentVariable)}.` };
+        } catch (error) {
+          const currentEditor = state.environmentVariableEditor;
+          if (currentEditor && currentEditor.variableId === environmentVariable.id) {
+            currentEditor.error = `Could not save current value: ${getErrorMessage(error)}`;
+            currentEditor.isSaving = false;
+          }
+        } finally {
+          render();
+        }
+      }
+
+      async function upsertEnvironmentVariableCurrentValue(environmentVariable, currentValueId, value) {
+        const webApi = getWebApi();
+        if (currentValueId) {
+          if (typeof webApi.updateRecord !== "function") {
+            throw new Error("Dataverse Web API updateRecord is not available.");
+          }
+
+          await webApi.updateRecord("environmentvariablevalue", currentValueId, {
+            value,
+            statecode: 0,
+            statuscode: 1
+          });
+          return currentValueId;
+        }
+
+        if (typeof webApi.createRecord !== "function") {
+          throw new Error("Dataverse Web API createRecord is not available.");
+        }
+
+        const result = await webApi.createRecord("environmentvariablevalue", {
+          schemaname: buildEnvironmentVariableValueSchemaName(environmentVariable),
+          value,
+          "EnvironmentVariableDefinitionId@odata.bind": `/environmentvariabledefinitions(${environmentVariable.id})`
+        });
+        return normalizeGuid(result && (result.id || result.entityReference && result.entityReference.id)) || "";
+      }
+
+      function closeEnvironmentVariableEditor() {
+        state.environmentVariableEditor = null;
+        render();
+      }
+
+      async function openEnvironmentVariablesList() {
+        const editor = state.environmentVariableEditor;
+        if (!editor) {
+          return;
+        }
+
+        try {
+          const url = await buildEnvironmentVariablesListUrl();
+          if (!url) {
+            throw new Error("Pass the Power Platform environment ID in the environmentName parameter to open the maker Environment variables list.");
+          }
+
+          openExternalUrl(url);
+        } catch (error) {
+          const currentEditor = state.environmentVariableEditor;
+          if (currentEditor) {
+            currentEditor.error = `Could not open Default Solution Environment variables list: ${getErrorMessage(error)}`;
+            render();
+          }
+        }
+      }
+
+      async function buildEnvironmentVariablesListUrl() {
+        const environmentName = getPowerPlatformEnvironmentId();
+        const defaultSolution = await getDefaultSolution();
+
+        if (!environmentName || !defaultSolution.solutionId) {
+          return "";
+        }
+
+        return `${getPowerAppsPortalUrl()}/environments/${encodeURIComponent(environmentName)}/solutions/${encodeURIComponent(defaultSolution.solutionId)}/objects/environment%20variables`;
+      }
+
+      async function getDefaultSolution() {
+        if (state.defaultSolution) {
+          return state.defaultSolution;
+        }
+
+        state.defaultSolution = await retrieveDefaultSolution();
+        return state.defaultSolution;
+      }
+
+      async function retrieveDefaultSolution() {
+        const filter = "uniquename eq 'Default'";
+        const records = await retrieveAll(
+          "solution",
+          `?$select=solutionid,uniquename,friendlyname,version,ismanaged&$filter=${encodeURIComponent(filter)}&$top=1`
+        );
+        const solution = records.map(mapSolution)[0];
+        if (!solution) {
+          throw new Error("Default Solution could not be found.");
+        }
+
+        return solution;
+      }
+
+      function getPowerAutomatePortalUrl() {
+        const configuredCloud = (initialOptions.cloud || "").toLowerCase();
+        if (configuredCloud === "gcc") {
+          return "https://make.gov.powerautomate.us";
+        }
+        if (configuredCloud === "gcchigh" || configuredCloud === "gcc-high" || configuredCloud === "high") {
+          return "https://make.high.powerautomate.us";
+        }
+        if (configuredCloud === "dod") {
+          return "https://make.powerautomate.appsplatform.us";
+        }
+        if (configuredCloud === "china" || configuredCloud === "mooncake") {
+          return "https://flow.partner.microsoftonline.cn";
+        }
+
+        const host = getClientUrlHost();
+        if (host.endsWith(".crm9.dynamics.com")) {
+          return "https://make.gov.powerautomate.us";
+        }
+        if (host.endsWith(".microsoftdynamics.us")) {
+          return "https://make.high.powerautomate.us";
+        }
+        if (host.endsWith(".crm.appsplatform.us")) {
+          return "https://make.powerautomate.appsplatform.us";
+        }
+        if (host.endsWith(".crm.dynamics.cn")) {
+          return "https://flow.partner.microsoftonline.cn";
+        }
+
+        return "https://make.powerautomate.com";
+      }
+
+      function getPowerAppsPortalUrl() {
+        const configuredCloud = (initialOptions.cloud || "").toLowerCase();
+        if (configuredCloud === "gcc") {
+          return "https://make.gov.powerapps.us";
+        }
+        if (configuredCloud === "gcchigh" || configuredCloud === "gcc-high" || configuredCloud === "high") {
+          return "https://make.high.powerapps.us";
+        }
+        if (configuredCloud === "dod") {
+          return "https://make.powerapps.appsplatform.us";
+        }
+        if (configuredCloud === "china" || configuredCloud === "mooncake") {
+          return "https://make.powerapps.partner.microsoftonline.cn";
+        }
+
+        const host = getClientUrlHost();
+        if (host.endsWith(".crm9.dynamics.com")) {
+          return "https://make.gov.powerapps.us";
+        }
+        if (host.endsWith(".microsoftdynamics.us")) {
+          return "https://make.high.powerapps.us";
+        }
+        if (host.endsWith(".crm.appsplatform.us")) {
+          return "https://make.powerapps.appsplatform.us";
+        }
+        if (host.endsWith(".crm.dynamics.cn")) {
+          return "https://make.powerapps.partner.microsoftonline.cn";
+        }
+
+        return "https://make.powerapps.com";
+      }
+
+      function getClientUrlHost() {
+        try {
+          return new URL(getClientUrl()).hostname.toLowerCase();
+        } catch (error) {
+          return window.location.hostname.toLowerCase();
+        }
+      }
+
+      async function getEnvironmentName() {
+        if (state.environmentName) {
+          return state.environmentName;
+        }
+
+        if (state.environmentNamePromise) {
+          return state.environmentNamePromise;
+        }
+
+        state.environmentNamePromise = retrieveEnvironmentName();
+        state.environmentName = await state.environmentNamePromise;
+        return state.environmentName;
+      }
+
+      async function retrieveEnvironmentName() {
+        const records = await retrieveAll("organization", "?$select=organizationid&$top=1");
+        const organization = records[0] || {};
+        return normalizeGuid(readString(organization, "organizationid")) || "";
+      }
+
+      function getPowerPlatformEnvironmentId() {
+        const configuredEnvironment = normalizeGuid(state.environmentName || initialOptions.environmentName);
+        if (configuredEnvironment) {
+          return configuredEnvironment;
+        }
+
+        const environmentId = getUrlCandidates()
+          .map((url) => {
+            const match = normalizeUrlText(url).match(/\/environments\/([0-9a-f-]{36})(?:[/?#]|$)/i);
+            return match ? normalizeGuid(match[1]) : "";
+          })
+          .find(Boolean);
+
+        return environmentId || "";
+      }
+
+      function getUrlCandidates() {
+        const urls = [window.location.href, document.referrer];
+
+        try {
+          urls.push(window.parent.location.href);
+        } catch (error) {
+          // Parent can be cross-origin in some host shells.
+        }
+
+        try {
+          urls.push(window.top.location.href);
+        } catch (error) {
+          // Top can be cross-origin in some host shells.
+        }
+
+        return urls.filter(Boolean);
+      }
+
+      function normalizeUrlText(value) {
+        let text = String(value || "");
+
+        for (let index = 0; index < 3; index += 1) {
+          try {
+            const decoded = decodeURIComponent(text);
+            if (decoded === text) {
+              break;
+            }
+            text = decoded;
+          } catch (error) {
+            break;
+          }
+        }
+
+        return text;
+      }
+
+      function openExternalUrl(url) {
+        const xrm = getXrm();
+        if (xrm && xrm.Navigation && typeof xrm.Navigation.openUrl === "function") {
+          void xrm.Navigation.openUrl(url, { openInNewWindow: true });
+          return;
+        }
+
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+
+      async function openWorkflowRecord(flow) {
+        const xrm = getXrm();
+        if (!xrm || !xrm.Navigation || typeof xrm.Navigation.openForm !== "function") {
+          throw new Error("Neither Power Automate URL navigation nor model-driven record navigation is available.");
+        }
+
+        await xrm.Navigation.openForm({
+          entityName: "workflow",
+          entityId: flow.id
+        });
+      }
+
+      async function openEnvironmentVariableRecord(environmentVariable) {
+        const xrm = getXrm();
+        if (!xrm || !xrm.Navigation || typeof xrm.Navigation.openForm !== "function") {
+          throw new Error("Neither Power Apps URL navigation nor model-driven record navigation is available.");
+        }
+
+        await xrm.Navigation.openForm({
+          entityName: "environmentvariabledefinition",
+          entityId: environmentVariable.id
+        });
+      }
+
+      function render() {
+        app.replaceChildren();
+        const shell = createElement("section", "fdv-shell");
+        app.appendChild(shell);
+
+        renderHeader(shell);
+        renderMessage(shell);
+
+        if (state.solutionMatches.length > 0) {
+          renderSolutionMatches(shell);
+        }
+
+        renderStats(shell);
+
+        const contentGrid = createElement("div", "fdv-content-grid");
+        shell.appendChild(contentGrid);
+        renderTable(contentGrid);
+        renderEnvironmentVariableEditor();
+      }
+
+      function renderHeader(host) {
+        const header = createElement("header", "fdv-header");
+        host.appendChild(header);
+
+        const titleBlock = createElement("div", "fdv-title-block");
+        header.appendChild(titleBlock);
+        titleBlock.appendChild(createElement("h1", "fdv-title", "Flow Dependency Viewer"));
+        titleBlock.appendChild(createElement("p", "fdv-subtitle", "Model-driven app web resource for flow dependencies, activation order, and flow state controls."));
+
+        const toolbar = createElement("div", "fdv-toolbar");
+        header.appendChild(toolbar);
+
+        const solutionField = createElement("div", "fdv-field fdv-solution-field");
+        toolbar.appendChild(solutionField);
+        solutionField.appendChild(createElement("label", "", "Solution"));
+        const picker = createElement("div", "fdv-picker");
+        solutionField.appendChild(picker);
+        const solutionInput = document.createElement("input");
+        solutionInput.className = "fdv-input";
+        solutionInput.placeholder = "Search solutions or paste a solution ID";
+        solutionInput.value = state.solutionQuery;
+        solutionInput.disabled = state.isLoading || state.isWorking;
+        solutionInput.setAttribute("role", "combobox");
+        solutionInput.setAttribute("aria-autocomplete", "list");
+        solutionInput.setAttribute("aria-expanded", String(state.isSolutionPickerOpen));
+        const pickerPanel = createElement("div", "fdv-picker-panel");
+        pickerPanel.setAttribute("role", "listbox");
+        pickerPanel.hidden = true;
+        solutionInput.addEventListener("input", () => {
+          state.solutionQuery = solutionInput.value;
+          scheduleSolutionSearch(solutionInput.value, pickerPanel);
+        });
+        solutionInput.addEventListener("focus", () => {
+          scheduleSolutionSearch(solutionInput.value, pickerPanel);
+        });
+        solutionInput.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            state.isSolutionPickerOpen = false;
+            renderSolutionPickerResults(pickerPanel);
+            void loadSolution(solutionInput.value);
+          } else if (event.key === "Escape") {
+            state.isSolutionPickerOpen = false;
+            renderSolutionPickerResults(pickerPanel);
+          } else if (event.key === "ArrowDown") {
+            const firstOption = pickerPanel.querySelector("button");
+            if (firstOption) {
+              event.preventDefault();
+              firstOption.focus();
+            }
+          }
+        });
+        solutionField.addEventListener("focusout", () => {
+          window.setTimeout(() => {
+            if (!solutionField.contains(document.activeElement)) {
+              state.isSolutionPickerOpen = false;
+              renderSolutionPickerResults(pickerPanel);
+            }
+          }, 100);
+        });
+        picker.appendChild(solutionInput);
+        picker.appendChild(pickerPanel);
+        renderSolutionPickerResults(pickerPanel);
+
+        toolbar.appendChild(createButton("Load", "primary", () => {
+          void loadSolution(state.solutionQuery);
+        }, state.isLoading || state.isWorking));
+
+        toolbar.appendChild(createButton("Refresh", "secondary", () => {
+          const reference = state.currentSolution ? state.currentSolution.solutionId : state.solutionQuery;
+          void loadSolution(reference);
+        }, state.isLoading || state.isWorking || (!state.currentSolution && !state.solutionQuery)));
+
+        if (state.enableActivationCommands) {
+          toolbar.appendChild(createButton("Turn all on in order", "primary", () => {
+            void bulkSetState(true);
+          }, state.isLoading || state.isWorking || state.flows.size === 0));
+          toolbar.appendChild(createButton("Turn all off", "danger", () => {
+            void bulkSetState(false);
+          }, state.isLoading || state.isWorking || state.flows.size === 0));
+        }
+      }
+
+      function renderMessage(host) {
+        const text = state.isWorking && state.workingText ? state.workingText : state.message.text;
+        const severity = state.isWorking ? "info" : state.message.severity;
+        host.appendChild(createElement("div", `fdv-message fdv-message-${severity}`, text));
+      }
+
+      function renderStats(host) {
+        const solutionFlows = getSortedFlows().filter((flow) => flow.inSolution);
+        const activeFlows = solutionFlows.filter(isFlowActive);
+        const externalFlows = getSortedFlows().filter((flow) => !flow.inSolution);
+        const cycleFlows = solutionFlows.filter((flow) => flow.hasCycle);
+
+        const stats = createElement("div", "fdv-stats");
+        host.appendChild(stats);
+        appendStat(stats, String(solutionFlows.length), "Solution flows");
+        appendStat(stats, String(activeFlows.length), "On");
+        appendStat(stats, String(solutionFlows.length - activeFlows.length), "Off");
+        appendStat(stats, String(state.dependencies.length), "Flow dependencies");
+        appendStat(stats, String(state.environmentVariableDependencies.length), "Variable dependencies");
+        appendStat(stats, String(getMissingEnvironmentVariableCount()), "Missing values");
+        appendStat(stats, String(externalFlows.length), "External flows");
+        appendStat(stats, String(cycleFlows.length), "Circular");
+      }
+
+      function renderSolutionMatches(host) {
+        const card = createElement("section", "fdv-card");
+        host.appendChild(card);
+        const header = createElement("div", "fdv-card-header");
+        header.appendChild(createElement("div", "fdv-card-title", "Matching solutions"));
+        card.appendChild(header);
+
+        const list = createElement("div", "fdv-match-list");
+        card.appendChild(list);
+
+        state.solutionMatches.forEach((solution) => {
+          const match = createElement("div", "fdv-match");
+          const label = createElement("div");
+          label.appendChild(createElement("div", "fdv-flow-name", getSolutionLabel(solution)));
+          label.appendChild(createElement("div", "fdv-flow-meta", `${solution.solutionId} ${solution.isManaged ? "managed" : "unmanaged"}`));
+          match.appendChild(label);
+          match.appendChild(createButton("Load", "primary", () => {
+            state.solutionQuery = solution.uniqueName || solution.solutionId;
+            void loadSolution(solution.solutionId);
+          }, state.isLoading || state.isWorking));
+          list.appendChild(match);
+        });
+      }
+
+      function renderTable(host) {
+        const card = createElement("section", "fdv-card");
+        host.appendChild(card);
+
+        const header = createElement("div", "fdv-card-header");
+        card.appendChild(header);
+        header.appendChild(createElement("div", "fdv-card-title", "Dependency table"));
+
+        const searchField = createElement("div", "fdv-field");
+        searchField.style.maxWidth = "22rem";
+        searchField.appendChild(createElement("label", "", "Filter flows"));
+        const searchInput = document.createElement("input");
+        searchInput.className = "fdv-input";
+        searchInput.placeholder = "Search by flow, dependency, or variable name";
+        searchInput.value = state.searchQuery;
+        searchInput.addEventListener("input", () => {
+          state.searchQuery = searchInput.value;
+          render();
+        });
+        searchField.appendChild(searchInput);
+        header.appendChild(searchField);
+
+        const tableWrap = createElement("div", "fdv-table-wrap");
+        card.appendChild(tableWrap);
+
+        const table = document.createElement("table");
+        table.className = "fdv-table";
+        tableWrap.appendChild(table);
+
+        const thead = document.createElement("thead");
+        table.appendChild(thead);
+        const headerRow = document.createElement("tr");
+        thead.appendChild(headerRow);
+        ["Activation order", "Flow", "State", "Depends on", "Environment variables", "Depended on by", "Actions"].forEach((heading) => {
+          headerRow.appendChild(createElement("th", "", heading));
+        });
+
+        const tbody = document.createElement("tbody");
+        table.appendChild(tbody);
+
+        const visibleFlows = getFilteredFlows();
+        if (visibleFlows.length === 0) {
+          const row = document.createElement("tr");
+          const cell = document.createElement("td");
+          cell.colSpan = 7;
+          cell.appendChild(createElement("div", "fdv-empty", state.flows.size === 0 ? "No flow dependency data loaded." : "No flows match the current filter."));
+          row.appendChild(cell);
+          tbody.appendChild(row);
+          return;
+        }
+
+        visibleFlows.forEach((flow) => {
+          const row = document.createElement("tr");
+          row.id = `flow-${flow.id}`;
+          if (flow.id === state.selectedFlowId) {
+            row.className = "fd-selected";
+          }
+          if (flow.id === state.highlightedFlowId) {
+            row.className = `${row.className} fd-highlight`.trim();
+          }
+
+          row.appendChild(renderOrderCell(flow));
+          row.appendChild(renderFlowCell(flow));
+          row.appendChild(renderStateCell(flow));
+          row.appendChild(renderDependencyCell(flow.dependsOn));
+          row.appendChild(renderEnvironmentVariableCell(flow.environmentVariableIds));
+          row.appendChild(renderDependencyCell(flow.dependedOnBy));
+          row.appendChild(renderActionsCell(flow));
+          tbody.appendChild(row);
+        });
+      }
+
+      function jumpToFlow(flowId) {
+        state.selectedFlowId = flowId;
+        state.highlightedFlowId = flowId;
+        state.searchQuery = "";
+        window.clearTimeout(state.highlightTimer);
+        render();
+
+        window.setTimeout(() => {
+          const row = document.getElementById(`flow-${flowId}`);
+          if (row) {
+            row.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+          }
+        }, 0);
+
+        state.highlightTimer = window.setTimeout(() => {
+          if (state.highlightedFlowId === flowId) {
+            state.highlightedFlowId = null;
+            render();
+          }
+        }, 2200);
+      }
+
+      function renderOrderCell(flow) {
+        const cell = document.createElement("td");
+        if (flow.hasCycle) {
+          cell.appendChild(createBadge("Cycle", "error"));
+          return cell;
+        }
+
+        if (flow.activationOrder === null) {
+          cell.appendChild(createElement("span", "fdv-muted", "Not ordered"));
+          return cell;
+        }
+
+        cell.appendChild(createBadge(String(flow.activationOrder), flow.inSolution ? "on" : "warning"));
+        if (!flow.inSolution) {
+          cell.appendChild(createElement("div", "fdv-flow-meta", "External"));
+        }
+
+        return cell;
+      }
+
+      function renderFlowCell(flow) {
+        const cell = document.createElement("td");
+        const flowButton = createElement("button", "fdv-flow-link", flow.name);
+        flowButton.type = "button";
+        flowButton.title = "Open flow details";
+        flowButton.addEventListener("click", () => {
+          void openFlowDetails(flow);
+        });
+        cell.appendChild(flowButton);
+
+        const details = [
+          flow.uniqueName,
+          flow.inSolution ? "in selected solution" : "outside selected solution",
+          flow.missingFromWorkflowTable ? "missing workflow row" : ""
+        ].filter(Boolean).join(" | ");
+        cell.appendChild(createElement("div", "fdv-flow-meta", details));
+        return cell;
+      }
+
+      function renderStateCell(flow) {
+        const cell = document.createElement("td");
+        cell.appendChild(createBadge(getStateText(flow), isFlowActive(flow) ? "on" : "off"));
+        if (flow.statusLabel && flow.statusLabel !== getStateText(flow)) {
+          cell.appendChild(createElement("div", "fdv-flow-meta", flow.statusLabel));
+        }
+
+        return cell;
+      }
+
+      function renderDependencyCell(flowIds) {
+        const cell = document.createElement("td");
+        const list = createElement("div", "fdv-chip-list");
+        cell.appendChild(list);
+
+        const flows = Array.from(flowIds)
+          .map((id) => state.flows.get(id))
+          .filter(Boolean)
+          .sort(compareFlows);
+
+        if (flows.length === 0) {
+          list.appendChild(createElement("span", "fdv-muted", "None"));
+          return cell;
+        }
+
+        flows.forEach((flow) => {
+          const chip = createElement("button", `fdv-chip${flow.inSolution ? "" : " fdv-chip-external"}`, `${flow.name}${flow.inSolution ? "" : " (external)"}`);
+          chip.type = "button";
+          chip.title = flow.inSolution ? "Jump to this flow in the table" : "External flow: not in the selected solution";
+          chip.addEventListener("click", () => {
+            jumpToFlow(flow.id);
+          });
+          list.appendChild(chip);
+        });
+
+        return cell;
+      }
+
+      function renderEnvironmentVariableCell(environmentVariableIds) {
+        const cell = document.createElement("td");
+        const list = createElement("div", "fdv-chip-list");
+        cell.appendChild(list);
+
+        const environmentVariables = Array.from(environmentVariableIds)
+          .map((id) => state.environmentVariables.get(id))
+          .filter(Boolean)
+          .sort(compareEnvironmentVariables);
+
+        if (environmentVariables.length === 0) {
+          list.appendChild(createElement("span", "fdv-muted", "None"));
+          return cell;
+        }
+
+        environmentVariables.forEach((environmentVariable) => {
+          const isMissingValue = isEnvironmentVariableValueMissing(environmentVariable);
+          const chip = createElement(
+            "button",
+            `fdv-chip${isMissingValue ? " fdv-chip-error" : ""}`,
+            getEnvironmentVariableLabel(environmentVariable)
+          );
+          chip.type = "button";
+          chip.title = `${environmentVariable.schemaName || environmentVariable.id} | ${getEnvironmentVariableValueStatusText(environmentVariable)} | Set current value`;
+          chip.addEventListener("click", () => {
+            void openEnvironmentVariable(environmentVariable);
+          });
+          list.appendChild(chip);
+        });
+
+        return cell;
+      }
+
+      function renderEnvironmentVariableEditor() {
+        const editor = state.environmentVariableEditor;
+        if (!editor) {
+          return;
+        }
+
+        const environmentVariable = state.environmentVariables.get(editor.variableId) || createMissingEnvironmentVariable(editor.variableId);
+        const overlay = createElement("div", "fdv-dialog-backdrop");
+        overlay.addEventListener("click", (event) => {
+          if (event.target === overlay && !editor.isSaving) {
+            closeEnvironmentVariableEditor();
+          }
+        });
+
+        const dialog = createElement("section", "fdv-dialog");
+        dialog.setAttribute("role", "dialog");
+        dialog.setAttribute("aria-modal", "true");
+        dialog.setAttribute("aria-labelledby", "fdv-environment-variable-editor-title");
+        overlay.appendChild(dialog);
+
+        const header = createElement("div", "fdv-dialog-header");
+        dialog.appendChild(header);
+        const title = createElement("h2", "fdv-dialog-title", "Set environment variable value");
+        title.id = "fdv-environment-variable-editor-title";
+        header.appendChild(title);
+        header.appendChild(createButton("Close", "secondary", closeEnvironmentVariableEditor, editor.isSaving));
+
+        const body = createElement("div", "fdv-dialog-body");
+        dialog.appendChild(body);
+
+        const detailGrid = createElement("div", "fdv-detail-grid");
+        body.appendChild(detailGrid);
+        appendDetail(detailGrid, "Display name", getEnvironmentVariableLabel(environmentVariable));
+        appendDetail(detailGrid, "Name", environmentVariable.schemaName || environmentVariable.id);
+        appendDetail(detailGrid, "Type", environmentVariable.typeLabel || getEnvironmentVariableTypeText(environmentVariable));
+        appendDetail(detailGrid, "Value status", getEnvironmentVariableValueStatusText(environmentVariable));
+
+        if (editor.multipleActiveValues) {
+          body.appendChild(createElement("div", "fdv-message fdv-message-warning", "Multiple active current-value rows exist. Saving updates the first active row returned by Dataverse."));
+        }
+
+        if (editor.currentValueHidden) {
+          body.appendChild(createElement("div", "fdv-message fdv-message-info", "Secret current values are not displayed. Saving replaces or creates the current value for this variable."));
+        }
+
+        if (editor.error) {
+          body.appendChild(createElement("div", "fdv-message fdv-message-error", editor.error));
+        }
+
+        const valueField = createElement("div", "fdv-field");
+        valueField.style.maxWidth = "none";
+        body.appendChild(valueField);
+        valueField.appendChild(createElement("label", "", "Current value"));
+
+        const valueInput = editor.currentValueHidden ? document.createElement("input") : document.createElement("textarea");
+        valueInput.className = editor.currentValueHidden ? "fdv-input" : "fdv-textarea";
+        valueInput.disabled = editor.isLoading || editor.isSaving;
+        valueInput.placeholder = editor.isLoading ? "Loading current value..." : "Enter current value";
+        valueInput.value = editor.value;
+        if (editor.currentValueHidden) {
+          valueInput.type = "password";
+          valueInput.autocomplete = "new-password";
+        }
+        if (environmentVariable.typeCode === ENVIRONMENT_VARIABLE_TYPE_NUMBER) {
+          valueInput.inputMode = "decimal";
+        }
+        valueInput.addEventListener("input", () => {
+          editor.value = valueInput.value;
+          editor.error = "";
+        });
+        valueField.appendChild(valueInput);
+
+        const footer = createElement("div", "fdv-dialog-footer");
+        dialog.appendChild(footer);
+        footer.appendChild(createButton("Open Default Solution list", "secondary", () => {
+          void openEnvironmentVariablesList();
+        }, editor.isLoading || editor.isSaving));
+
+        const footerActions = createElement("div", "fdv-actions");
+        footer.appendChild(footerActions);
+        footerActions.appendChild(createButton("Cancel", "secondary", closeEnvironmentVariableEditor, editor.isSaving));
+        footerActions.appendChild(createButton(editor.isSaving ? "Saving..." : "Save current value", "primary", () => {
+          void saveEnvironmentVariableEditor();
+        }, editor.isLoading || editor.isSaving));
+
+        app.appendChild(overlay);
+
+        if (!editor.isLoading && !editor.isSaving) {
+          window.setTimeout(() => valueInput.focus(), 0);
+        }
+      }
+
+      function renderActionsCell(flow) {
+        const cell = document.createElement("td");
+        const actions = createElement("div", "fdv-actions");
+        cell.appendChild(actions);
+
+        if (!state.enableActivationCommands) {
+          actions.appendChild(createElement("span", "fdv-muted", "Commands disabled"));
+          return cell;
+        }
+
+        if (!flow.inSolution) {
+          actions.appendChild(createElement("span", "fdv-muted", "External flow"));
+          return cell;
+        }
+
+        const turnOn = !isFlowActive(flow);
+        actions.appendChild(createButton(turnOn ? "Turn on" : "Turn off", turnOn ? "primary" : "danger", () => {
+          void setSingleFlowState(flow, turnOn);
+        }, state.isLoading || state.isWorking));
+
+        return cell;
+      }
+
+      function getFilteredFlows() {
+        const query = state.searchQuery.trim().toLowerCase();
+        const flows = getSortedFlows();
+        if (!query) {
+          return flows;
+        }
+
+        return flows.filter((flow) => {
+          const dependencyNames = Array.from(flow.dependsOn).concat(Array.from(flow.dependedOnBy))
+            .map((id) => {
+              const dependency = state.flows.get(id);
+              return dependency ? dependency.name : "";
+            })
+            .join(" ");
+          const environmentVariableNames = Array.from(flow.environmentVariableIds)
+            .map((id) => state.environmentVariables.get(id))
+            .filter(Boolean)
+            .map((environmentVariable) => `${environmentVariable.displayName} ${environmentVariable.schemaName}`)
+            .join(" ");
+          return `${flow.name} ${flow.uniqueName} ${dependencyNames} ${environmentVariableNames}`.toLowerCase().includes(query);
+        });
+      }
+
+      function getSortedFlows() {
+        return Array.from(state.flows.values()).sort((left, right) => {
+          if (left.inSolution !== right.inSolution) {
+            return left.inSolution ? -1 : 1;
+          }
+
+          const leftOrder = left.activationOrder || Number.MAX_SAFE_INTEGER;
+          const rightOrder = right.activationOrder || Number.MAX_SAFE_INTEGER;
+          if (leftOrder !== rightOrder) {
+            return leftOrder - rightOrder;
+          }
+
+          if (left.hasCycle !== right.hasCycle) {
+            return left.hasCycle ? 1 : -1;
+          }
+
+          return compareFlows(left, right);
+        });
+      }
+
+      function appendStat(host, value, label) {
+        const stat = createElement("div", "fdv-stat");
+        stat.appendChild(createElement("div", "fdv-stat-value", value));
+        stat.appendChild(createElement("div", "fdv-stat-label", label));
+        host.appendChild(stat);
+      }
+
+      function appendDetail(host, label, value) {
+        const detail = createElement("div", "fdv-detail");
+        detail.appendChild(createElement("div", "fdv-detail-label", label));
+        detail.appendChild(createElement("div", "fdv-detail-value", value || "-"));
+        host.appendChild(detail);
+      }
+
+      function createButton(label, variant, onClick, disabled) {
+        const button = createElement("button", `fdv-button fdv-button-${variant}`, label);
+        button.type = "button";
+        button.disabled = !!disabled;
+        button.addEventListener("click", onClick);
+        return button;
+      }
+
+      function createBadge(text, variant) {
+        return createElement("span", `fdv-badge fdv-badge-${variant}`, text);
+      }
+
+      function createElement(tagName, className, textContent) {
+        const element = document.createElement(tagName);
+        if (className) {
+          element.className = className;
+        }
+        if (textContent !== undefined) {
+          element.textContent = textContent;
+        }
+        return element;
+      }
+
+      async function confirmAction(title, text, confirmButtonLabel) {
+        const xrm = getXrm();
+        if (xrm && xrm.Navigation && typeof xrm.Navigation.openConfirmDialog === "function") {
+          const result = await xrm.Navigation.openConfirmDialog({
+            title,
+            text,
+            confirmButtonLabel,
+            cancelButtonLabel: "Cancel"
+          });
+          return result.confirmed;
+        }
+
+        return window.confirm(`${title}\n\n${text}`);
+      }
+
+      function mapSolution(record) {
+        return {
+          solutionId: normalizeGuid(readString(record, "solutionid")) || "",
+          uniqueName: readString(record, "uniquename"),
+          friendlyName: readString(record, "friendlyname"),
+          version: readString(record, "version"),
+          isManaged: readBoolean(record, "ismanaged")
+        };
+      }
+
+      function mapFlow(record, inSolution) {
+        const id = normalizeGuid(readString(record, "workflowid")) || "";
+        const name = readString(record, "name") || readString(record, "uniquename") || id;
+        return {
+          id,
+          name,
+          uniqueName: readString(record, "uniquename"),
+          resourceId: normalizeGuid(readString(record, "resourceid")) || "",
+          workflowIdUnique: normalizeGuid(readString(record, "workflowidunique")) || "",
+          stateCode: readNumber(record, "statecode"),
+          statusCode: readNumber(record, "statuscode"),
+          stateLabel: readFormattedString(record, "statecode"),
+          statusLabel: readFormattedString(record, "statuscode"),
+          modifiedOn: readString(record, "modifiedon"),
+          inSolution,
+          dependsOn: new Set(),
+          dependedOnBy: new Set(),
+          environmentVariableIds: new Set(),
+          activationOrder: null,
+          hasCycle: false,
+          missingFromWorkflowTable: false
+        };
+      }
+
+      function mapEnvironmentVariable(record) {
+        const id = normalizeGuid(readString(record, "environmentvariabledefinitionid")) || "";
+        const schemaName = readString(record, "schemaname");
+        const displayName = readString(record, "displayname");
+        return {
+          id,
+          schemaName,
+          displayName,
+          typeCode: readNumber(record, "type"),
+          typeLabel: readFormattedString(record, "type"),
+          currentValueId: "",
+          hasDefaultValue: false,
+          hasCurrentValue: false,
+          hasValue: false,
+          missingFromDefinitionTable: false
+        };
+      }
+
+      function mapEnvironmentVariableValue(record, includeValue) {
+        return {
+          id: normalizeGuid(readString(record, "environmentvariablevalueid")) || "",
+          definitionId: normalizeGuid(
+            readString(record, "_environmentvariabledefinitionid_value") || readString(record, "environmentvariabledefinitionid")
+          ) || "",
+          schemaName: readString(record, "schemaname"),
+          value: includeValue ? readString(record, "value") : "",
+          hasValue: includeValue ? hasNonEmptyValue(record.value) : false,
+          stateCode: readNumber(record, "statecode"),
+          statusCode: readNumber(record, "statuscode"),
+          modifiedOn: readString(record, "modifiedon")
+        };
+      }
+
+      function createMissingEnvironmentVariable(id) {
+        return {
+          id,
+          schemaName: "",
+          displayName: `Unknown environment variable ${id}`,
+          typeCode: null,
+          typeLabel: "Unknown",
+          currentValueId: "",
+          hasDefaultValue: false,
+          hasCurrentValue: false,
+          hasValue: false,
+          missingFromDefinitionTable: true
+        };
+      }
+
+      function createMissingFlow(id, inSolution) {
+        return {
+          id,
+          name: `Unknown flow ${id}`,
+          uniqueName: "",
+          resourceId: "",
+          workflowIdUnique: "",
+          stateCode: null,
+          statusCode: null,
+          stateLabel: "Unknown",
+          statusLabel: "Unknown",
+          modifiedOn: "",
+          inSolution,
+          dependsOn: new Set(),
+          dependedOnBy: new Set(),
+          environmentVariableIds: new Set(),
+          activationOrder: null,
+          hasCycle: false,
+          missingFromWorkflowTable: true
+        };
+      }
+
+      function isFlowActive(flow) {
+        return flow.stateCode === ACTIVE_STATE || flow.statusCode === ACTIVE_STATUS;
+      }
+
+      function getStateText(flow) {
+        if (flow.stateLabel) {
+          return flow.stateLabel;
+        }
+        if (flow.stateCode === ACTIVE_STATE) {
+          return "On";
+        }
+        if (flow.stateCode === DRAFT_STATE) {
+          return "Off";
+        }
+        return "Unknown";
+      }
+
+      function getSolutionLabel(solution) {
+        const displayName = solution.friendlyName || solution.uniqueName || solution.solutionId;
+        return solution.version ? `${displayName} (${solution.version})` : displayName;
+      }
+
+      function setMessage(severity, text) {
+        state.message = { severity, text };
+        render();
+      }
+
+      function compareFlows(left, right) {
+        return left.name.localeCompare(right.name, undefined, { sensitivity: "base" }) || left.id.localeCompare(right.id);
+      }
+
+      function compareEnvironmentVariables(left, right) {
+        return getEnvironmentVariableLabel(left).localeCompare(getEnvironmentVariableLabel(right), undefined, { sensitivity: "base" })
+          || left.id.localeCompare(right.id);
+      }
+
+      function getEnvironmentVariableLabel(environmentVariable) {
+        return environmentVariable.displayName || environmentVariable.schemaName || environmentVariable.id;
+      }
+
+      function getEnvironmentVariableTypeText(environmentVariable) {
+        if (environmentVariable.typeCode === ENVIRONMENT_VARIABLE_TYPE_NUMBER) {
+          return "Number";
+        }
+        if (environmentVariable.typeCode === ENVIRONMENT_VARIABLE_TYPE_SECRET) {
+          return "Secret";
+        }
+
+        return "Environment variable";
+      }
+
+      function isEnvironmentVariableValueMissing(environmentVariable) {
+        return environmentVariable.missingFromDefinitionTable || !environmentVariable.hasValue;
+      }
+
+      function getEnvironmentVariableValueStatusText(environmentVariable) {
+        if (environmentVariable.missingFromDefinitionTable) {
+          return "Definition row not found";
+        }
+        if (environmentVariable.hasCurrentValue) {
+          return "Current value set";
+        }
+        if (environmentVariable.hasDefaultValue) {
+          return "Default value set";
+        }
+
+        return "Missing value";
+      }
+
+      function getMissingEnvironmentVariableCount(environmentVariableMap = state.environmentVariables, dependencies = state.environmentVariableDependencies) {
+        const environmentVariableIds = distinctNormalizedGuids(dependencies.map((dependency) => dependency.environmentVariableId));
+        return environmentVariableIds
+          .map((id) => environmentVariableMap.get(id))
+          .filter(Boolean)
+          .filter(isEnvironmentVariableValueMissing)
+          .length;
+      }
+
+      function buildEnvironmentVariableValueSchemaName(environmentVariable) {
+        const baseName = (environmentVariable.schemaName || `environmentvariable_${environmentVariable.id.replace(/-/g, "")}`)
+          .replace(/[^A-Za-z0-9_]/g, "_");
+        const suffix = "_Value";
+        return `${baseName.slice(0, 100 - suffix.length)}${suffix}`;
+      }
+
+      function readString(record, fieldName) {
+        const value = record[fieldName];
+        return typeof value === "string" ? value : "";
+      }
+
+      function readFormattedString(record, fieldName) {
+        return readString(record, `${fieldName}@OData.Community.Display.V1.FormattedValue`);
+      }
+
+      function readNumber(record, fieldName) {
+        const value = record[fieldName];
+        if (typeof value === "number") {
+          return value;
+        }
+        if (typeof value === "string") {
+          const parsed = Number(value);
+          return Number.isFinite(parsed) ? parsed : null;
+        }
+        return null;
+      }
+
+      function readBoolean(record, fieldName) {
+        const value = record[fieldName];
+        return typeof value === "boolean" ? value : false;
+      }
+
+      function hasNonEmptyValue(value) {
+        return value !== null && value !== undefined && String(value).trim() !== "";
+      }
+
+      function distinctNormalizedGuids(values) {
+        const ids = new Set();
+        values.forEach((value) => {
+          const id = normalizeGuid(value);
+          if (id) {
+            ids.add(id);
+          }
+        });
+        return Array.from(ids);
+      }
+
+      function normalizeGuid(value) {
+        if (!value) {
+          return null;
+        }
+
+        const normalized = String(value).trim().replace(/[{}]/g, "").toLowerCase();
+        return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(normalized)
+          ? normalized
+          : null;
+      }
+
+      function buildInCondition(attributeName, values) {
+        return [
+          `      <condition attribute="${attributeName}" operator="in">`,
+          ...values.map((value) => `        <value>${escapeXml(value)}</value>`),
+          "      </condition>"
+        ].join("");
+      }
+
+      function toFetchXmlQuery(fetchXml) {
+        return `?fetchXml=${encodeURIComponent(fetchXml)}`;
+      }
+
+      function chunk(values, size) {
+        const chunks = [];
+        for (let index = 0; index < values.length; index += size) {
+          chunks.push(values.slice(index, index + size));
+        }
+        return chunks;
+      }
+
+      function escapeODataString(value) {
+        return value.replace(/'/g, "''");
+      }
+
+      function escapeXml(value) {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&apos;");
+      }
+
+      function getErrorMessage(error) {
+        if (error instanceof Error) {
+          return error.message;
+        }
+        if (error && typeof error === "object" && typeof error.message === "string") {
+          return error.message;
+        }
+        return String(error);
+      }
+
+      function getFlowStateErrorMessage(error, turnOn) {
+        const message = getErrorMessage(error);
+        if (!turnOn) {
+          return message;
+        }
+
+        const environmentVariableName = getMissingEnvironmentVariableName(message);
+        if (!environmentVariableName) {
+          return message;
+        }
+
+        return `Power Automate blocked activation because environment variable "${environmentVariableName}" does not have a current value in this environment. Set the environment variable value, then retry. Details: ${message}`;
+      }
+
+      function getMissingEnvironmentVariableName(message) {
+        if (!message.includes("XrmEnvironmentVariableAttributeNotFound")) {
+          return "";
+        }
+
+        const match = message.match(/environment variable '([^']+)'/i);
+        return match ? match[1] : "";
+      }
+    })();
+  </script>
+</body>
+</html>

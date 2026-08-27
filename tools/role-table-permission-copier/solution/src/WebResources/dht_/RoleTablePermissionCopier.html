@@ -1,0 +1,1893 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Role Table Permission Copier</title>
+  <script>
+    (() => {
+      const param = new URLSearchParams(window.location.search).get("scoutTheme");
+      const theme =
+        param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --cp-bg: #f7f4ef;
+      --cp-bg-elevated: #fcfbf8;
+      --cp-surface: #ffffff;
+      --cp-surface-soft: #f5f5f5;
+      --cp-border: #dedede;
+      --cp-border-strong: #919191;
+      --cp-text: #242424;
+      --cp-text-muted: #5c5c5c;
+      --cp-text-soft: #6f6f6f;
+      --cp-accent: #b11f4b;
+      --cp-accent-hover: #9a1a41;
+      --cp-accent-soft: rgba(177, 31, 75, 0.08);
+      --cp-accent-fg: #ffffff;
+      --cp-success: #16a34a;
+      --cp-danger: #dc2626;
+      --cp-warning: #f59e0b;
+      --cp-link: #0078d4;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+      --cp-overlay: rgba(255, 255, 255, 0.8);
+      --cp-panel: rgba(255, 255, 255, 0.86);
+      --cp-panel-strong: rgba(255, 255, 255, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.55);
+      --cp-highlight: rgba(177, 31, 75, 0.12);
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --cp-bg: #3d3b3a;
+      --cp-bg-elevated: #343231;
+      --cp-surface: #292929;
+      --cp-surface-soft: #2e2e2e;
+      --cp-border: #474747;
+      --cp-border-strong: #5f5f5f;
+      --cp-text: #dedede;
+      --cp-text-muted: #919191;
+      --cp-text-soft: #b0b0b0;
+      --cp-accent: #fd8ea1;
+      --cp-accent-hover: #fb7b91;
+      --cp-accent-soft: rgba(253, 142, 161, 0.14);
+      --cp-accent-fg: #1a1a1a;
+      --cp-success: #4ade80;
+      --cp-danger: #f87171;
+      --cp-warning: #fbbf24;
+      --cp-link: #4da6ff;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      --cp-overlay: rgba(41, 41, 41, 0.88);
+      --cp-panel: rgba(41, 41, 41, 0.72);
+      --cp-panel-strong: rgba(41, 41, 41, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.04);
+      --cp-highlight: rgba(253, 142, 161, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--cp-bg);
+      color: var(--cp-text);
+      font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 14px;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .panel {
+      overflow: hidden;
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      background: var(--cp-surface);
+      box-shadow: 0 0 2px var(--cp-border), 0 1px 2px var(--cp-border);
+    }
+
+    .header,
+    .section {
+      padding: 16px;
+      border-bottom: 1px solid var(--cp-border);
+    }
+
+    .header {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      justify-content: space-between;
+      background: var(--cp-bg-elevated);
+    }
+
+    h1,
+    h2 {
+      margin: 0;
+      font-weight: 600;
+    }
+
+    h1 {
+      font-size: 19px;
+    }
+
+    h2 {
+      font-size: 15px;
+    }
+
+    .subtitle,
+    .hint,
+    .muted {
+      color: var(--cp-text-muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .subtitle {
+      margin-top: 4px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .setup-grid {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+    }
+
+    .setup-grid .button {
+      margin-top: 20px;
+    }
+
+    .role-picker {
+      margin-top: 12px;
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      background: var(--cp-bg-elevated);
+      padding: 12px;
+    }
+
+    .role-picker-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .clone-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: end;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--cp-border);
+    }
+
+    .role-list {
+      max-height: 220px;
+      overflow: auto;
+      margin-top: 8px;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface);
+    }
+
+    .role-option {
+      width: 100%;
+      border: 0;
+      border-bottom: 1px solid var(--cp-border);
+      background: var(--cp-surface);
+      color: var(--cp-text);
+      cursor: pointer;
+      padding: 9px 10px;
+      text-align: left;
+    }
+
+    .role-option:hover,
+    .role-option.selected {
+      background: var(--cp-accent-soft);
+    }
+
+    .role-option:last-child {
+      border-bottom: 0;
+    }
+
+    .role-title {
+      font-weight: 600;
+    }
+
+    .role-meta {
+      margin-top: 2px;
+      color: var(--cp-text-muted);
+      font-family: Consolas, "Courier New", Courier, monospace;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .copy-grid {
+      grid-template-columns: minmax(280px, 0.8fr) minmax(360px, 1.2fr);
+      align-items: stretch;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .sort-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 132px;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--cp-text-muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .input,
+    .select {
+      width: 100%;
+      min-height: 36px;
+      border: 1px solid var(--cp-border-strong);
+      border-radius: 0.625rem;
+      background: var(--cp-surface);
+      color: var(--cp-text);
+      padding: 7px 10px;
+    }
+
+    .input:focus,
+    .select:focus {
+      outline: 2px solid var(--cp-accent);
+      outline-offset: 1px;
+    }
+
+    .button {
+      min-height: 36px;
+      border: 1px solid var(--cp-accent);
+      border-radius: 0.625rem;
+      background: var(--cp-accent);
+      color: var(--cp-accent-fg);
+      cursor: pointer;
+      font-weight: 600;
+      padding: 7px 12px;
+      white-space: nowrap;
+    }
+
+    .button:hover {
+      background: var(--cp-accent-hover);
+    }
+
+    .button.secondary {
+      border-color: var(--cp-border-strong);
+      background: var(--cp-surface);
+      color: var(--cp-text);
+    }
+
+    .button.secondary:hover {
+      background: var(--cp-surface-soft);
+    }
+
+    .button.danger {
+      border-color: var(--cp-danger);
+      background: var(--cp-surface);
+      color: var(--cp-danger);
+    }
+
+    .button:disabled {
+      cursor: not-allowed;
+      opacity: 0.62;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--cp-border);
+      background: var(--cp-surface);
+    }
+
+    .stat {
+      min-height: 72px;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface-soft);
+      padding: 10px;
+    }
+
+    .stat-value {
+      font-size: 21px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .stat-label {
+      margin-top: 3px;
+      color: var(--cp-text-muted);
+      font-size: 12px;
+    }
+
+    .picker {
+      display: flex;
+      flex-direction: column;
+      min-height: 430px;
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      background: var(--cp-bg-elevated);
+      padding: 12px;
+    }
+
+    .picker-header {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .picker-list {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface);
+    }
+
+    .table-option {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 8px;
+      align-items: start;
+      width: 100%;
+      border: 0;
+      border-bottom: 1px solid var(--cp-border);
+      background: var(--cp-surface);
+      color: var(--cp-text);
+      cursor: pointer;
+      padding: 9px 10px;
+      text-align: left;
+    }
+
+    .table-option:hover,
+    .table-option.selected {
+      background: var(--cp-accent-soft);
+    }
+
+    .table-option:last-child {
+      border-bottom: 0;
+    }
+
+    .table-title {
+      font-weight: 600;
+    }
+
+    .table-meta {
+      margin-top: 2px;
+      color: var(--cp-text-muted);
+      font-family: Consolas, "Courier New", Courier, monospace;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .chips {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 23px;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface-soft);
+      color: var(--cp-text);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 8px;
+      white-space: nowrap;
+    }
+
+    .chip.custom {
+      border-color: var(--cp-accent);
+    }
+
+    .message {
+      display: none;
+      margin-top: 10px;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface-soft);
+      color: var(--cp-text);
+      padding: 10px 12px;
+    }
+
+    .message.visible {
+      display: block;
+    }
+
+    .message.error {
+      border-color: var(--cp-danger);
+    }
+
+    .message.success {
+      border-color: var(--cp-success);
+    }
+
+    .message.warning {
+      border-color: var(--cp-warning);
+    }
+
+    .permissions {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .preview-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(220px, 0.28fr);
+      gap: 12px;
+      align-items: end;
+    }
+
+    .permission-card {
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface-soft);
+      padding: 9px;
+    }
+
+    .permission-name {
+      font-weight: 600;
+    }
+
+    .permission-depth {
+      margin-top: 4px;
+      color: var(--cp-text-muted);
+      font-size: 12px;
+    }
+
+    .footer-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      padding: 16px;
+      background: var(--cp-bg-elevated);
+    }
+
+    .checkbox-row {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      color: var(--cp-text-muted);
+      font-size: 12px;
+    }
+
+    .checkbox-row input {
+      accent-color: var(--cp-accent);
+    }
+
+    .empty {
+      padding: 18px 12px;
+      color: var(--cp-text-muted);
+      text-align: center;
+    }
+
+    @media (max-width: 980px) {
+      .setup-grid,
+      .role-picker-grid,
+      .clone-grid,
+      .preview-header,
+      .copy-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats,
+      .permissions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="panel">
+      <div class="header">
+        <div>
+          <h1>Role Table Permission Copier</h1>
+          <div class="subtitle">Copy one table's role privileges to many other tables with better search, custom-table selection, and a preview before writing.</div>
+        </div>
+        <select id="themeSelect" class="select" aria-label="Theme" style="max-width: 128px;">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+
+      <div class="section">
+        <div class="grid setup-grid">
+          <div class="field">
+            <label for="dataverseUrl">Dataverse org URL</label>
+            <input id="dataverseUrl" class="input" type="url" placeholder="https://org.crm9.dynamics.com">
+            <div class="hint" style="margin-top: 4px;">Auto-filled from the current app when this runs as a Dataverse web resource. You can override it if needed.</div>
+          </div>
+          <button id="loadRolesButton" class="button" type="button">Load roles</button>
+        </div>
+        <input id="roleEditorUrl" type="hidden">
+        <div id="rolePickerPanel" class="role-picker" hidden>
+          <div class="role-picker-grid">
+            <div class="field">
+              <label for="roleSearch">Select role</label>
+              <input id="roleSearch" class="input" type="search" placeholder="Search roles by name or business unit">
+            </div>
+            <button id="loadButton" class="button" type="button" disabled>Load selected role</button>
+          </div>
+          <div id="roleList" class="role-list"></div>
+          <div class="clone-grid">
+            <div class="field">
+              <label for="cloneRoleName">Clone selected role as</label>
+              <input id="cloneRoleName" class="input" type="text" placeholder="New security role name">
+            </div>
+            <button id="cloneRoleButton" class="button secondary" type="button" disabled>Clone role</button>
+          </div>
+        </div>
+        <div id="message" class="message" role="status"></div>
+        <div class="hint" style="margin-top: 8px;">Best used as an HTML web resource inside the target Dataverse environment. If opened outside Dataverse, browser authentication/CORS may block writes.</div>
+      </div>
+
+      <div class="stats" aria-label="Copy summary">
+        <div class="stat">
+          <div id="roleName" class="stat-value">-</div>
+          <div class="stat-label">Loaded role</div>
+        </div>
+        <div class="stat">
+          <div id="tableCount" class="stat-value">0</div>
+          <div class="stat-label">Tables loaded</div>
+        </div>
+        <div class="stat">
+          <div id="selectedTargetCount" class="stat-value">0</div>
+          <div class="stat-label">Target tables selected</div>
+        </div>
+        <div class="stat">
+          <div id="sourcePrivilegeCount" class="stat-value">0</div>
+          <div class="stat-label">Source permissions to copy</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div style="margin-bottom: 14px;">
+          <div class="preview-header">
+            <div>
+              <h2>Preview source permissions</h2>
+              <div class="hint">Use an existing table as the pattern, or manually set the permissions to apply.</div>
+            </div>
+            <div class="field">
+              <label for="permissionMode">Permission source</label>
+              <select id="permissionMode" class="select">
+                <option value="sourceTable">Use selected source table</option>
+                <option value="manual">Set permissions manually</option>
+              </select>
+            </div>
+          </div>
+          <div id="sourcePermissionPreview" class="permissions"></div>
+        </div>
+
+        <div class="grid copy-grid">
+          <div class="picker">
+            <div class="picker-header">
+              <div>
+                <h2>Pick source table</h2>
+                <div class="hint">This table's current permissions become the copy pattern. Optional when permissions are set manually.</div>
+              </div>
+            </div>
+            <input id="sourceSearch" class="input" type="search" placeholder="Search source table by display or logical name">
+            <div class="sort-row">
+              <select id="sourceSortBy" class="select" aria-label="Sort source tables by">
+                <option value="displayName">Sort by display name</option>
+                <option value="logicalName">Sort by logical name</option>
+                <option value="schemaName">Sort by schema name</option>
+              </select>
+              <select id="sourceSortDirection" class="select" aria-label="Source sort direction">
+                <option value="asc">A to Z</option>
+                <option value="desc">Z to A</option>
+              </select>
+            </div>
+            <div class="toolbar">
+              <label class="checkbox-row"><input id="sourceCustomOnlyToggle" type="checkbox"> Show custom only</label>
+            </div>
+            <div id="sourceList" class="picker-list" style="margin-top: 8px;"></div>
+          </div>
+
+          <div class="picker">
+            <div class="picker-header">
+              <div>
+                <h2>Pick target tables</h2>
+                <div class="hint">Select one, filtered results, or every custom table.</div>
+              </div>
+            </div>
+            <input id="targetSearch" class="input" type="search" placeholder="Search target tables by display or logical name">
+            <div class="sort-row">
+              <select id="targetSortBy" class="select" aria-label="Sort target tables by">
+                <option value="displayName">Sort by display name</option>
+                <option value="logicalName">Sort by logical name</option>
+                <option value="schemaName">Sort by schema name</option>
+              </select>
+              <select id="targetSortDirection" class="select" aria-label="Target sort direction">
+                <option value="asc">A to Z</option>
+                <option value="desc">Z to A</option>
+              </select>
+            </div>
+            <div class="toolbar">
+              <button id="selectCustomButton" class="button secondary" type="button">Select all custom tables</button>
+              <button id="selectFilteredButton" class="button secondary" type="button">Select filtered</button>
+              <button id="clearTargetsButton" class="button secondary" type="button">Clear</button>
+              <label class="checkbox-row"><input id="targetCustomOnlyToggle" type="checkbox"> Show custom only</label>
+            </div>
+            <div id="targetList" class="picker-list" style="margin-top: 8px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-actions">
+        <label class="checkbox-row"><input id="replaceMode" type="checkbox" checked> Replace selected target table permissions to match source table</label>
+        <button id="previewButton" class="button secondary" type="button">Refresh preview</button>
+        <button id="copyButton" class="button" type="button" disabled>Copy permissions</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const TABLE_VERBS = ["Create", "Read", "Write", "Delete", "Append", "AppendTo", "Assign", "Share"];
+      const DEPTH_LABELS = {
+        0: "User",
+        1: "Business Unit",
+        2: "Parent/Child BU",
+        3: "Organization",
+        4: "Record Filter"
+      };
+      const EMPTY_GUID = "00000000-0000-0000-0000-000000000000";
+      const state = {
+        apiRoot: "",
+        currentRolePrivileges: [],
+        currentRolePrivilegeById: new Map(),
+        dataverseUrl: "",
+        manualDepths: createEmptyManualDepths(),
+        permissionMode: "sourceTable",
+        privilegeByName: new Map(),
+        role: null,
+        roles: [],
+        roleId: "",
+        selectedRole: null,
+        sourceTable: null,
+        sourceVisibleTables: [],
+        tables: [],
+        targetSelected: new Set(),
+        targetVisibleTables: [],
+        xrm: null
+      };
+
+      document.addEventListener("DOMContentLoaded", init);
+
+      function init() {
+        state.xrm = getXrm();
+        initThemeSelector();
+        initializeDefaults();
+
+        document.getElementById("loadRolesButton").addEventListener("click", loadRoleList);
+        document.getElementById("loadButton").addEventListener("click", loadRoleData);
+        document.getElementById("cloneRoleButton").addEventListener("click", cloneSelectedRole);
+        document.getElementById("cloneRoleName").addEventListener("input", updateRoleLoadButton);
+        document.getElementById("roleSearch").addEventListener("input", renderRoleList);
+        document.getElementById("sourceSearch").addEventListener("input", renderTablePickers);
+        document.getElementById("targetSearch").addEventListener("input", renderTablePickers);
+        document.getElementById("sourceSortBy").addEventListener("change", renderTablePickers);
+        document.getElementById("sourceSortDirection").addEventListener("change", renderTablePickers);
+        document.getElementById("targetSortBy").addEventListener("change", renderTablePickers);
+        document.getElementById("targetSortDirection").addEventListener("change", renderTablePickers);
+        document.getElementById("sourceCustomOnlyToggle").addEventListener("change", renderTablePickers);
+        document.getElementById("targetCustomOnlyToggle").addEventListener("change", renderTablePickers);
+        document.getElementById("selectCustomButton").addEventListener("click", selectAllCustomTables);
+        document.getElementById("selectFilteredButton").addEventListener("click", selectFilteredTargets);
+        document.getElementById("clearTargetsButton").addEventListener("click", clearTargets);
+        document.getElementById("previewButton").addEventListener("click", renderPreview);
+        document.getElementById("copyButton").addEventListener("click", copyPermissions);
+        document.getElementById("permissionMode").addEventListener("change", function () {
+          state.permissionMode = document.getElementById("permissionMode").value;
+          renderTablePickers();
+          renderPreview();
+        });
+
+        renderTablePickers();
+        renderPreview();
+        updateStats();
+      }
+
+      function initThemeSelector() {
+        const themeSelect = document.getElementById("themeSelect");
+        const theme = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+        themeSelect.value = theme;
+        themeSelect.addEventListener("change", function () {
+          document.documentElement.setAttribute("data-theme", themeSelect.value);
+        });
+      }
+
+      function initializeDefaults() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const roleUrl = urlParams.get("roleUrl") || "";
+        const roleId = urlParams.get("roleId") || parseRoleId(window.location.href);
+        const clientUrl = getCurrentOrgUrl();
+
+        if (roleUrl) {
+          document.getElementById("roleEditorUrl").value = roleUrl;
+        } else if (roleId) {
+          document.getElementById("roleEditorUrl").value = roleId;
+        }
+
+        if (clientUrl) {
+          document.getElementById("dataverseUrl").value = clientUrl;
+        }
+      }
+
+      async function loadRoleList() {
+        setLoading(true);
+        setMessage("", "");
+
+        try {
+          const dataverseUrl = normalizeDataverseUrl(document.getElementById("dataverseUrl").value.trim() || getClientUrl());
+          if (!dataverseUrl) {
+            throw new Error("Enter the Dataverse organization URL for this environment.");
+          }
+
+          state.dataverseUrl = dataverseUrl;
+          state.apiRoot = dataverseUrl + "/api/data/v9.2";
+          state.roles = await retrieveRoles();
+          state.selectedRole = null;
+          document.getElementById("rolePickerPanel").hidden = false;
+          renderRoleList();
+          setMessage("Loaded " + state.roles.length + " roles. Select one to continue.", "success");
+        } catch (error) {
+          setMessage(getErrorMessage(error), "error");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      async function loadRoleData() {
+        setLoading(true);
+        setMessage("", "");
+
+        try {
+          const roleInput = document.getElementById("roleEditorUrl").value.trim();
+          const roleId = state.selectedRole ? state.selectedRole.roleId : parseRoleId(roleInput);
+          const dataverseUrl = normalizeDataverseUrl(document.getElementById("dataverseUrl").value.trim() || getClientUrl());
+
+          if (!roleId) {
+            throw new Error("Load roles and select a role first.");
+          }
+
+          if (!dataverseUrl) {
+            throw new Error("Enter the Dataverse organization URL for this environment.");
+          }
+
+          await loadRoleDetails(roleId, dataverseUrl);
+          setMessage("Loaded role and table metadata.", "success");
+        } catch (error) {
+          setMessage(getErrorMessage(error), "error");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      async function loadRoleDetails(roleId, dataverseUrl) {
+        state.roleId = roleId;
+        state.dataverseUrl = dataverseUrl;
+        state.apiRoot = dataverseUrl + "/api/data/v9.2";
+
+        const results = await Promise.all([
+          retrieveRole(roleId),
+          retrieveRolePrivileges(roleId),
+          retrieveTables(),
+          retrievePrivileges()
+        ]);
+
+        state.role = results[0];
+        state.currentRolePrivileges = results[1];
+        state.currentRolePrivilegeById = new Map(state.currentRolePrivileges.map(function (rolePrivilege) {
+          return [cleanGuid(rolePrivilege.PrivilegeId), rolePrivilege];
+        }));
+        state.tables = results[2].filter(hasTablePrivileges).sort(compareTables);
+        state.privilegeByName = new Map(results[3].map(function (privilege) {
+          return [String(privilege.name || "").toLowerCase(), privilege];
+        }));
+
+        hydrateTablesWithPrivileges();
+        state.tables = state.tables.filter(function (table) {
+          return table.privilegeMap.size > 0;
+        });
+        renderTablePickers();
+        renderPreview();
+        updateStats();
+      }
+
+      async function retrieveRole(roleId) {
+        if (state.xrm && state.xrm.WebApi) {
+          return state.xrm.WebApi.retrieveRecord("role", roleId, "?$select=name,roleid,_businessunitid_value");
+        }
+
+        return rawFetchJson(state.apiRoot + "/roles(" + roleId + ")?$select=name,roleid,_businessunitid_value");
+      }
+
+      async function retrieveRoles() {
+        if (state.xrm && state.xrm.WebApi) {
+          return retrieveAllRecords("role", "?$select=name,roleid,_businessunitid_value&$orderby=name asc");
+        }
+
+        return rawFetchAll(state.apiRoot + "/roles?$select=name,roleid,_businessunitid_value&$orderby=name asc");
+      }
+
+      async function cloneSelectedRole() {
+        if (!state.selectedRole) {
+          setMessage("Select a role to clone first.", "warning");
+          return;
+        }
+
+        const newRoleName = document.getElementById("cloneRoleName").value.trim();
+        if (!newRoleName) {
+          setMessage("Enter a new role name before cloning.", "warning");
+          return;
+        }
+
+        const confirmed = window.confirm("Clone " + state.selectedRole.name + " as " + newRoleName + "?");
+        if (!confirmed) {
+          return;
+        }
+
+        setLoading(true);
+        setMessage("Cloning role...", "");
+
+        try {
+          const dataverseUrl = normalizeDataverseUrl(document.getElementById("dataverseUrl").value.trim() || getClientUrl());
+          state.dataverseUrl = dataverseUrl;
+          state.apiRoot = dataverseUrl + "/api/data/v9.2";
+
+          const sourceRole = state.selectedRole;
+          const sourcePrivileges = await retrieveRolePrivileges(sourceRole.roleId);
+          const newRole = await createRole(newRoleName, sourceRole.businessUnitId);
+          const newRoleId = cleanGuid(newRole.id || newRole.roleid);
+          const privilegesToAdd = sourcePrivileges.map(function (rolePrivilege) {
+            return {
+              BusinessUnitId: sourceRole.businessUnitId || EMPTY_GUID,
+              Depth: privilegeDepthToEnumName(rolePrivilege.Depth),
+              PrivilegeId: cleanGuid(rolePrivilege.PrivilegeId)
+            };
+          }).filter(function (rolePrivilege) {
+            return rolePrivilege.PrivilegeId;
+          });
+
+          if (privilegesToAdd.length > 0) {
+            await addPrivilegesToRole(privilegesToAdd, newRoleId);
+          }
+
+          state.selectedRole = {
+            businessUnitId: sourceRole.businessUnitId,
+            businessUnitName: sourceRole.businessUnitName,
+            name: newRoleName,
+            roleId: newRoleId
+          };
+          document.getElementById("roleEditorUrl").value = newRoleId;
+          document.getElementById("cloneRoleName").value = "";
+          await loadRoleDetails(newRoleId, dataverseUrl);
+          await loadRoleList();
+          state.selectedRole = {
+            businessUnitId: sourceRole.businessUnitId,
+            businessUnitName: sourceRole.businessUnitName,
+            name: newRoleName,
+            roleId: newRoleId
+          };
+          document.getElementById("roleEditorUrl").value = newRoleId;
+          renderRoleList();
+          updateRoleLoadButton();
+          setMessage("Cloned role as " + newRoleName + " and loaded it for editing.", "success");
+        } catch (error) {
+          setMessage("Could not clone role. " + getErrorMessage(error), "error");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      async function createRole(name, businessUnitId) {
+        const payload = {
+          name: name
+        };
+
+        if (businessUnitId) {
+          payload["businessunitid@odata.bind"] = "/businessunits(" + businessUnitId + ")";
+        }
+
+        if (state.xrm && state.xrm.WebApi) {
+          return state.xrm.WebApi.createRecord("role", payload);
+        }
+
+        return rawFetchJson(state.apiRoot + "/roles", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Prefer: "return=representation"
+          },
+          body: JSON.stringify(payload)
+        });
+      }
+
+      async function retrieveRolePrivileges(roleId) {
+        const options = "?$select=privilegeid,roleid,privilegedepthmask&$filter=roleid eq " + roleId;
+        const rows = state.xrm && state.xrm.WebApi
+          ? await retrieveAllRecords("roleprivileges", options)
+          : await rawFetchAll(state.apiRoot + "/roleprivilegescollection" + options);
+
+        return rows.map(function (row) {
+          return {
+            BusinessUnitId: cleanGuid(state.role && state.role["_businessunitid_value"]) || EMPTY_GUID,
+            Depth: privilegeDepthMaskToDepth(row.privilegedepthmask),
+            PrivilegeId: cleanGuid(row.privilegeid || row["_privilegeid_value"])
+          };
+        });
+      }
+
+      async function retrieveTables() {
+        const url = state.apiRoot + "/EntityDefinitions?$select=LogicalName,SchemaName,DisplayName,IsCustomEntity,IsIntersect,OwnershipType";
+        const rows = await rawFetchAll(url);
+        return rows.map(function (row) {
+          return {
+            displayName: getLocalizedLabel(row.DisplayName) || row.SchemaName || row.LogicalName,
+            isIntersect: row.IsIntersect === true,
+            logicalName: row.LogicalName || "",
+            ownershipType: row.OwnershipType || "",
+            privilegeMap: new Map(),
+            schemaName: row.SchemaName || row.LogicalName || "",
+            systemIsCustom: row.IsCustomEntity === true
+          };
+        }).filter(function (table) {
+          return table.logicalName && !table.isIntersect;
+        });
+      }
+
+      async function retrievePrivileges() {
+        if (state.xrm && state.xrm.WebApi) {
+          const result = await retrieveAllRecords("privilege", "?$select=privilegeid,name,accessright");
+          return result;
+        }
+
+        return rawFetchAll(state.apiRoot + "/privileges?$select=privilegeid,name,accessright");
+      }
+
+      async function retrieveAllRecords(entityName, options) {
+        const records = [];
+        let nextOptions = options;
+
+        while (nextOptions) {
+          const result = await state.xrm.WebApi.retrieveMultipleRecords(entityName, nextOptions, 5000);
+          records.push.apply(records, result.entities || []);
+          nextOptions = result.nextLink ? result.nextLink.substring(result.nextLink.indexOf("?")) : "";
+        }
+
+        return records;
+      }
+
+      async function rawFetchAll(url) {
+        const records = [];
+        let nextUrl = url;
+
+        while (nextUrl) {
+          const data = await rawFetchJson(nextUrl);
+          records.push.apply(records, data.value || []);
+          nextUrl = data["@odata.nextLink"] || "";
+        }
+
+        return records;
+      }
+
+      async function rawFetchJson(url, options) {
+        const requestOptions = Object.assign({
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+            "OData-MaxVersion": "4.0",
+            "OData-Version": "4.0"
+          }
+        }, options || {});
+        requestOptions.headers = Object.assign({
+          Accept: "application/json",
+          "OData-MaxVersion": "4.0",
+          "OData-Version": "4.0"
+        }, options && options.headers ? options.headers : {});
+        const response = await fetch(url, requestOptions);
+
+        if (!response.ok) {
+          throw new Error("Dataverse Web API returned HTTP " + response.status + " for " + url + ".");
+        }
+
+        return response.status === 204 ? {} : response.json();
+      }
+
+      function hydrateTablesWithPrivileges() {
+        for (const table of state.tables) {
+          table.privilegeMap = new Map();
+          for (const verb of TABLE_VERBS) {
+            const privilege = findPrivilegeForTable(table, verb);
+            if (privilege) {
+              table.privilegeMap.set(verb, privilege);
+            }
+          }
+        }
+      }
+
+      function hasTablePrivileges(table) {
+        const suffixes = getPrivilegeSuffixes(table);
+        return suffixes.length > 0;
+      }
+
+      function findPrivilegeForTable(table, verb) {
+        const prefixes = ["prv" + verb];
+        const suffixes = getPrivilegeSuffixes(table);
+
+        for (const prefix of prefixes) {
+          for (const suffix of suffixes) {
+            const privilege = state.privilegeByName.get((prefix + suffix).toLowerCase());
+            if (privilege) {
+              return privilege;
+            }
+          }
+        }
+
+        return null;
+      }
+
+      function getPrivilegeSuffixes(table) {
+        const values = [
+          table.schemaName,
+          table.logicalName,
+          pascalizeLogicalName(table.logicalName)
+        ].filter(Boolean);
+        return Array.from(new Set(values));
+      }
+
+      function pascalizeLogicalName(logicalName) {
+        return String(logicalName || "").split("_").map(function (part) {
+          return part ? part.charAt(0).toUpperCase() + part.substring(1) : "";
+        }).join("_");
+      }
+
+      function renderTablePickers() {
+        const sourceSearch = document.getElementById("sourceSearch").value.trim().toLowerCase();
+        const targetSearch = document.getElementById("targetSearch").value.trim().toLowerCase();
+        const sourceCustomOnly = document.getElementById("sourceCustomOnlyToggle").checked;
+        const targetCustomOnly = document.getElementById("targetCustomOnlyToggle").checked;
+
+        state.sourceVisibleTables = sortTables(
+          filterTables(sourceSearch, sourceCustomOnly),
+          document.getElementById("sourceSortBy").value,
+          document.getElementById("sourceSortDirection").value
+        );
+        state.targetVisibleTables = sortTables(filterTables(targetSearch, targetCustomOnly).filter(function (table) {
+          return state.permissionMode !== "sourceTable" || !state.sourceTable || table.logicalName !== state.sourceTable.logicalName;
+        }), document.getElementById("targetSortBy").value, document.getElementById("targetSortDirection").value);
+
+        renderSourceList();
+        renderTargetList();
+        updateStats();
+      }
+
+      function filterTables(searchText, customOnly) {
+        return state.tables.filter(function (table) {
+          if (customOnly && !isUserCustomTable(table)) {
+            return false;
+          }
+
+          if (!searchText) {
+            return true;
+          }
+
+          return [
+            table.displayName,
+            table.logicalName,
+            table.schemaName,
+            isUserCustomTable(table) ? "custom" : "standard"
+          ].join(" ").toLowerCase().indexOf(searchText) >= 0;
+        });
+      }
+
+      function sortTables(tables, sortBy, direction) {
+        const multiplier = direction === "desc" ? -1 : 1;
+        return tables.slice().sort(function (left, right) {
+          const leftValue = getTableSortValue(left, sortBy);
+          const rightValue = getTableSortValue(right, sortBy);
+          const comparison = leftValue.localeCompare(rightValue, undefined, {
+            numeric: true,
+            sensitivity: "base"
+          });
+
+          if (comparison !== 0) {
+            return comparison * multiplier;
+          }
+
+          return left.displayName.localeCompare(right.displayName, undefined, {
+            numeric: true,
+            sensitivity: "base"
+          }) * multiplier;
+        });
+      }
+
+      function getTableSortValue(table, sortBy) {
+        if (sortBy === "logicalName") {
+          return table.logicalName || "";
+        }
+
+        if (sortBy === "schemaName") {
+          return table.schemaName || "";
+        }
+
+        return table.displayName || "";
+      }
+
+      function isUserCustomTable(table) {
+        if (!table.systemIsCustom) {
+          return false;
+        }
+
+        const logicalName = String(table.logicalName || "").toLowerCase();
+        const schemaName = String(table.schemaName || "").toLowerCase();
+        const prefix = getPublisherPrefix(logicalName);
+        const blockedPrefixes = [
+          "msdyn_",
+          "msdynce_",
+          "mspp_",
+          "msfp_",
+          "msft_",
+          "mspcat_",
+          "adx_",
+          "bot_",
+          "conversation_",
+          "dmsyn_"
+        ];
+
+        if (!prefix) {
+          return false;
+        }
+
+        return !blockedPrefixes.some(function (prefix) {
+          return logicalName.indexOf(prefix) === 0 || schemaName.indexOf(prefix) === 0;
+        });
+      }
+
+      function getPublisherPrefix(logicalName) {
+        const text = String(logicalName || "").toLowerCase();
+        const underscoreIndex = text.indexOf("_");
+        if (underscoreIndex <= 0) {
+          return "";
+        }
+
+        return text.substring(0, underscoreIndex + 1);
+      }
+
+      function renderRoleList() {
+        const list = document.getElementById("roleList");
+        const searchText = document.getElementById("roleSearch").value.trim().toLowerCase();
+        const roles = state.roles.map(getRoleOption).filter(function (role) {
+          if (!searchText) {
+            return true;
+          }
+
+          return [
+            role.name,
+            role.businessUnitName,
+            role.roleId
+          ].join(" ").toLowerCase().indexOf(searchText) >= 0;
+        });
+
+        list.textContent = "";
+        if (roles.length === 0) {
+          appendEmpty(list, state.roles.length === 0 ? "Enter an org URL and load roles." : "No roles match.");
+          updateRoleLoadButton();
+          return;
+        }
+
+        for (const role of roles) {
+          const button = document.createElement("button");
+          button.className = "role-option";
+          button.type = "button";
+          button.classList.toggle("selected", state.selectedRole && state.selectedRole.roleId === role.roleId);
+
+          const title = document.createElement("div");
+          title.className = "role-title";
+          title.textContent = role.name;
+
+          const meta = document.createElement("div");
+          meta.className = "role-meta";
+          meta.textContent = role.businessUnitName + " | " + role.roleId;
+
+          button.appendChild(title);
+          button.appendChild(meta);
+          button.addEventListener("click", function () {
+            state.selectedRole = role;
+            document.getElementById("roleEditorUrl").value = role.roleId;
+            renderRoleList();
+            updateRoleLoadButton();
+          });
+          list.appendChild(button);
+        }
+
+        updateRoleLoadButton();
+      }
+
+      function getRoleOption(record) {
+        return {
+          businessUnitId: cleanGuid(record["_businessunitid_value"]),
+          businessUnitName: record["_businessunitid_value@OData.Community.Display.V1.FormattedValue"] ||
+            record["_businessunitid_value"] ||
+            "(No business unit)",
+          name: record.name || "(Unnamed role)",
+          roleId: cleanGuid(record.roleid)
+        };
+      }
+
+      function updateRoleLoadButton() {
+        const button = document.getElementById("loadButton");
+        const cloneButton = document.getElementById("cloneRoleButton");
+        const cloneRoleName = document.getElementById("cloneRoleName").value.trim();
+        button.disabled = !state.selectedRole;
+        button.textContent = state.selectedRole ? "Load " + state.selectedRole.name : "Load selected role";
+        cloneButton.disabled = !state.selectedRole || !cloneRoleName;
+      }
+
+      function renderSourceList() {
+        const list = document.getElementById("sourceList");
+        list.textContent = "";
+
+        if (state.sourceVisibleTables.length === 0) {
+          appendEmpty(list, state.tables.length === 0 ? "Load a role first." : "No source tables match.");
+          return;
+        }
+
+        for (const table of state.sourceVisibleTables) {
+          const button = createTableOption(table, false);
+          button.classList.toggle("selected", state.sourceTable && state.sourceTable.logicalName === table.logicalName);
+          button.addEventListener("click", function () {
+            state.sourceTable = table;
+            state.permissionMode = "sourceTable";
+            document.getElementById("permissionMode").value = "sourceTable";
+            state.targetSelected.delete(table.logicalName);
+            renderTablePickers();
+            renderPreview();
+          });
+          list.appendChild(button);
+        }
+      }
+
+      function renderTargetList() {
+        const list = document.getElementById("targetList");
+        list.textContent = "";
+
+        if (state.targetVisibleTables.length === 0) {
+          appendEmpty(list, state.tables.length === 0 ? "Load a role first." : "No target tables match.");
+          return;
+        }
+
+        for (const table of state.targetVisibleTables) {
+          const label = createTableOption(table, true);
+          const checkbox = label.querySelector("input");
+          checkbox.checked = state.targetSelected.has(table.logicalName);
+          checkbox.addEventListener("change", function () {
+            if (checkbox.checked) {
+              state.targetSelected.add(table.logicalName);
+            } else {
+              state.targetSelected.delete(table.logicalName);
+            }
+            updateStats();
+            updateCopyButton();
+          });
+          list.appendChild(label);
+        }
+      }
+
+      function createTableOption(table, includeCheckbox) {
+        const wrapper = includeCheckbox ? document.createElement("label") : document.createElement("button");
+        wrapper.className = "table-option";
+        if (!includeCheckbox) {
+          wrapper.type = "button";
+        }
+
+        if (includeCheckbox) {
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.value = table.logicalName;
+          checkbox.style.accentColor = "var(--cp-accent)";
+          wrapper.appendChild(checkbox);
+        } else {
+          const spacer = document.createElement("span");
+          spacer.textContent = "";
+          wrapper.appendChild(spacer);
+        }
+
+        const content = document.createElement("span");
+        const title = document.createElement("div");
+        title.className = "table-title";
+        title.textContent = table.displayName;
+        const meta = document.createElement("div");
+        meta.className = "table-meta";
+        meta.textContent = table.logicalName + " | " + table.schemaName;
+        const chips = document.createElement("div");
+        chips.className = "chips";
+        chips.appendChild(createChip(isUserCustomTable(table) ? "Custom" : "Standard", isUserCustomTable(table) ? "custom" : ""));
+        chips.appendChild(createChip(String(table.privilegeMap.size) + " privileges", ""));
+
+        content.appendChild(title);
+        content.appendChild(meta);
+        content.appendChild(chips);
+        wrapper.appendChild(content);
+        return wrapper;
+      }
+
+      function renderPreview() {
+        const preview = document.getElementById("sourcePermissionPreview");
+        preview.textContent = "";
+        document.getElementById("permissionMode").value = state.permissionMode;
+
+        if (state.permissionMode === "manual") {
+          for (const verb of TABLE_VERBS) {
+            preview.appendChild(createManualPermissionCard(verb));
+          }
+
+          updateStats();
+          updateCopyButton();
+          return;
+        }
+
+        if (!state.sourceTable) {
+          appendEmpty(preview, "Choose a source table to preview its role permissions.");
+          updateStats();
+          updateCopyButton();
+          return;
+        }
+
+        const assignments = getSourceAssignments();
+        for (const assignment of assignments) {
+          const card = document.createElement("div");
+          card.className = "permission-card";
+          const name = document.createElement("div");
+          name.className = "permission-name";
+          name.textContent = assignment.verb;
+          const depth = document.createElement("div");
+          depth.className = "permission-depth";
+          depth.textContent = assignment.rolePrivilege ? depthLabel(assignment.rolePrivilege.Depth) : "None";
+          card.appendChild(name);
+          card.appendChild(depth);
+          preview.appendChild(card);
+        }
+
+        updateStats();
+        updateCopyButton();
+      }
+
+      function createManualPermissionCard(verb) {
+        const card = document.createElement("div");
+        card.className = "permission-card";
+
+        const name = document.createElement("label");
+        name.className = "permission-name";
+        name.textContent = verb;
+        name.setAttribute("for", "manualDepth_" + verb);
+
+        const select = document.createElement("select");
+        select.id = "manualDepth_" + verb;
+        select.className = "select";
+        select.style.marginTop = "6px";
+
+        const none = document.createElement("option");
+        none.value = "";
+        none.textContent = "None";
+        select.appendChild(none);
+
+        [0, 1, 2, 3].forEach(function (depth) {
+          const option = document.createElement("option");
+          option.value = String(depth);
+          option.textContent = depthLabel(depth);
+          select.appendChild(option);
+        });
+
+        select.value = state.manualDepths[verb];
+        select.addEventListener("change", function () {
+          state.manualDepths[verb] = select.value;
+          updateStats();
+          updateCopyButton();
+        });
+
+        card.appendChild(name);
+        card.appendChild(select);
+        return card;
+      }
+
+      function getSourceAssignments() {
+        if (state.permissionMode === "manual") {
+          return TABLE_VERBS.map(function (verb) {
+            const value = state.manualDepths[verb];
+            return {
+              privilege: null,
+              rolePrivilege: value === "" ? null : {
+                BusinessUnitId: cleanGuid(state.role && state.role["_businessunitid_value"]) || EMPTY_GUID,
+                Depth: Number(value),
+                PrivilegeId: EMPTY_GUID
+              },
+              verb: verb
+            };
+          });
+        }
+
+        if (!state.sourceTable) {
+          return [];
+        }
+
+        return TABLE_VERBS.map(function (verb) {
+          const privilege = state.sourceTable.privilegeMap.get(verb);
+          const rolePrivilege = privilege ? state.currentRolePrivilegeById.get(cleanGuid(privilege.privilegeid)) : null;
+          return {
+            privilege: privilege,
+            rolePrivilege: rolePrivilege || null,
+            verb: verb
+          };
+        });
+      }
+
+      function selectAllCustomTables() {
+        for (const table of state.tables) {
+          if (isUserCustomTable(table) && (state.permissionMode !== "sourceTable" || !state.sourceTable || table.logicalName !== state.sourceTable.logicalName)) {
+            state.targetSelected.add(table.logicalName);
+          }
+        }
+        renderTablePickers();
+        updateCopyButton();
+      }
+
+      function selectFilteredTargets() {
+        for (const table of state.targetVisibleTables) {
+          state.targetSelected.add(table.logicalName);
+        }
+        renderTablePickers();
+        updateCopyButton();
+      }
+
+      function clearTargets() {
+        state.targetSelected.clear();
+        renderTablePickers();
+        updateCopyButton();
+      }
+
+      async function copyPermissions() {
+        if (!state.role || state.targetSelected.size === 0 || !hasSourcePermissions()) {
+          return;
+        }
+
+        const replaceMode = document.getElementById("replaceMode").checked;
+        const sourceAssignments = getSourceAssignments();
+        const sourceGranted = sourceAssignments.filter(function (assignment) {
+          return assignment.rolePrivilege;
+        });
+        const selectedTargets = state.tables.filter(function (table) {
+          return state.targetSelected.has(table.logicalName);
+        });
+
+        if (sourceGranted.length === 0) {
+          setMessage("The source table has no assigned permissions on this role.", "warning");
+          return;
+        }
+
+        const confirmed = window.confirm("Copy " + sourceGranted.length + " source table permissions to " + selectedTargets.length + " target tables?");
+        if (!confirmed) {
+          return;
+        }
+
+        setLoading(true);
+        setMessage("Copying table permissions...", "");
+
+        try {
+          const toAdd = [];
+          let removed = 0;
+          let skipped = 0;
+
+          for (const table of selectedTargets) {
+            const verbsToRemove = replaceMode ? TABLE_VERBS : sourceGranted.map(function (assignment) {
+              return assignment.verb;
+            });
+
+            for (const verb of verbsToRemove) {
+              const targetPrivilege = table.privilegeMap.get(verb);
+              const existing = targetPrivilege ? state.currentRolePrivilegeById.get(cleanGuid(targetPrivilege.privilegeid)) : null;
+              if (existing) {
+                await removePrivilegeFromRole(cleanGuid(targetPrivilege.privilegeid));
+                state.currentRolePrivilegeById.delete(cleanGuid(targetPrivilege.privilegeid));
+                removed += 1;
+              }
+            }
+
+            for (const assignment of sourceGranted) {
+              const targetPrivilege = table.privilegeMap.get(assignment.verb);
+              if (!targetPrivilege) {
+                skipped += 1;
+                continue;
+              }
+
+              toAdd.push(toRolePrivilege(targetPrivilege, assignment.rolePrivilege));
+            }
+          }
+
+          if (toAdd.length > 0) {
+            await addPrivilegesToRole(toAdd);
+          }
+
+          state.currentRolePrivileges = await retrieveRolePrivileges(state.roleId);
+          state.currentRolePrivilegeById = new Map(state.currentRolePrivileges.map(function (rolePrivilege) {
+            return [cleanGuid(rolePrivilege.PrivilegeId), rolePrivilege];
+          }));
+
+          renderPreview();
+          setMessage("Copied " + toAdd.length + " permissions. Removed " + removed + " existing permissions. Skipped " + skipped + " unavailable target privileges.", "success");
+        } catch (error) {
+          setMessage("Copy failed. " + getErrorMessage(error), "error");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      function toRolePrivilege(targetPrivilege, sourceRolePrivilege) {
+        const rolePrivilege = {
+          BusinessUnitId: cleanGuid(state.role["_businessunitid_value"]) || EMPTY_GUID,
+          Depth: privilegeDepthToEnumName(sourceRolePrivilege.Depth),
+          PrivilegeId: cleanGuid(targetPrivilege.privilegeid)
+        };
+
+        return rolePrivilege;
+      }
+
+      async function addPrivilegesToRole(privileges, roleId) {
+        const targetRoleId = roleId || state.roleId;
+        const request = {
+          entity: {
+            entityType: "role",
+            id: targetRoleId
+          },
+          Privileges: privileges,
+          getMetadata: function () {
+            return {
+              boundParameter: "entity",
+              parameterTypes: {
+                entity: {
+                  typeName: "mscrm.role",
+                  structuralProperty: 5
+                },
+                Privileges: {
+                  typeName: "Collection(mscrm.RolePrivilege)",
+                  structuralProperty: 4
+                }
+              },
+              operationType: 0,
+              operationName: "AddPrivilegesRole"
+            };
+          }
+        };
+
+        await executeRequest(request, "AddPrivilegesRole");
+      }
+
+      async function removePrivilegeFromRole(privilegeId) {
+        const request = {
+          entity: {
+            entityType: "role",
+            id: state.roleId
+          },
+          Privilege: {
+            entityType: "privilege",
+            id: privilegeId
+          },
+          getMetadata: function () {
+            return {
+              boundParameter: "entity",
+              parameterTypes: {
+                entity: {
+                  typeName: "mscrm.role",
+                  structuralProperty: 5
+                },
+                Privilege: {
+                  typeName: "mscrm.privilege",
+                  structuralProperty: 5
+                }
+              },
+              operationType: 0,
+              operationName: "RemovePrivilegeRole"
+            };
+          }
+        };
+
+        await executeRequest(request, "RemovePrivilegeRole");
+      }
+
+      async function executeRequest(request, label) {
+        const api = getExecutableWebApi();
+        if (!api) {
+          throw new Error(label + " requires Xrm.WebApi.execute. Upload this file as a Dataverse HTML web resource in the target environment.");
+        }
+
+        const response = await api.execute(request);
+        if (response && response.ok === false) {
+          throw new Error(label + " returned HTTP " + response.status + ".");
+        }
+      }
+
+      function updateStats() {
+        document.getElementById("roleName").textContent = state.role ? state.role.name || "(Unnamed role)" : "-";
+        document.getElementById("tableCount").textContent = String(state.tables.length);
+        document.getElementById("selectedTargetCount").textContent = String(state.targetSelected.size);
+        document.getElementById("sourcePrivilegeCount").textContent = String(getSourceAssignments().filter(function (assignment) {
+          return assignment.rolePrivilege;
+        }).length);
+      }
+
+      function updateCopyButton() {
+        document.getElementById("copyButton").disabled = !state.role || state.targetSelected.size === 0 || !hasSourcePermissions();
+      }
+
+      function setLoading(isLoading) {
+        document.getElementById("loadRolesButton").disabled = isLoading;
+        document.getElementById("loadButton").disabled = isLoading || !state.selectedRole;
+        document.getElementById("copyButton").disabled = isLoading || !state.role || state.targetSelected.size === 0 || !hasSourcePermissions();
+        document.getElementById("loadRolesButton").textContent = isLoading ? "Loading..." : "Load roles";
+        document.getElementById("loadButton").textContent = isLoading ? "Loading..." : (state.selectedRole ? "Load " + state.selectedRole.name : "Load selected role");
+        document.getElementById("copyButton").textContent = isLoading ? "Working..." : "Copy permissions";
+      }
+
+      function hasSourcePermissions() {
+        return getSourceAssignments().some(function (assignment) {
+          return !!assignment.rolePrivilege;
+        });
+      }
+
+      function setMessage(text, type) {
+        const message = document.getElementById("message");
+        message.textContent = text;
+        message.className = "message" + (text ? " visible" : "") + (type ? " " + type : "");
+      }
+
+      function appendEmpty(parent, text) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = text;
+        parent.appendChild(empty);
+      }
+
+      function createChip(text, className) {
+        const chip = document.createElement("span");
+        chip.className = "chip" + (className ? " " + className : "");
+        chip.textContent = text;
+        return chip;
+      }
+
+      function depthLabel(depth) {
+        const numeric = typeof depth === "number" ? depth : Number(depth);
+        return DEPTH_LABELS[numeric] || String(depth || "None");
+      }
+
+      function privilegeDepthToEnumName(depth) {
+        const numeric = typeof depth === "number" ? depth : Number(depth);
+        const names = {
+          0: "Basic",
+          1: "Local",
+          2: "Deep",
+          3: "Global",
+          4: "RecordFilter"
+        };
+        return names[numeric] || "Basic";
+      }
+
+      function privilegeDepthMaskToDepth(mask) {
+        const numeric = Number(mask);
+        if (numeric === 1) {
+          return 0;
+        }
+
+        if (numeric === 2) {
+          return 1;
+        }
+
+        if (numeric === 4) {
+          return 2;
+        }
+
+        if (numeric === 8) {
+          return 3;
+        }
+
+        if (numeric === 16) {
+          return 4;
+        }
+
+        return numeric >= 0 && numeric <= 4 ? numeric : 0;
+      }
+
+      function compareTables(left, right) {
+        return left.displayName.localeCompare(right.displayName, undefined, {
+          numeric: true,
+          sensitivity: "base"
+        });
+      }
+
+      function getLocalizedLabel(label) {
+        if (!label) {
+          return "";
+        }
+
+        if (label.UserLocalizedLabel && label.UserLocalizedLabel.Label) {
+          return label.UserLocalizedLabel.Label;
+        }
+
+        if (Array.isArray(label.LocalizedLabels) && label.LocalizedLabels.length > 0) {
+          return label.LocalizedLabels[0].Label || "";
+        }
+
+        return "";
+      }
+
+      function parseRoleId(value) {
+        const text = String(value || "");
+        const match = text.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/g);
+        if (!match || match.length === 0) {
+          return "";
+        }
+
+        const roleEditorIndex = text.toLowerCase().indexOf("/securityroles/");
+        if (roleEditorIndex >= 0) {
+          const afterSecurityRoles = text.substring(roleEditorIndex + "/securityroles/".length);
+          return cleanGuid(afterSecurityRoles);
+        }
+
+        return cleanGuid(match[match.length - 1]);
+      }
+
+      function normalizeDataverseUrl(url) {
+        return String(url || "").replace(/\/+$/, "");
+      }
+
+      function getClientUrl() {
+        return getCurrentOrgUrl();
+      }
+
+      function getCurrentOrgUrl() {
+        if (state.xrm && state.xrm.Utility && typeof state.xrm.Utility.getGlobalContext === "function") {
+          const clientUrl = state.xrm.Utility.getGlobalContext().getClientUrl();
+          if (clientUrl) {
+            return normalizeDataverseUrl(clientUrl);
+          }
+        }
+
+        const urls = [window.location.href, document.referrer];
+
+        try {
+          if (window.parent && window.parent.location) {
+            urls.push(window.parent.location.href);
+          }
+        } catch (error) {
+          // Parent may be cross-origin in some host shells.
+        }
+
+        try {
+          if (window.top && window.top.location) {
+            urls.push(window.top.location.href);
+          }
+        } catch (error) {
+          // Top may be cross-origin in some host shells.
+        }
+
+        for (const url of urls) {
+          const origin = getDataverseOrigin(url);
+          if (origin) {
+            return origin;
+          }
+        }
+
+        return "";
+      }
+
+      function getDataverseOrigin(url) {
+        try {
+          const parsed = new URL(url);
+          const host = parsed.hostname.toLowerCase();
+          if (host.endsWith(".dynamics.com") || host.endsWith(".crm.dynamics.com") || host.indexOf(".crm") >= 0) {
+            return parsed.origin;
+          }
+        } catch (error) {
+          return "";
+        }
+
+        return "";
+      }
+
+      function getExecutableWebApi() {
+        if (!state.xrm || !state.xrm.WebApi) {
+          return null;
+        }
+
+        return state.xrm.WebApi.online && typeof state.xrm.WebApi.online.execute === "function"
+          ? state.xrm.WebApi.online
+          : state.xrm.WebApi;
+      }
+
+      function getXrm() {
+        if (window.Xrm) {
+          return window.Xrm;
+        }
+
+        if (window.parent && window.parent.Xrm) {
+          return window.parent.Xrm;
+        }
+
+        if (window.top && window.top.Xrm) {
+          return window.top.Xrm;
+        }
+
+        return null;
+      }
+
+      function getErrorMessage(error) {
+        return error && error.message ? error.message : String(error);
+      }
+
+      function cleanGuid(value) {
+        const text = value == null ? "" : String(value);
+        const match = text.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
+        return match ? match[0].toLowerCase() : "";
+      }
+
+      function createEmptyManualDepths() {
+        return {
+          Create: "",
+          Read: "",
+          Write: "",
+          Delete: "",
+          Append: "",
+          AppendTo: "",
+          Assign: "",
+          Share: ""
+        };
+      }
+    })();
+  </script>
+</body>
+</html>

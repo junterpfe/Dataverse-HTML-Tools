@@ -1,0 +1,2456 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Effective Security Roles</title>
+  <script>
+    (() => {
+      const theme = hasDarkModeFlag() ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", theme);
+
+      function hasDarkModeFlag() {
+        return getUrlCandidates().some(urlHasDarkModeFlag);
+      }
+
+      function getUrlCandidates() {
+        const urls = [window.location.href, document.referrer];
+
+        try {
+          urls.push(window.parent.location.href);
+        } catch (error) {
+          // Parent can be cross-origin in some host shells.
+        }
+
+        try {
+          urls.push(window.top.location.href);
+        } catch (error) {
+          // Top can be cross-origin in some host shells.
+        }
+
+        return urls.filter(Boolean);
+      }
+
+      function urlHasDarkModeFlag(url) {
+        const text = normalizeUrlText(url);
+        return text.includes("themeoption=darkmode") || text.includes("themeoption%3ddarkmode");
+      }
+
+      function normalizeUrlText(value) {
+        let text = String(value || "").toLowerCase();
+
+        for (let index = 0; index < 3; index += 1) {
+          try {
+            const decoded = decodeURIComponent(text);
+            if (decoded === text) {
+              break;
+            }
+            text = decoded;
+          } catch (error) {
+            break;
+          }
+        }
+
+        return text;
+      }
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --cp-bg: #f7f4ef;
+      --cp-bg-elevated: #fcfbf8;
+      --cp-surface: #ffffff;
+      --cp-surface-soft: #f5f5f5;
+      --cp-border: #dedede;
+      --cp-border-strong: #919191;
+      --cp-text: #242424;
+      --cp-text-muted: #5c5c5c;
+      --cp-text-soft: #6f6f6f;
+      --cp-accent: #b11f4b;
+      --cp-accent-hover: #9a1a41;
+      --cp-accent-soft: rgba(177, 31, 75, 0.08);
+      --cp-accent-fg: #ffffff;
+      --cp-success: #16a34a;
+      --cp-danger: #dc2626;
+      --cp-warning: #f59e0b;
+      --cp-link: #0078d4;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+      --cp-overlay: rgba(255, 255, 255, 0.8);
+      --cp-panel: rgba(255, 255, 255, 0.86);
+      --cp-panel-strong: rgba(255, 255, 255, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.55);
+      --cp-highlight: rgba(177, 31, 75, 0.12);
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --cp-bg: #3d3b3a;
+      --cp-bg-elevated: #343231;
+      --cp-surface: #292929;
+      --cp-surface-soft: #2e2e2e;
+      --cp-border: #474747;
+      --cp-border-strong: #5f5f5f;
+      --cp-text: #dedede;
+      --cp-text-muted: #919191;
+      --cp-text-soft: #b0b0b0;
+      --cp-accent: #fd8ea1;
+      --cp-accent-hover: #fb7b91;
+      --cp-accent-soft: rgba(253, 142, 161, 0.14);
+      --cp-accent-fg: #1a1a1a;
+      --cp-success: #4ade80;
+      --cp-danger: #f87171;
+      --cp-warning: #fbbf24;
+      --cp-link: #4da6ff;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      --cp-overlay: rgba(41, 41, 41, 0.88);
+      --cp-panel: rgba(41, 41, 41, 0.72);
+      --cp-panel-strong: rgba(41, 41, 41, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.04);
+      --cp-highlight: rgba(253, 142, 161, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--cp-bg);
+      color: var(--cp-text);
+      font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 14px;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .panel {
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      box-shadow: 0 0 2px var(--cp-border), 0 1px 2px var(--cp-border);
+      overflow: hidden;
+    }
+
+    .header {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 16px;
+      border-bottom: 1px solid var(--cp-border);
+      background: var(--cp-bg-elevated);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .subtitle {
+      margin-top: 4px;
+      color: var(--cp-text-muted);
+      font-size: 13px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .button {
+      border: 1px solid var(--cp-accent);
+      background: var(--cp-accent);
+      color: var(--cp-accent-fg);
+      border-radius: 0.625rem;
+      cursor: pointer;
+      min-height: 34px;
+      padding: 6px 12px;
+      font-weight: 600;
+    }
+
+    .button:hover {
+      background: var(--cp-accent-hover);
+    }
+
+    .button:disabled {
+      cursor: not-allowed;
+      opacity: 0.62;
+    }
+
+    .button.secondary {
+      border-color: var(--cp-border-strong);
+      background: var(--cp-surface);
+      color: var(--cp-text);
+    }
+
+    .button.secondary:hover {
+      background: var(--cp-surface-soft);
+    }
+
+    .button.danger {
+      border-color: var(--cp-danger);
+      background: var(--cp-surface);
+      color: var(--cp-danger);
+    }
+
+    .button.danger:hover {
+      background: var(--cp-surface-soft);
+    }
+
+    .theme-field {
+      min-width: 132px;
+      text-align: left;
+    }
+
+    .record-link {
+      color: var(--cp-link);
+      text-decoration: none;
+    }
+
+    .record-link:hover {
+      text-decoration: underline;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--cp-border);
+      background: var(--cp-surface);
+    }
+
+    .stat {
+      padding: 10px;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface-soft);
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .stat-label {
+      margin-top: 2px;
+      color: var(--cp-text-muted);
+      font-size: 12px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--cp-border);
+      background: var(--cp-surface);
+    }
+
+    .search {
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .input,
+    .select {
+      width: 100%;
+      min-height: 34px;
+      border: 1px solid var(--cp-border-strong);
+      border-radius: 0.625rem;
+      background: var(--cp-surface);
+      color: var(--cp-text);
+      padding: 6px 10px;
+    }
+
+    .input:focus,
+    .select:focus {
+      outline: 2px solid var(--cp-accent);
+      outline-offset: 1px;
+    }
+
+    .multi-select {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 210px;
+      border: 1px solid var(--cp-border-strong);
+      border-radius: 0.625rem;
+      background: var(--cp-surface);
+      color: var(--cp-text);
+      padding: 8px;
+    }
+
+    .multi-select.disabled {
+      opacity: 0.72;
+    }
+
+    .multi-summary {
+      margin-bottom: 6px;
+      color: var(--cp-text-muted);
+      font-size: 12px;
+    }
+
+    .multi-search {
+      width: 100%;
+      min-height: 32px;
+      margin-bottom: 6px;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface);
+      color: var(--cp-text);
+      padding: 5px 8px;
+    }
+
+    .multi-search:focus {
+      outline: 2px solid var(--cp-accent);
+      outline-offset: 1px;
+    }
+
+    .multi-options {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface);
+    }
+
+    .multi-option {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      padding: 6px 8px;
+      cursor: pointer;
+    }
+
+    .multi-option:hover {
+      background: var(--cp-accent-soft);
+    }
+
+    .multi-option input {
+      margin-top: 2px;
+      accent-color: var(--cp-accent);
+    }
+
+    .multi-empty {
+      padding: 8px;
+      color: var(--cp-text-muted);
+      font-size: 12px;
+    }
+
+    .message {
+      display: none;
+      margin: 12px 16px 0;
+      padding: 10px 12px;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface-soft);
+      color: var(--cp-text);
+    }
+
+    .message.visible {
+      display: block;
+    }
+
+    .message.error {
+      border-color: var(--cp-danger);
+    }
+
+    .message.warning {
+      border-color: var(--cp-warning);
+    }
+
+    .message.success {
+      border-color: var(--cp-success);
+    }
+
+    .management {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--cp-border);
+      background: var(--cp-bg-elevated);
+    }
+
+    .management-header {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .hint {
+      margin-top: 4px;
+      color: var(--cp-text-muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .checkbox-row {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      color: var(--cp-text-muted);
+      font-size: 12px;
+    }
+
+    .checkbox-row input {
+      accent-color: var(--cp-accent);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 168px minmax(0, 1fr) 168px;
+      column-gap: 8px;
+      row-gap: 8px;
+      align-items: end;
+    }
+
+    .remove-grid {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--cp-border);
+    }
+
+    .copy-grid {
+      grid-template-columns: minmax(0, 1fr) 168px;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--cp-border);
+    }
+
+    .copy-grid .action-field {
+      align-self: start;
+      padding-top: 20px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--cp-text-muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .user-picker {
+      position: relative;
+    }
+
+    .user-results {
+      margin-top: 6px;
+      max-height: 160px;
+      overflow: auto;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface);
+    }
+
+    .user-result {
+      width: 100%;
+      border: 0;
+      border-bottom: 1px solid var(--cp-border);
+      background: var(--cp-surface);
+      color: var(--cp-text);
+      cursor: pointer;
+      padding: 8px;
+      text-align: left;
+    }
+
+    .user-result:hover {
+      background: var(--cp-accent-soft);
+    }
+
+    .user-result:last-child {
+      border-bottom: 0;
+    }
+
+    .user-result-name {
+      font-weight: 600;
+    }
+
+    .user-result-meta {
+      margin-top: 2px;
+      color: var(--cp-text-muted);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .selected-user {
+      margin-top: 6px;
+      color: var(--cp-text-muted);
+      font-size: 12px;
+    }
+
+    .action-field {
+      display: flex;
+      align-items: end;
+      width: 168px;
+    }
+
+    .action-field .button {
+      width: 100%;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: 540px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--cp-border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--cp-bg-elevated);
+      color: var(--cp-text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .sort-button {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      border: 0;
+      background: transparent;
+      color: var(--cp-text-muted);
+      cursor: pointer;
+      font: inherit;
+      font-weight: 600;
+      padding: 0;
+      text-align: left;
+      text-transform: uppercase;
+    }
+
+    .sort-button:hover {
+      color: var(--cp-text);
+    }
+
+    .sort-arrow {
+      min-width: 14px;
+      color: var(--cp-accent);
+      font-size: 12px;
+    }
+
+    tr:hover td {
+      background: var(--cp-accent-soft);
+    }
+
+    .role-name {
+      font-weight: 600;
+    }
+
+    .meta {
+      margin-top: 3px;
+      color: var(--cp-text-muted);
+      font-family: Consolas, "Courier New", Courier, monospace;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .chips {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 3px 8px;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface-soft);
+      color: var(--cp-text);
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .chip.record-link:hover {
+      text-decoration: none;
+      border-color: var(--cp-link);
+    }
+
+    .chip.direct {
+      border-color: var(--cp-success);
+    }
+
+    .chip.team {
+      border-color: var(--cp-accent);
+    }
+
+    .empty,
+    .no-access {
+      padding: 28px 16px;
+      color: var(--cp-text-muted);
+      text-align: center;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 780px) {
+      .header,
+      .toolbar,
+      .management-header {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .actions {
+        justify-content: flex-start;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .action-field,
+      .action-field .button {
+        width: 100%;
+      }
+
+      .copy-grid .action-field {
+        padding-top: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section id="contentPanel" class="panel" aria-labelledby="title">
+      <div class="header">
+        <div>
+          <h1 id="title">Effective Security Roles</h1>
+          <div id="subtitle" class="subtitle">Loading user security roles...</div>
+        </div>
+        <div class="actions">
+          <div class="theme-field">
+            <select id="themeSelect" class="select" aria-label="Theme">
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+          <button id="refreshButton" class="button" type="button">Refresh</button>
+        </div>
+      </div>
+
+      <div class="stats" aria-label="Role summary">
+        <div class="stat">
+          <div id="totalRoles" class="stat-value">0</div>
+          <div class="stat-label">Effective roles</div>
+        </div>
+        <div class="stat">
+          <div id="directRoles" class="stat-value">0</div>
+          <div class="stat-label">Direct roles</div>
+        </div>
+        <div class="stat">
+          <div id="teamRoles" class="stat-value">0</div>
+          <div class="stat-label">Team-inherited roles</div>
+        </div>
+        <div class="stat">
+          <div id="sourceTeams" class="stat-value">0</div>
+          <div class="stat-label">Source teams</div>
+        </div>
+      </div>
+
+      <div class="toolbar" aria-label="Role filters">
+        <div class="search">
+          <label for="searchInput" class="visually-hidden">Search roles</label>
+          <input id="searchInput" class="input" type="search" placeholder="Search role, business unit, team, or id">
+        </div>
+        <div>
+          <label for="sourceFilter" class="visually-hidden">Filter by source</label>
+          <select id="sourceFilter" class="select">
+            <option value="all">All sources</option>
+            <option value="direct">Direct only</option>
+            <option value="team">Team-inherited only</option>
+            <option value="both">Direct and team</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="message" class="message" role="status"></div>
+
+      <div id="managementSection" class="management" aria-label="Manage user assignments">
+        <div class="management-header">
+          <div>
+            <h2>Manage assignments</h2>
+            <div class="hint">
+              Add or remove direct security roles and owner team associations. Changes are made immediately in Dataverse.
+            </div>
+          </div>
+        </div>
+        <div class="form-grid copy-grid">
+          <div class="field user-picker">
+            <label for="copyUserSearch">Copy assignments from user</label>
+            <input id="copyUserSearch" class="input" type="search" autocomplete="off" placeholder="Search users by name or email">
+            <div id="copyUserResults" class="user-results" hidden></div>
+            <div id="copyUserSelected" class="selected-user">No source user selected</div>
+          </div>
+          <div class="field action-field">
+            <button id="copyAssignmentsButton" class="button secondary" type="button" disabled>Copy assignments</button>
+          </div>
+        </div>
+        <div class="hint">
+          <label class="checkbox-row">
+            <input id="customRolesOnlyToggle" type="checkbox">
+            Show custom roles only
+          </label>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label for="roleSelect">Direct role to assign</label>
+            <div id="roleSelect" class="multi-select" data-placeholder="Search direct roles..." data-empty="No assignable roles found"></div>
+          </div>
+          <div class="field action-field">
+            <button id="addRoleButton" class="button" type="button" disabled>Add direct roles</button>
+          </div>
+          <div class="field">
+            <label for="teamSelect">Team to associate</label>
+            <div id="teamSelect" class="multi-select" data-placeholder="Search owner teams..." data-empty="No assignable teams found"></div>
+          </div>
+          <div class="field action-field">
+            <button id="addTeamButton" class="button secondary" type="button" disabled>Associate teams</button>
+          </div>
+        </div>
+        <div class="form-grid remove-grid">
+          <div class="field">
+            <label for="removeRoleSelect">Direct role to remove</label>
+            <div id="removeRoleSelect" class="multi-select" data-placeholder="Search direct roles to remove..." data-empty="No direct roles assigned"></div>
+          </div>
+          <div class="field action-field">
+            <button id="removeRoleButton" class="button danger" type="button" disabled>Remove direct roles</button>
+          </div>
+          <div class="field">
+            <label for="removeTeamSelect">Team association to remove</label>
+            <div id="removeTeamSelect" class="multi-select" data-placeholder="Search team associations to remove..." data-empty="No removable team memberships"></div>
+          </div>
+          <div class="field action-field">
+            <button id="removeTeamButton" class="button danger" type="button" disabled>Remove teams</button>
+          </div>
+        </div>
+        <div id="managementAccessHint" class="hint">
+          Role options are limited to this user's business unit and exclude roles already directly assigned.
+          Team add options show owner teams in this user's business unit that they do not already belong to.
+          Team removal options show removable owner-team memberships. Microsoft Entra group team membership must be managed in Entra ID.
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table aria-label="Effective security roles">
+          <thead>
+            <tr>
+              <th scope="col"><button class="sort-button" type="button" data-sort-column="roleName">Role <span class="sort-arrow" data-sort-arrow="roleName"></span></button></th>
+              <th scope="col"><button class="sort-button" type="button" data-sort-column="businessUnitName">Business unit <span class="sort-arrow" data-sort-arrow="businessUnitName"></span></button></th>
+              <th scope="col"><button class="sort-button" type="button" data-sort-column="source">Source <span class="sort-arrow" data-sort-arrow="source"></span></button></th>
+              <th scope="col"><button class="sort-button" type="button" data-sort-column="teamNames">Source team <span class="sort-arrow" data-sort-arrow="teamNames"></span></button></th>
+            </tr>
+          </thead>
+          <tbody id="rolesBody">
+            <tr>
+              <td colspan="4" class="empty">Loading...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const FORMATTED_VALUE = "@OData.Community.Display.V1.FormattedValue";
+      const EMPTY_GUID = "00000000-0000-0000-0000-000000000000";
+      const ACCESS_RULES = {
+        viewRoleNames: ["System Administrator", "System Customizer", "Security Role Viewer", "Security Role Manager"],
+        manageRoleNames: ["System Administrator", "Security Role Manager"]
+      };
+      const state = {
+        availableRoles: [],
+        availableTeams: [],
+        canManage: false,
+        canView: false,
+        copySourceUser: null,
+        currentUserRoleNames: [],
+        directRecords: [],
+        filteredRows: [],
+        isLoading: false,
+        multiSelects: {
+          roleSelect: { items: [], selected: new Set(), searchText: "" },
+          teamSelect: { items: [], selected: new Set(), searchText: "" },
+          removeRoleSelect: { items: [], selected: new Set(), searchText: "" },
+          removeTeamSelect: { items: [], selected: new Set(), searchText: "" }
+        },
+        rows: [],
+        searchUserTimer: null,
+        searchUserRequest: 0,
+        sort: {
+          column: "roleName",
+          direction: "asc"
+        },
+        teamRecords: [],
+        user: null,
+        userBusinessUnitId: "",
+        userTeams: [],
+        userId: "",
+        xrm: null
+      };
+
+      document.addEventListener("DOMContentLoaded", init);
+
+      function init() {
+        initThemeSelector();
+        document.addEventListener("click", handleRecordLinkClick);
+        document.querySelectorAll("[data-sort-column]").forEach(function (button) {
+          button.addEventListener("click", handleSortClick);
+        });
+        document.getElementById("refreshButton").addEventListener("click", loadRoles);
+        document.getElementById("copyAssignmentsButton").addEventListener("click", copyAssignmentsFromUser);
+        document.getElementById("copyUserSearch").addEventListener("input", handleCopyUserSearch);
+        document.getElementById("addRoleButton").addEventListener("click", addDirectRole);
+        document.getElementById("addTeamButton").addEventListener("click", addTeamMembership);
+        document.getElementById("removeRoleButton").addEventListener("click", removeDirectRole);
+        document.getElementById("removeTeamButton").addEventListener("click", removeTeamMembership);
+        document.getElementById("searchInput").addEventListener("input", renderRows);
+        document.getElementById("sourceFilter").addEventListener("change", renderRows);
+        document.getElementById("customRolesOnlyToggle").addEventListener("change", renderAssignmentOptions);
+        loadRoles();
+      }
+
+      function initThemeSelector() {
+        const themeSelect = document.getElementById("themeSelect");
+        const initialTheme = getDefaultThemeFromUrl();
+
+        themeSelect.value = initialTheme;
+        applyThemeChoice(initialTheme);
+        themeSelect.addEventListener("change", function () {
+          applyThemeChoice(themeSelect.value);
+        });
+      }
+
+      function getDefaultThemeFromUrl() {
+        return getUrlCandidates().some(urlHasDarkModeFlag) ? "dark" : "light";
+      }
+
+      function applyThemeChoice(choice) {
+        const theme = choice === "dark" ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", theme);
+      }
+
+      function getUrlCandidates() {
+        const urls = [window.location.href, document.referrer];
+
+        try {
+          urls.push(window.parent.location.href);
+        } catch (error) {
+          // Parent can be cross-origin in some host shells.
+        }
+
+        try {
+          urls.push(window.top.location.href);
+        } catch (error) {
+          // Top can be cross-origin in some host shells.
+        }
+
+        return urls.filter(Boolean);
+      }
+
+      function urlHasDarkModeFlag(url) {
+        const text = normalizeUrlText(url);
+        return text.includes("themeoption=darkmode") || text.includes("themeoption%3ddarkmode");
+      }
+
+      function normalizeUrlText(value) {
+        let text = String(value || "").toLowerCase();
+
+        for (let index = 0; index < 3; index += 1) {
+          try {
+            const decoded = decodeURIComponent(text);
+            if (decoded === text) {
+              break;
+            }
+            text = decoded;
+          } catch (error) {
+            break;
+          }
+        }
+
+        return text;
+      }
+
+      function handleSortClick(event) {
+        const column = event.currentTarget.dataset.sortColumn;
+        if (!column) {
+          return;
+        }
+
+        if (state.sort.column === column) {
+          state.sort.direction = state.sort.direction === "asc" ? "desc" : "asc";
+        } else {
+          state.sort.column = column;
+          state.sort.direction = "asc";
+        }
+
+        renderRows();
+      }
+
+      async function loadRoles() {
+        setLoading(true);
+        setMessage("", "");
+
+        try {
+          state.xrm = getXrm();
+          if (!state.xrm || !state.xrm.WebApi) {
+            throw new Error("Xrm.WebApi was not found. Open this HTML web resource inside a model-driven app form.");
+          }
+
+          applyAccessRules();
+          if (!state.canView) {
+            renderNoAccess();
+            return;
+          }
+
+          state.userId = getTargetUserId(state.xrm);
+          if (!state.userId) {
+            throw new Error("No user record id was found. Enable record id parameters on the web resource form component.");
+          }
+
+          state.user = await state.xrm.WebApi.retrieveRecord(
+            "systemuser",
+            state.userId,
+            "?$select=fullname,domainname,internalemailaddress,_businessunitid_value"
+          );
+          state.userBusinessUnitId = lookupId(state.user, "businessunitid");
+
+          const results = await Promise.all([
+            retrieveAll("role", getDirectRolesFetchXml(state.userId)),
+            retrieveAll("role", getTeamRolesFetchXml(state.userId)),
+            retrieveAll("role", getAssignableRolesFetchXml(state.userBusinessUnitId)),
+            retrieveAll("team", getUserTeamsFetchXml(state.userId)),
+            retrieveAll("team", getAssignableTeamsFetchXml(state.userBusinessUnitId))
+          ]);
+
+          state.directRecords = results[0];
+          state.teamRecords = results[1];
+          state.availableRoles = results[2];
+          state.userTeams = results[3];
+          state.availableTeams = results[4];
+          state.rows = aggregateRoles(state.directRecords, state.teamRecords);
+
+          renderHeader();
+          renderStats();
+          renderAccessState();
+          renderAssignmentOptions();
+          renderRows();
+        } catch (error) {
+          renderError(error);
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      function applyAccessRules() {
+        state.currentUserRoleNames = getCurrentUserRoleNames();
+        state.canView = hasConfiguredRole(state.currentUserRoleNames, ACCESS_RULES.viewRoleNames);
+        state.canManage = state.canView && hasConfiguredRole(state.currentUserRoleNames, ACCESS_RULES.manageRoleNames);
+        document.getElementById("contentPanel").hidden = !state.canView;
+      }
+
+      function getCurrentUserRoleNames() {
+        const names = [];
+        const context = state.xrm.Utility && typeof state.xrm.Utility.getGlobalContext === "function"
+          ? state.xrm.Utility.getGlobalContext()
+          : null;
+        const roles = context && context.userSettings ? context.userSettings.roles : null;
+
+        if (!roles) {
+          return names;
+        }
+
+        if (typeof roles.getAll === "function") {
+          roles.getAll().forEach(addRoleName);
+          return names;
+        }
+
+        if (typeof roles.getLength === "function" && typeof roles.get === "function") {
+          for (let index = 0; index < roles.getLength(); index += 1) {
+            addRoleName(roles.get(index));
+          }
+          return names;
+        }
+
+        if (Array.isArray(roles)) {
+          roles.forEach(addRoleName);
+        }
+
+        return names;
+
+        function addRoleName(role) {
+          const name = role && (role.name || role.Name || role.displayName);
+          if (name) {
+            names.push(String(name));
+          }
+        }
+      }
+
+      function hasConfiguredRole(userRoleNames, configuredRoleNames) {
+        if (!configuredRoleNames || configuredRoleNames.length === 0) {
+          return true;
+        }
+
+        const allowedRoleNames = new Set(configuredRoleNames.map(normalizeRoleName));
+        if (allowedRoleNames.has("*")) {
+          return true;
+        }
+
+        return userRoleNames.map(normalizeRoleName).some(function (roleName) {
+          return allowedRoleNames.has(roleName);
+        });
+      }
+
+      function normalizeRoleName(roleName) {
+        return String(roleName || "").trim().toLowerCase();
+      }
+
+      function renderAccessState() {
+        const managementAccessHint = document.getElementById("managementAccessHint");
+        if (state.canManage) {
+          managementAccessHint.textContent = "Role options are limited to this user's business unit and exclude roles already directly assigned. Copy assignments maps direct roles to matching roles in this user's business unit and copies removable owner-team memberships. Microsoft Entra group team membership must be managed in Entra ID.";
+          return;
+        }
+
+        managementAccessHint.textContent = "Your security roles allow viewing this information, but add/remove fields are read-only.";
+      }
+
+      function renderNoAccess() {
+        document.getElementById("contentPanel").hidden = true;
+      }
+
+      async function addDirectRole() {
+        if (!state.canManage) {
+          return;
+        }
+
+        const roleIds = getSelectedValues("roleSelect");
+        if (roleIds.length === 0) {
+          setMessage("Select one or more roles before adding direct assignments.", "warning");
+          return;
+        }
+
+        setLoading(true);
+        setMessage("Adding direct role " + pluralize("assignment", roleIds.length) + "...", "");
+
+        try {
+          for (const roleId of roleIds) {
+            await associateRecords("systemuser", state.userId, "systemuserroles_association", "role", roleId);
+          }
+          await loadRoles();
+          setMessage("Added " + roleIds.length + " direct role " + pluralize("assignment", roleIds.length) + ".", "success");
+        } catch (error) {
+          setMessage("Could not add direct role " + pluralize("assignment", roleIds.length) + ". " + getErrorMessage(error), "error");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      function handleCopyUserSearch(event) {
+        state.copySourceUser = null;
+        document.getElementById("copyUserSelected").textContent = "No source user selected";
+        updateAssignmentButtons();
+
+        const searchText = event.target.value.trim();
+        if (state.searchUserTimer) {
+          window.clearTimeout(state.searchUserTimer);
+        }
+
+        state.searchUserTimer = window.setTimeout(function () {
+          searchCopyUsers(searchText);
+        }, 300);
+      }
+
+      async function searchCopyUsers(searchText) {
+        const resultsContainer = document.getElementById("copyUserResults");
+        const requestId = state.searchUserRequest + 1;
+        state.searchUserRequest = requestId;
+
+        if (!state.canManage || searchText.length < 2) {
+          renderCopyUserResults([], searchText.length === 0 ? "" : "Type at least 2 characters");
+          return;
+        }
+
+        resultsContainer.hidden = false;
+        resultsContainer.textContent = "";
+        const loading = document.createElement("div");
+        loading.className = "multi-empty";
+        loading.textContent = "Searching users...";
+        resultsContainer.appendChild(loading);
+
+        try {
+          const users = await retrieveAll("systemuser", getUserSearchFetchXml(searchText, state.userId));
+          if (requestId !== state.searchUserRequest) {
+            return;
+          }
+          renderCopyUserResults(users.map(getUserSearchResult), "No matching users found");
+        } catch (error) {
+          if (requestId !== state.searchUserRequest) {
+            return;
+          }
+          renderCopyUserResults([], "Could not search users. " + getErrorMessage(error));
+        }
+      }
+
+      function renderCopyUserResults(users, emptyText) {
+        const resultsContainer = document.getElementById("copyUserResults");
+        resultsContainer.textContent = "";
+
+        if (users.length === 0) {
+          if (!emptyText) {
+            resultsContainer.hidden = true;
+            return;
+          }
+
+          const empty = document.createElement("div");
+          empty.className = "multi-empty";
+          empty.textContent = emptyText;
+          resultsContainer.hidden = false;
+          resultsContainer.appendChild(empty);
+          return;
+        }
+
+        resultsContainer.hidden = false;
+        for (const user of users) {
+          const button = document.createElement("button");
+          button.className = "user-result";
+          button.type = "button";
+          button.dataset.userId = user.userId;
+
+          const name = document.createElement("div");
+          name.className = "user-result-name";
+          name.textContent = user.fullName;
+
+          const meta = document.createElement("div");
+          meta.className = "user-result-meta";
+          meta.textContent = user.email || user.domainName || user.userId;
+
+          button.appendChild(name);
+          button.appendChild(meta);
+          button.addEventListener("click", function () {
+            selectCopySourceUser(user);
+          });
+          resultsContainer.appendChild(button);
+        }
+      }
+
+      function selectCopySourceUser(user) {
+        state.copySourceUser = user;
+        document.getElementById("copyUserSearch").value = user.fullName;
+        document.getElementById("copyUserSelected").textContent = "Selected: " + user.fullName + (user.email ? " (" + user.email + ")" : "");
+        document.getElementById("copyUserResults").hidden = true;
+        updateAssignmentButtons();
+      }
+
+      function clearCopySourceUser() {
+        state.copySourceUser = null;
+        document.getElementById("copyUserSearch").value = "";
+        document.getElementById("copyUserSelected").textContent = "No source user selected";
+        document.getElementById("copyUserResults").hidden = true;
+        updateAssignmentButtons();
+      }
+
+      async function copyAssignmentsFromUser() {
+        if (!state.canManage || !state.copySourceUser) {
+          return;
+        }
+
+        const confirmed = await confirmManagementAction(
+          "Copy assignments",
+          "Copy direct role assignments and owner-team memberships from " + state.copySourceUser.fullName + " to this user? Existing assignments will be kept.",
+          "Copy"
+        );
+
+        if (!confirmed) {
+          return;
+        }
+
+        setLoading(true);
+        setMessage("Copying assignments from " + state.copySourceUser.fullName + "...", "");
+
+        try {
+          const results = await Promise.all([
+            retrieveAll("role", getDirectRolesFetchXml(state.copySourceUser.userId)),
+            retrieveAll("team", getUserTeamsFetchXml(state.copySourceUser.userId))
+          ]);
+          const currentDirectRoleIds = new Set(state.directRecords.map(function (record) {
+            return cleanGuid(record.roleid);
+          }));
+          const currentTeamIds = new Set(state.userTeams.map(function (record) {
+            return cleanGuid(record.teamid);
+          }));
+          const targetAssignableRoles = state.availableRoles.map(getRole);
+          const rolesToAdd = getCopiedRoleIds(results[0], targetAssignableRoles, currentDirectRoleIds);
+          const teamsToAdd = results[1]
+            .map(getTeam)
+            .filter(function (team) {
+              return isRemovableTeam(team) && !currentTeamIds.has(team.teamId);
+            })
+            .map(function (team) {
+              return team.teamId;
+            });
+
+          for (const roleId of rolesToAdd.ids) {
+            await associateRecords("systemuser", state.userId, "systemuserroles_association", "role", roleId);
+          }
+
+          for (const teamId of teamsToAdd) {
+            await associateRecords("systemuser", state.userId, "teammembership_association", "team", teamId);
+          }
+
+          await loadRoles();
+          clearCopySourceUser();
+          setMessage(
+            "Copied " + rolesToAdd.ids.length + " direct " + pluralize("role", rolesToAdd.ids.length) +
+            " and " + teamsToAdd.length + " team " + pluralize("association", teamsToAdd.length) +
+            (rolesToAdd.skipped > 0 ? ". Skipped " + rolesToAdd.skipped + " source " + pluralize("role", rolesToAdd.skipped) + " without a matching role in this user's business unit." : "."),
+            "success"
+          );
+        } catch (error) {
+          setMessage("Could not copy assignments. " + getErrorMessage(error), "error");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      function getCopiedRoleIds(sourceRoleRecords, targetAssignableRoles, currentDirectRoleIds) {
+        const ids = [];
+        let skipped = 0;
+
+        for (const sourceRecord of sourceRoleRecords) {
+          const sourceRole = getRole(sourceRecord);
+          const targetRole = targetAssignableRoles.find(function (candidate) {
+            return candidate.roleId === sourceRole.roleId ||
+              (candidate.rootRoleId && sourceRole.rootRoleId && candidate.rootRoleId === sourceRole.rootRoleId) ||
+              candidate.roleName === sourceRole.roleName;
+          });
+
+          if (!targetRole || currentDirectRoleIds.has(targetRole.roleId) || ids.indexOf(targetRole.roleId) >= 0) {
+            if (!targetRole) {
+              skipped += 1;
+            }
+            continue;
+          }
+
+          ids.push(targetRole.roleId);
+        }
+
+        return {
+          ids: ids,
+          skipped: skipped
+        };
+      }
+
+      async function addTeamMembership() {
+        if (!state.canManage) {
+          return;
+        }
+
+        const teamIds = getSelectedValues("teamSelect");
+        if (teamIds.length === 0) {
+          setMessage("Select one or more teams before associating this user.", "warning");
+          return;
+        }
+
+        setLoading(true);
+        setMessage("Associating user with " + teamIds.length + " " + pluralize("team", teamIds.length) + "...", "");
+
+        try {
+          for (const teamId of teamIds) {
+            await associateRecords("systemuser", state.userId, "teammembership_association", "team", teamId);
+          }
+          await loadRoles();
+          setMessage("Associated user with " + teamIds.length + " " + pluralize("team", teamIds.length) + ".", "success");
+        } catch (error) {
+          setMessage("Could not associate user with " + pluralize("team", teamIds.length) + ". " + getErrorMessage(error), "error");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      async function removeDirectRole() {
+        if (!state.canManage) {
+          return;
+        }
+
+        const roleIds = getSelectedValues("removeRoleSelect");
+        if (roleIds.length === 0) {
+          setMessage("Select one or more direct roles before removing assignments.", "warning");
+          return;
+        }
+
+        const confirmed = await confirmManagementAction(
+          "Remove direct " + pluralize("role", roleIds.length),
+          "Remove " + roleIds.length + " direct " + pluralize("role", roleIds.length) + " from this user?"
+        );
+
+        if (!confirmed) {
+          return;
+        }
+
+        setLoading(true);
+        setMessage("Removing direct role assignment...", "");
+
+        try {
+          for (const roleId of roleIds) {
+            await disassociateRecords("systemuser", state.userId, "systemuserroles_association", roleId);
+          }
+          await loadRoles();
+          setMessage("Removed " + roleIds.length + " direct role " + pluralize("assignment", roleIds.length) + ".", "success");
+        } catch (error) {
+          setMessage("Could not remove direct role " + pluralize("assignment", roleIds.length) + ". " + getErrorMessage(error), "error");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      async function removeTeamMembership() {
+        if (!state.canManage) {
+          return;
+        }
+
+        const teamIds = getSelectedValues("removeTeamSelect");
+        if (teamIds.length === 0) {
+          setMessage("Select one or more teams before removing associations.", "warning");
+          return;
+        }
+
+        const confirmed = await confirmManagementAction(
+          "Remove team " + pluralize("association", teamIds.length),
+          "Remove this user from " + teamIds.length + " " + pluralize("team", teamIds.length) + "? Team-inherited roles from " + (teamIds.length === 1 ? "that team" : "those teams") + " will no longer apply."
+        );
+
+        if (!confirmed) {
+          return;
+        }
+
+        setLoading(true);
+        setMessage("Removing team association...", "");
+
+        try {
+          for (const teamId of teamIds) {
+            await disassociateRecords("systemuser", state.userId, "teammembership_association", teamId);
+          }
+          await loadRoles();
+          setMessage("Removed " + teamIds.length + " team " + pluralize("association", teamIds.length) + ".", "success");
+        } catch (error) {
+          setMessage("Could not remove team " + pluralize("association", teamIds.length) + ". " + getErrorMessage(error), "error");
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      async function associateRecords(targetEntityName, targetId, relationshipName, relatedEntityName, relatedId) {
+        const api = getExecutableWebApi();
+
+        const request = {
+          target: {
+            entityType: targetEntityName,
+            id: targetId
+          },
+          relatedEntities: [
+            {
+              entityType: relatedEntityName,
+              id: relatedId
+            }
+          ],
+          relationship: relationshipName,
+          getMetadata: function () {
+            return {
+              boundParameter: null,
+              parameterTypes: {
+                target: {
+                  typeName: "mscrm.crmbaseentity",
+                  structuralProperty: 5
+                },
+                relatedEntities: {
+                  typeName: "Collection(mscrm.crmbaseentity)",
+                  structuralProperty: 4
+                },
+                relationship: {
+                  typeName: "Edm.String",
+                  structuralProperty: 1
+                }
+              },
+              operationType: 2,
+              operationName: "Associate"
+            };
+          }
+        };
+
+        const response = await api.execute(request);
+        if (response && response.ok === false) {
+          throw new Error("Dataverse returned HTTP " + response.status + ".");
+        }
+      }
+
+      async function disassociateRecords(targetEntityName, targetId, relationshipName, relatedId) {
+        const api = getExecutableWebApi();
+
+        const request = {
+          target: {
+            entityType: targetEntityName,
+            id: targetId
+          },
+          relatedEntityId: relatedId,
+          relationship: relationshipName,
+          getMetadata: function () {
+            return {
+              boundParameter: null,
+              parameterTypes: {
+                target: {
+                  typeName: "mscrm.crmbaseentity",
+                  structuralProperty: 5
+                },
+                relatedEntityId: {
+                  typeName: "Edm.Guid",
+                  structuralProperty: 1
+                },
+                relationship: {
+                  typeName: "Edm.String",
+                  structuralProperty: 1
+                }
+              },
+              operationType: 2,
+              operationName: "Disassociate"
+            };
+          }
+        };
+
+        const response = await api.execute(request);
+        if (response && response.ok === false) {
+          throw new Error("Dataverse returned HTTP " + response.status + ".");
+        }
+      }
+
+      function getExecutableWebApi() {
+        const api = state.xrm.WebApi.online && typeof state.xrm.WebApi.online.execute === "function"
+          ? state.xrm.WebApi.online
+          : state.xrm.WebApi;
+
+        if (!api || typeof api.execute !== "function") {
+          throw new Error("Xrm.WebApi.execute is not available in this client.");
+        }
+
+        return api;
+      }
+
+      async function confirmManagementAction(title, text, confirmButtonLabel) {
+        if (state.xrm.Navigation && typeof state.xrm.Navigation.openConfirmDialog === "function") {
+          const result = await state.xrm.Navigation.openConfirmDialog({
+            cancelButtonLabel: "Cancel",
+            confirmButtonLabel: confirmButtonLabel || "Remove",
+            text: text,
+            title: title
+          });
+          return result.confirmed === true;
+        }
+
+        return window.confirm(text);
+      }
+
+      function getXrm() {
+        if (window.Xrm) {
+          return window.Xrm;
+        }
+
+        if (window.parent && window.parent.Xrm) {
+          return window.parent.Xrm;
+        }
+
+        if (window.top && window.top.Xrm) {
+          return window.top.Xrm;
+        }
+
+        return null;
+      }
+
+      function getTargetUserId(xrm) {
+        const queryStringId = getIdFromQueryString();
+        if (queryStringId) {
+          return queryStringId;
+        }
+
+        const page = xrm.Page;
+        if (page && page.data && page.data.entity && typeof page.data.entity.getId === "function") {
+          return cleanGuid(page.data.entity.getId());
+        }
+
+        return "";
+      }
+
+      function getIdFromQueryString() {
+        const params = new URLSearchParams(window.location.search);
+        const directKeys = ["id", "recordId", "recordid", "userid", "userId"];
+
+        for (const key of directKeys) {
+          const value = cleanGuid(params.get(key));
+          if (value) {
+            return value;
+          }
+        }
+
+        const data = params.get("data");
+        if (!data) {
+          return "";
+        }
+
+        const decodedData = decodeURIComponent(data);
+        const dataGuid = cleanGuid(decodedData);
+        if (dataGuid) {
+          return dataGuid;
+        }
+
+        const dataParams = new URLSearchParams(decodedData);
+        for (const key of directKeys) {
+          const value = cleanGuid(dataParams.get(key));
+          if (value) {
+            return value;
+          }
+        }
+
+        try {
+          const json = JSON.parse(decodedData);
+          for (const key of directKeys) {
+            const value = cleanGuid(json[key]);
+            if (value) {
+              return value;
+            }
+          }
+        } catch (error) {
+          return "";
+        }
+
+        return "";
+      }
+
+      async function retrieveAll(entityName, fetchXml) {
+        let options = "?fetchXml=" + encodeURIComponent(fetchXml);
+        const records = [];
+
+        while (options) {
+          const result = await state.xrm.WebApi.retrieveMultipleRecords(entityName, options, 5000);
+          records.push.apply(records, result.entities);
+          options = result.nextLink ? nextLinkToOptions(result.nextLink) : "";
+        }
+
+        return records;
+      }
+
+      function nextLinkToOptions(nextLink) {
+        const queryIndex = nextLink.indexOf("?");
+        return queryIndex >= 0 ? nextLink.substring(queryIndex) : nextLink;
+      }
+
+      function getDirectRolesFetchXml(userId) {
+        return [
+          "<fetch mapping=\"logical\">",
+          "  <entity name=\"role\">",
+          "    <attribute name=\"roleid\" />",
+          "    <attribute name=\"name\" />",
+          "    <attribute name=\"businessunitid\" />",
+          "    <attribute name=\"ismanaged\" />",
+          "    <attribute name=\"issytemgenerated\" />",
+          "    <attribute name=\"parentrootroleid\" />",
+          "    <order attribute=\"name\" />",
+          "    <link-entity name=\"systemuserroles\" from=\"roleid\" to=\"roleid\" intersect=\"true\">",
+          "      <filter>",
+          "        <condition attribute=\"systemuserid\" operator=\"eq\" value=\"" + userId + "\" />",
+          "      </filter>",
+          "    </link-entity>",
+          "  </entity>",
+          "</fetch>"
+        ].join("");
+      }
+
+      function getTeamRolesFetchXml(userId) {
+        return [
+          "<fetch mapping=\"logical\">",
+          "  <entity name=\"role\">",
+          "    <attribute name=\"roleid\" />",
+          "    <attribute name=\"name\" />",
+          "    <attribute name=\"businessunitid\" />",
+          "    <attribute name=\"ismanaged\" />",
+          "    <attribute name=\"issytemgenerated\" />",
+          "    <attribute name=\"parentrootroleid\" />",
+          "    <order attribute=\"name\" />",
+          "    <link-entity name=\"teamroles\" from=\"roleid\" to=\"roleid\" intersect=\"true\">",
+          "      <link-entity name=\"team\" from=\"teamid\" to=\"teamid\" alias=\"sourceteam\">",
+          "        <attribute name=\"teamid\" />",
+          "        <attribute name=\"name\" />",
+          "        <link-entity name=\"teammembership\" from=\"teamid\" to=\"teamid\" intersect=\"true\">",
+          "          <filter>",
+          "            <condition attribute=\"systemuserid\" operator=\"eq\" value=\"" + userId + "\" />",
+          "          </filter>",
+          "        </link-entity>",
+          "      </link-entity>",
+          "    </link-entity>",
+          "  </entity>",
+          "</fetch>"
+        ].join("");
+      }
+
+      function getAssignableRolesFetchXml(businessUnitId) {
+        const filterValue = businessUnitId || EMPTY_GUID;
+        return [
+          "<fetch mapping=\"logical\">",
+          "  <entity name=\"role\">",
+          "    <attribute name=\"roleid\" />",
+          "    <attribute name=\"name\" />",
+          "    <attribute name=\"businessunitid\" />",
+          "    <attribute name=\"ismanaged\" />",
+          "    <attribute name=\"issytemgenerated\" />",
+          "    <attribute name=\"parentrootroleid\" />",
+          "    <order attribute=\"name\" />",
+          "    <filter>",
+          "      <condition attribute=\"businessunitid\" operator=\"eq\" value=\"" + filterValue + "\" />",
+          "    </filter>",
+          "  </entity>",
+          "</fetch>"
+        ].join("");
+      }
+
+      function getUserTeamsFetchXml(userId) {
+        return [
+          "<fetch mapping=\"logical\">",
+          "  <entity name=\"team\">",
+          "    <attribute name=\"teamid\" />",
+          "    <attribute name=\"name\" />",
+          "    <attribute name=\"businessunitid\" />",
+          "    <attribute name=\"teamtype\" />",
+          "    <attribute name=\"isdefault\" />",
+          "    <order attribute=\"name\" />",
+          "    <link-entity name=\"teammembership\" from=\"teamid\" to=\"teamid\" intersect=\"true\">",
+          "      <filter>",
+          "        <condition attribute=\"systemuserid\" operator=\"eq\" value=\"" + userId + "\" />",
+          "      </filter>",
+          "    </link-entity>",
+          "  </entity>",
+          "</fetch>"
+        ].join("");
+      }
+
+      function getAssignableTeamsFetchXml(businessUnitId) {
+        const filterValue = businessUnitId || EMPTY_GUID;
+        return [
+          "<fetch mapping=\"logical\">",
+          "  <entity name=\"team\">",
+          "    <attribute name=\"teamid\" />",
+          "    <attribute name=\"name\" />",
+          "    <attribute name=\"businessunitid\" />",
+          "    <attribute name=\"teamtype\" />",
+          "    <attribute name=\"isdefault\" />",
+          "    <order attribute=\"name\" />",
+          "    <filter>",
+          "      <condition attribute=\"businessunitid\" operator=\"eq\" value=\"" + filterValue + "\" />",
+          "      <condition attribute=\"teamtype\" operator=\"eq\" value=\"0\" />",
+          "      <condition attribute=\"isdefault\" operator=\"eq\" value=\"0\" />",
+          "    </filter>",
+          "  </entity>",
+          "</fetch>"
+        ].join("");
+      }
+
+      function getUserSearchFetchXml(searchText, currentUserId) {
+        const searchValue = "%" + xmlAttributeEncode(searchText) + "%";
+        return [
+          "<fetch mapping=\"logical\" top=\"10\">",
+          "  <entity name=\"systemuser\">",
+          "    <attribute name=\"systemuserid\" />",
+          "    <attribute name=\"fullname\" />",
+          "    <attribute name=\"internalemailaddress\" />",
+          "    <attribute name=\"domainname\" />",
+          "    <attribute name=\"businessunitid\" />",
+          "    <order attribute=\"fullname\" />",
+          "    <filter type=\"and\">",
+          "      <condition attribute=\"isdisabled\" operator=\"eq\" value=\"0\" />",
+          "      <condition attribute=\"systemuserid\" operator=\"ne\" value=\"" + xmlAttributeEncode(currentUserId) + "\" />",
+          "      <filter type=\"or\">",
+          "        <condition attribute=\"fullname\" operator=\"like\" value=\"" + searchValue + "\" />",
+          "        <condition attribute=\"internalemailaddress\" operator=\"like\" value=\"" + searchValue + "\" />",
+          "        <condition attribute=\"domainname\" operator=\"like\" value=\"" + searchValue + "\" />",
+          "      </filter>",
+          "    </filter>",
+          "  </entity>",
+          "</fetch>"
+        ].join("");
+      }
+
+      function aggregateRoles(directRecords, teamRecords) {
+        const roles = new Map();
+
+        for (const record of directRecords) {
+          addRole(roles, record, {
+            type: "direct",
+            teamId: "",
+            teamName: ""
+          });
+        }
+
+        for (const record of teamRecords) {
+          addRole(roles, record, {
+            type: "team",
+            teamId: cleanGuid(getAliasedValue(record, "sourceteam", "teamid")),
+            teamName: getAliasedValue(record, "sourceteam", "name") || "(Unnamed team)"
+          });
+        }
+
+        return Array.from(roles.values()).sort(function (left, right) {
+          return left.roleName.localeCompare(right.roleName) ||
+            left.businessUnitName.localeCompare(right.businessUnitName);
+        });
+      }
+
+      function addRole(roles, record, source) {
+        const role = getRole(record);
+        const key = role.roleId || [role.roleName, role.businessUnitId].join("|");
+        let row = roles.get(key);
+
+        if (!row) {
+          row = {
+            businessUnitId: role.businessUnitId,
+            businessUnitName: role.businessUnitName,
+            direct: false,
+            roleId: role.roleId,
+            roleName: role.roleName,
+            rootRoleId: role.rootRoleId,
+            teams: []
+          };
+          roles.set(key, row);
+        }
+
+        if (source.type === "direct") {
+          row.direct = true;
+          return;
+        }
+
+        const alreadyListed = row.teams.some(function (team) {
+          return team.teamId === source.teamId && team.teamName === source.teamName;
+        });
+
+        if (!alreadyListed) {
+          row.teams.push({
+            teamId: source.teamId,
+            teamName: source.teamName
+          });
+          row.teams.sort(function (left, right) {
+            return left.teamName.localeCompare(right.teamName);
+          });
+        }
+      }
+
+      function getRole(record) {
+        const roleId = cleanGuid(record.roleid);
+        const businessUnitId = lookupId(record, "businessunitid");
+        const rootRoleId = lookupId(record, "parentrootroleid") || cleanGuid(record.parentrootroleid) || roleId;
+
+        return {
+          businessUnitId: businessUnitId,
+          businessUnitName: lookupName(record, "businessunitid") || "(No business unit name)",
+          isManaged: record.ismanaged === true || String(record.ismanaged).toLowerCase() === "true",
+          isSystemGenerated: record.issytemgenerated === true || String(record.issytemgenerated).toLowerCase() === "true",
+          roleId: roleId,
+          roleName: record.name || "(Unnamed role)",
+          rootRoleId: rootRoleId
+        };
+      }
+
+      function getTeam(record) {
+        return {
+          businessUnitId: lookupId(record, "businessunitid"),
+          businessUnitName: lookupName(record, "businessunitid") || "(No business unit name)",
+          isDefault: record.isdefault === true || String(record.isdefault).toLowerCase() === "true",
+          teamId: cleanGuid(record.teamid),
+          teamName: record.name || "(Unnamed team)",
+          teamType: record.teamtype,
+          teamTypeName: record["teamtype" + FORMATTED_VALUE] || ""
+        };
+      }
+
+      function getUserSearchResult(record) {
+        return {
+          businessUnitId: lookupId(record, "businessunitid"),
+          businessUnitName: lookupName(record, "businessunitid") || "(No business unit name)",
+          domainName: record.domainname || "",
+          email: record.internalemailaddress || "",
+          fullName: record.fullname || "(Unnamed user)",
+          userId: cleanGuid(record.systemuserid)
+        };
+      }
+
+      function lookupId(record, logicalName) {
+        return cleanGuid(record["_" + logicalName + "_value"] || record[logicalName]);
+      }
+
+      function lookupName(record, logicalName) {
+        return record["_" + logicalName + "_value" + FORMATTED_VALUE] ||
+          record[logicalName + FORMATTED_VALUE] ||
+          "";
+      }
+
+      function getAliasedValue(record, alias, attribute) {
+        return record[alias + "." + attribute + FORMATTED_VALUE] ||
+          record[alias + "." + attribute] ||
+          record[alias + "_" + attribute] ||
+          "";
+      }
+
+      function renderHeader() {
+        const name = state.user && state.user.fullname ? state.user.fullname : "this user";
+        const email = state.user && (state.user.internalemailaddress || state.user.domainname);
+        const details = email ? name + " (" + email + ")" : name;
+        document.getElementById("subtitle").textContent = "Showing direct and team-inherited roles for " + details + ".";
+      }
+
+      function renderStats() {
+        const sourceTeamIds = new Set();
+        const directCount = state.rows.filter(function (row) {
+          return row.direct;
+        }).length;
+        const teamRoleCount = state.rows.filter(function (row) {
+          return row.teams.length > 0;
+        }).length;
+
+        for (const row of state.rows) {
+          for (const team of row.teams) {
+            sourceTeamIds.add(team.teamId || team.teamName);
+          }
+        }
+
+        document.getElementById("totalRoles").textContent = String(state.rows.length);
+        document.getElementById("directRoles").textContent = String(directCount);
+        document.getElementById("teamRoles").textContent = String(teamRoleCount);
+        document.getElementById("sourceTeams").textContent = String(sourceTeamIds.size);
+      }
+
+      function renderAssignmentOptions() {
+        const customRolesOnly = document.getElementById("customRolesOnlyToggle").checked;
+        const directRoleIds = new Set(state.directRecords.map(function (record) {
+          return cleanGuid(record.roleid);
+        }));
+        const userTeamIds = new Set(state.userTeams.map(function (record) {
+          return cleanGuid(record.teamid);
+        }));
+
+        const roles = state.availableRoles
+          .map(getRole)
+          .filter(function (role) {
+            return role.roleId && !directRoleIds.has(role.roleId) && (!customRolesOnly || isCustomRole(role));
+          })
+          .sort(function (left, right) {
+            return left.roleName.localeCompare(right.roleName) ||
+              left.businessUnitName.localeCompare(right.businessUnitName);
+          });
+
+        const teams = state.availableTeams
+          .map(getTeam)
+          .filter(function (team) {
+            return team.teamId && !userTeamIds.has(team.teamId);
+          })
+          .sort(function (left, right) {
+            return left.teamName.localeCompare(right.teamName) ||
+              left.businessUnitName.localeCompare(right.businessUnitName);
+          });
+
+        renderMultiSelect("roleSelect", "Search direct roles...", "No assignable roles found", roles, function (role) {
+          return {
+            value: role.roleId,
+            text: role.roleName + " - " + role.businessUnitName
+          };
+        });
+
+        renderMultiSelect("teamSelect", "Search owner teams...", "No assignable teams found", teams, function (team) {
+          return {
+            value: team.teamId,
+            text: team.teamName + " - " + team.businessUnitName
+          };
+        });
+
+        const assignedDirectRoles = state.directRecords
+          .map(getRole)
+          .filter(function (role) {
+            return role.roleId && (!customRolesOnly || isCustomRole(role));
+          })
+          .sort(function (left, right) {
+            return left.roleName.localeCompare(right.roleName) ||
+              left.businessUnitName.localeCompare(right.businessUnitName);
+          });
+
+        const removableTeams = state.userTeams
+          .map(getTeam)
+          .filter(function (team) {
+            return team.teamId && isRemovableTeam(team);
+          })
+          .sort(function (left, right) {
+            return left.teamName.localeCompare(right.teamName) ||
+              left.businessUnitName.localeCompare(right.businessUnitName);
+          });
+
+        renderMultiSelect("removeRoleSelect", "Search direct roles to remove...", "No direct roles assigned", assignedDirectRoles, function (role) {
+          return {
+            value: role.roleId,
+            text: role.roleName + " - " + role.businessUnitName
+          };
+        });
+
+        renderMultiSelect("removeTeamSelect", "Search team associations to remove...", "No removable team memberships", removableTeams, function (team) {
+          return {
+            value: team.teamId,
+            text: team.teamName + " - " + team.businessUnitName
+          };
+        });
+
+        updateAssignmentButtons();
+      }
+
+      function isCustomRole(role) {
+        return !role.isManaged && !role.isSystemGenerated;
+      }
+
+      function isRemovableTeam(team) {
+        return !team.isDefault && String(team.teamType) === "0";
+      }
+
+      function renderMultiSelect(selectId, placeholder, emptyText, items, mapItem) {
+        const container = document.getElementById(selectId);
+        const control = state.multiSelects[selectId];
+        const priorSelected = control ? control.selected : new Set();
+        const mappedItems = items.map(function (item) {
+          const optionData = mapItem(item);
+          return {
+            value: cleanGuid(optionData.value),
+            text: optionData.text,
+            searchText: String(optionData.text || "").toLowerCase()
+          };
+        }).filter(function (item) {
+          return item.value;
+        });
+        const validValues = new Set(mappedItems.map(function (item) {
+          return item.value;
+        }));
+
+        state.multiSelects[selectId] = {
+          items: mappedItems,
+          selected: new Set(Array.from(priorSelected).filter(function (value) {
+            return validValues.has(value);
+          })),
+          searchText: control ? control.searchText : ""
+        };
+
+        container.textContent = "";
+        container.className = "multi-select";
+        container.dataset.placeholder = placeholder;
+        container.dataset.empty = emptyText;
+
+        const summary = document.createElement("div");
+        summary.className = "multi-summary";
+        summary.dataset.multiSummary = selectId;
+        container.appendChild(summary);
+
+        const searchInput = document.createElement("input");
+        searchInput.className = "multi-search";
+        searchInput.type = "search";
+        searchInput.placeholder = placeholder;
+        searchInput.value = state.multiSelects[selectId].searchText;
+        searchInput.dataset.multiSearch = selectId;
+        searchInput.addEventListener("input", function () {
+          state.multiSelects[selectId].searchText = searchInput.value;
+          renderMultiSelectOptions(selectId);
+        });
+        container.appendChild(searchInput);
+
+        const options = document.createElement("div");
+        options.className = "multi-options";
+        options.dataset.multiOptions = selectId;
+        container.appendChild(options);
+
+        renderMultiSelectOptions(selectId);
+      }
+
+      function renderMultiSelectOptions(selectId) {
+        const control = state.multiSelects[selectId];
+        const container = document.getElementById(selectId);
+        const options = container.querySelector("[data-multi-options]");
+        const summary = container.querySelector("[data-multi-summary]");
+        const searchText = String(control.searchText || "").trim().toLowerCase();
+        const visibleItems = control.items.filter(function (item) {
+          return !searchText || item.searchText.indexOf(searchText) >= 0;
+        });
+
+        summary.textContent = getMultiSelectSummary(selectId);
+        options.textContent = "";
+
+        if (visibleItems.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "multi-empty";
+          empty.textContent = control.items.length === 0 ? container.dataset.empty : "No matches found";
+          options.appendChild(empty);
+          updateAssignmentButtons();
+          return;
+        }
+
+        for (const item of visibleItems) {
+          const optionLabel = document.createElement("label");
+          optionLabel.className = "multi-option";
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.value = item.value;
+          checkbox.checked = control.selected.has(item.value);
+          checkbox.addEventListener("change", function () {
+            if (checkbox.checked) {
+              control.selected.add(item.value);
+            } else {
+              control.selected.delete(item.value);
+            }
+            summary.textContent = getMultiSelectSummary(selectId);
+            updateAssignmentButtons();
+          });
+
+          const text = document.createElement("span");
+          text.textContent = item.text;
+
+          optionLabel.appendChild(checkbox);
+          optionLabel.appendChild(text);
+          options.appendChild(optionLabel);
+        }
+
+        updateAssignmentButtons();
+      }
+
+      function getMultiSelectSummary(selectId) {
+        const control = state.multiSelects[selectId];
+        const count = control.selected.size;
+        if (count === 0) {
+          return "None selected";
+        }
+
+        return count + " " + pluralize(getMultiSelectNoun(selectId), count) + " selected";
+      }
+
+      function getMultiSelectNoun(selectId) {
+        return selectId.toLowerCase().indexOf("team") >= 0 ? "team" : "role";
+      }
+
+      function getSelectedValues(selectId) {
+        const control = state.multiSelects[selectId];
+        return control ? Array.from(control.selected) : [];
+      }
+
+      function renderRows() {
+        const rowsBody = document.getElementById("rolesBody");
+        const searchText = document.getElementById("searchInput").value.trim().toLowerCase();
+        const sourceFilter = document.getElementById("sourceFilter").value;
+        const rows = sortRows(state.rows.filter(function (row) {
+          return matchesSourceFilter(row, sourceFilter) && matchesSearch(row, searchText);
+        }));
+
+        state.filteredRows = rows;
+        rowsBody.textContent = "";
+        updateSortHeaders();
+
+        if (rows.length === 0) {
+          const tr = document.createElement("tr");
+          const td = document.createElement("td");
+          td.colSpan = 4;
+          td.className = "empty";
+          td.textContent = state.rows.length === 0 ? "No roles were found for this user." : "No roles match the current filters.";
+          tr.appendChild(td);
+          rowsBody.appendChild(tr);
+          return;
+        }
+
+        for (const row of rows) {
+          rowsBody.appendChild(createRoleRow(row));
+        }
+      }
+
+      function sortRows(rows) {
+        return rows.slice().sort(function (left, right) {
+          const leftValue = getSortValue(left, state.sort.column);
+          const rightValue = getSortValue(right, state.sort.column);
+          const comparison = leftValue.localeCompare(rightValue, undefined, {
+            numeric: true,
+            sensitivity: "base"
+          });
+
+          if (comparison !== 0) {
+            return state.sort.direction === "asc" ? comparison : comparison * -1;
+          }
+
+          return left.roleName.localeCompare(right.roleName, undefined, {
+            numeric: true,
+            sensitivity: "base"
+          });
+        });
+      }
+
+      function getSortValue(row, column) {
+        if (column === "businessUnitName") {
+          return row.businessUnitName || "";
+        }
+
+        if (column === "source") {
+          return getSourceText(row);
+        }
+
+        if (column === "teamNames") {
+          return getTeamNames(row);
+        }
+
+        return row.roleName || "";
+      }
+
+      function getSourceText(row) {
+        if (row.direct && row.teams.length > 0) {
+          return "Direct and Team";
+        }
+
+        if (row.direct) {
+          return "Direct";
+        }
+
+        if (row.teams.length > 0) {
+          return "Team";
+        }
+
+        return "";
+      }
+
+      function getTeamNames(row) {
+        return row.teams.map(function (team) {
+          return team.teamName;
+        }).join(", ");
+      }
+
+      function updateSortHeaders() {
+        document.querySelectorAll("[data-sort-arrow]").forEach(function (arrow) {
+          const column = arrow.dataset.sortArrow;
+          if (column !== state.sort.column) {
+            arrow.textContent = "↕";
+            return;
+          }
+
+          arrow.textContent = state.sort.direction === "asc" ? "↑" : "↓";
+        });
+      }
+
+      function matchesSourceFilter(row, sourceFilter) {
+        if (sourceFilter === "direct") {
+          return row.direct;
+        }
+
+        if (sourceFilter === "team") {
+          return row.teams.length > 0;
+        }
+
+        if (sourceFilter === "both") {
+          return row.direct && row.teams.length > 0;
+        }
+
+        return true;
+      }
+
+      function matchesSearch(row, searchText) {
+        if (!searchText) {
+          return true;
+        }
+
+        const teamNames = row.teams.map(function (team) {
+          return team.teamName;
+        }).join(" ");
+
+        return [
+          row.roleName,
+          row.businessUnitName,
+          row.roleId,
+          row.rootRoleId,
+          teamNames,
+          row.direct ? "direct" : "",
+          row.teams.length > 0 ? "team inherited" : ""
+        ].join(" ").toLowerCase().indexOf(searchText) >= 0;
+      }
+
+      function createRoleRow(row) {
+        const tr = document.createElement("tr");
+
+        const roleCell = document.createElement("td");
+        const roleName = document.createElement("div");
+        roleName.className = "role-name";
+        roleName.appendChild(createRecordLink(row.roleName, "role", row.roleId));
+        const roleMeta = document.createElement("div");
+        roleMeta.className = "meta";
+        roleMeta.textContent = "roleid: " + row.roleId + " | root: " + row.rootRoleId;
+        roleCell.appendChild(roleName);
+        roleCell.appendChild(roleMeta);
+
+        const businessUnitCell = document.createElement("td");
+        businessUnitCell.textContent = row.businessUnitName;
+
+        const sourceCell = document.createElement("td");
+        const sourceChips = document.createElement("div");
+        sourceChips.className = "chips";
+        if (row.direct) {
+          sourceChips.appendChild(createChip("Direct", "direct"));
+        }
+        if (row.teams.length > 0) {
+          sourceChips.appendChild(createChip("Team", "team"));
+        }
+        sourceCell.appendChild(sourceChips);
+
+        const teamCell = document.createElement("td");
+        if (row.teams.length === 0) {
+          teamCell.textContent = "-";
+        } else {
+          const teamList = document.createElement("div");
+          teamList.className = "chips";
+          for (const team of row.teams) {
+            teamList.appendChild(createRecordChip(team.teamName, "team", "team", team.teamId));
+          }
+          teamCell.appendChild(teamList);
+        }
+
+        tr.appendChild(roleCell);
+        tr.appendChild(businessUnitCell);
+        tr.appendChild(sourceCell);
+        tr.appendChild(teamCell);
+        return tr;
+      }
+
+      function createChip(text, className) {
+        const chip = document.createElement("span");
+        chip.className = "chip " + className;
+        chip.textContent = text;
+        return chip;
+      }
+
+      function createRecordChip(text, className, entityName, recordId) {
+        const chip = createRecordLink(text, entityName, recordId);
+        chip.className = "chip " + className + " record-link";
+        return chip;
+      }
+
+      function createRecordLink(text, entityName, recordId) {
+        if (!recordId) {
+          const span = document.createElement("span");
+          span.textContent = text;
+          return span;
+        }
+
+        const link = document.createElement("a");
+        link.className = "record-link";
+        link.href = getRecordUrl(entityName, recordId);
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.dataset.entityName = entityName;
+        link.dataset.recordId = recordId;
+        link.textContent = text;
+        return link;
+      }
+
+      function handleRecordLinkClick(event) {
+        const link = event.target.closest ? event.target.closest("a[data-entity-name][data-record-id]") : null;
+        if (!link || !state.xrm || !state.xrm.Navigation || typeof state.xrm.Navigation.openForm !== "function") {
+          return;
+        }
+
+        event.preventDefault();
+        state.xrm.Navigation.openForm({
+          entityName: link.dataset.entityName,
+          entityId: link.dataset.recordId
+        });
+      }
+
+      function getRecordUrl(entityName, recordId) {
+        const clientUrl = state.xrm && state.xrm.Utility && typeof state.xrm.Utility.getGlobalContext === "function"
+          ? state.xrm.Utility.getGlobalContext().getClientUrl()
+          : "";
+        return clientUrl + "/main.aspx?pagetype=entityrecord&etn=" +
+          encodeURIComponent(entityName) + "&id=" + encodeURIComponent(recordId);
+      }
+
+      function renderError(error) {
+        document.getElementById("subtitle").textContent = "Unable to load effective security roles.";
+        document.getElementById("rolesBody").textContent = "";
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 4;
+        td.className = "empty";
+        td.textContent = "The roles could not be loaded.";
+        tr.appendChild(td);
+        document.getElementById("rolesBody").appendChild(tr);
+        setMessage(error && error.message ? error.message : String(error), "error");
+        renderMultiSelect("roleSelect", "Search direct roles...", "Roles unavailable", [], function () {
+          return {};
+        });
+        renderMultiSelect("teamSelect", "Search owner teams...", "Teams unavailable", [], function () {
+          return {};
+        });
+        renderMultiSelect("removeRoleSelect", "Search direct roles to remove...", "Direct roles unavailable", [], function () {
+          return {};
+        });
+        renderMultiSelect("removeTeamSelect", "Search team associations to remove...", "Team memberships unavailable", [], function () {
+          return {};
+        });
+        updateAssignmentButtons();
+      }
+
+      function setLoading(isLoading) {
+        state.isLoading = isLoading;
+        const button = document.getElementById("refreshButton");
+        button.disabled = isLoading;
+        button.textContent = isLoading ? "Loading..." : "Refresh";
+        updateAssignmentButtons();
+      }
+
+      function updateAssignmentButtons() {
+        const addRoleCount = getSelectedValues("roleSelect").length;
+        const addTeamCount = getSelectedValues("teamSelect").length;
+        const removeRoleCount = getSelectedValues("removeRoleSelect").length;
+        const removeTeamCount = getSelectedValues("removeTeamSelect").length;
+        const copyUserSearch = document.getElementById("copyUserSearch");
+
+        setMultiSelectDisabled("roleSelect", state.isLoading || !state.canManage);
+        setMultiSelectDisabled("teamSelect", state.isLoading || !state.canManage);
+        setMultiSelectDisabled("removeRoleSelect", state.isLoading || !state.canManage);
+        setMultiSelectDisabled("removeTeamSelect", state.isLoading || !state.canManage);
+        copyUserSearch.disabled = state.isLoading || !state.canManage;
+
+        updateActionButton("addRoleButton", "Add", "direct role", addRoleCount);
+        updateActionButton("addTeamButton", "Associate", "team", addTeamCount);
+        updateActionButton("removeRoleButton", "Remove", "direct role", removeRoleCount);
+        updateActionButton("removeTeamButton", "Remove", "team", removeTeamCount);
+
+        document.getElementById("addRoleButton").disabled = state.isLoading || !state.canManage || addRoleCount === 0;
+        document.getElementById("addTeamButton").disabled = state.isLoading || !state.canManage || addTeamCount === 0;
+        document.getElementById("removeRoleButton").disabled = state.isLoading || !state.canManage || removeRoleCount === 0;
+        document.getElementById("removeTeamButton").disabled = state.isLoading || !state.canManage || removeTeamCount === 0;
+        document.getElementById("copyAssignmentsButton").disabled = state.isLoading || !state.canManage || !state.copySourceUser;
+      }
+
+      function setMultiSelectDisabled(selectId, isDisabled) {
+        const container = document.getElementById(selectId);
+        if (!container) {
+          return;
+        }
+
+        container.classList.toggle("disabled", isDisabled);
+        container.querySelectorAll("input").forEach(function (input) {
+          input.disabled = isDisabled;
+        });
+      }
+
+      function updateActionButton(buttonId, actionText, noun, count) {
+        const button = document.getElementById(buttonId);
+        if (count > 0) {
+          button.textContent = actionText + " " + count + " " + pluralize(noun, count);
+          return;
+        }
+
+        button.textContent = actionText + " " + pluralize(noun, 2);
+      }
+
+      function setMessage(text, type) {
+        const message = document.getElementById("message");
+        message.textContent = text;
+        message.className = "message" + (text ? " visible" : "") + (type ? " " + type : "");
+      }
+
+      function getErrorMessage(error) {
+        if (!error) {
+          return "";
+        }
+
+        if (error.message) {
+          return error.message;
+        }
+
+        return String(error);
+      }
+
+      function pluralize(noun, count) {
+        return count === 1 ? noun : noun + "s";
+      }
+
+      function xmlAttributeEncode(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/"/g, "&quot;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
+      function cleanGuid(value) {
+        const text = value == null ? "" : String(value);
+        const match = text.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
+        return match ? match[0].toLowerCase() : "";
+      }
+    })();
+  </script>
+</body>
+</html>

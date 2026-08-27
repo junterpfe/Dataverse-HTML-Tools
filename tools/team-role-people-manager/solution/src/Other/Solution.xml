@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ImportExportXml version="9.1.0.643" SolutionPackageVersion="9.1" languagecode="1033" generatedBy="CrmLive" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <SolutionManifest>
+    <UniqueName>DataverseHtmlToolsTeamRolePeopleManager</UniqueName>
+    <LocalizedNames>
+      <LocalizedName description="Team Role and People Manager" languagecode="1033" />
+    </LocalizedNames>
+    <Descriptions>
+      <Description description="Team form helper for managing team security roles and owner-team membership." languagecode="1033" />
+    </Descriptions>
+    <Version>1.0.0.0</Version>
+    <Managed>2</Managed>
+    <Publisher>
+      <UniqueName>DataverseHTMLTools</UniqueName>
+      <LocalizedNames>
+        <LocalizedName description="Dataverse HTML Tools" languagecode="1033" />
+      </LocalizedNames>
+      <Descriptions>
+        <Description description="Dataverse HTML Tools" languagecode="1033" />
+      </Descriptions>
+      <EMailAddress xsi:nil="true"></EMailAddress>
+      <SupportingWebsiteUrl xsi:nil="true"></SupportingWebsiteUrl>
+      <CustomizationPrefix>dht</CustomizationPrefix>
+      <CustomizationOptionValuePrefix>45369</CustomizationOptionValuePrefix>
+      <Addresses />
+    </Publisher>
+    <RootComponents>
+      <RootComponent type="61" schemaName="dht_/TeamRolePeopleManager.html" behavior="0" />
+    </RootComponents>
+    <MissingDependencies />
+  </SolutionManifest>
+</ImportExportXml>
