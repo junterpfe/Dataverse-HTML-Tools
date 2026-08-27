@@ -46,7 +46,3 @@ Use `themeOption=darkmode` when a model-driven app URL should force dark mode. T
 The tools do not bypass Dataverse or Power Platform security. All reads and writes run as the currently signed-in user. Restrict access with model-driven app access, web resource visibility, and Dataverse security roles.
 
 See [SECURITY.md](SECURITY.md) for implementation notes and review guidance.
-
-## Adding future tools
-
-Add each new tool under `tools\<tool-slug>` with its own `README.md`, source files, and optional packaging project. Update this README and [`docs\README.md`](docs/README.md) when adding a tool.
