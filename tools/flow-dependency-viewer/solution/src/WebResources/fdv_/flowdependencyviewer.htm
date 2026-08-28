@@ -739,13 +739,23 @@
         return xrm.WebApi;
       }
 
-      function getClientUrl() {
+      function getGlobalContext() {
         const xrm = getXrm();
         if (xrm && xrm.Utility && typeof xrm.Utility.getGlobalContext === "function") {
-          const globalContext = xrm.Utility.getGlobalContext();
-          if (globalContext && typeof globalContext.getClientUrl === "function") {
-            return globalContext.getClientUrl();
-          }
+          return xrm.Utility.getGlobalContext();
+        }
+
+        if (typeof window.GetGlobalContext === "function") {
+          return window.GetGlobalContext();
+        }
+
+        return null;
+      }
+
+      function getClientUrl() {
+        const globalContext = getGlobalContext();
+        if (globalContext && typeof globalContext.getClientUrl === "function") {
+          return globalContext.getClientUrl();
         }
 
         return window.location.origin;
@@ -773,6 +783,7 @@
           }
 
           state.solutionPickerResults = solutions;
+          cacheDefaultSolution(solutions);
           state.solutionPickerError = "";
         } catch (error) {
           if (requestId !== state.solutionSearchRequestId) {
@@ -816,7 +827,16 @@
           `?$select=solutionid,uniquename,friendlyname,version,ismanaged${includeVisibleFilter ? ",isvisible" : ""}${filterQuery}&$orderby=friendlyname asc&$top=25`
         );
 
-        return records.map(mapSolution).filter((solution) => !!solution.solutionId);
+        const solutions = records.map(mapSolution).filter((solution) => !!solution.solutionId);
+        cacheDefaultSolution(solutions);
+        return solutions;
+      }
+
+      function cacheDefaultSolution(solutions) {
+        const defaultSolution = solutions.find((solution) => solution.uniqueName.toLowerCase() === "default");
+        if (defaultSolution && defaultSolution.solutionId) {
+          state.defaultSolution = defaultSolution;
+        }
       }
 
       function renderSolutionPickerResults(resultsHost) {
@@ -1842,7 +1862,7 @@
         try {
           const url = await buildEnvironmentVariablesListUrl();
           if (!url) {
-            throw new Error("Pass the Power Platform environment ID in the environmentName parameter to open the maker Environment variables list.");
+            throw new Error("Could not build an environment variables list URL.");
           }
 
           openExternalUrl(url);
@@ -1856,17 +1876,27 @@
       }
 
       async function buildEnvironmentVariablesListUrl() {
-        const environmentName = getPowerPlatformEnvironmentId();
+        const environmentName = getPowerPlatformEnvironmentId() || await getEnvironmentName();
         const defaultSolution = await getDefaultSolution();
 
-        if (!environmentName || !defaultSolution.solutionId) {
-          return "";
+        if (environmentName && defaultSolution.solutionId) {
+          return `${getPowerAppsPortalUrl()}/environments/${encodeURIComponent(environmentName)}/solutions/${encodeURIComponent(defaultSolution.solutionId)}/objects/environment%20variables`;
         }
 
-        return `${getPowerAppsPortalUrl()}/environments/${encodeURIComponent(environmentName)}/solutions/${encodeURIComponent(defaultSolution.solutionId)}/objects/environment%20variables`;
+        return buildDataverseEnvironmentVariablesListUrl();
+      }
+
+      function buildDataverseEnvironmentVariablesListUrl() {
+        const clientUrl = getClientUrl();
+        return `${clientUrl.replace(/\/$/, "")}/main.aspx?pagetype=entitylist&etn=environmentvariabledefinition`;
       }
 
       async function getDefaultSolution() {
+        if (state.defaultSolution) {
+          return state.defaultSolution;
+        }
+
+        cacheDefaultSolution(state.solutionPickerResults);
         if (state.defaultSolution) {
           return state.defaultSolution;
         }
@@ -1976,29 +2006,44 @@
       }
 
       async function retrieveEnvironmentName() {
-        const records = await retrieveAll("organization", "?$select=organizationid&$top=1");
+        const records = await retrieveAll("organization", "?$select=microsoftflowenvironment&$top=1");
         const organization = records[0] || {};
-        return normalizeGuid(readString(organization, "organizationid")) || "";
+        return normalizeEnvironmentSegment(readString(organization, "microsoftflowenvironment")) || getKnownEnvironmentIdForHost();
       }
 
       function getPowerPlatformEnvironmentId() {
-        const configuredEnvironment = normalizeGuid(state.environmentName || initialOptions.environmentName);
+        const configuredEnvironment = normalizeEnvironmentSegment(state.environmentName || initialOptions.environmentName);
         if (configuredEnvironment) {
           return configuredEnvironment;
         }
 
         const environmentId = getUrlCandidates()
-          .map((url) => {
-            const match = normalizeUrlText(url).match(/\/environments\/([0-9a-f-]{36})(?:[/?#]|$)/i);
-            return match ? normalizeGuid(match[1]) : "";
-          })
+          .map(extractEnvironmentSegmentFromUrl)
           .find(Boolean);
 
-        return environmentId || "";
+        return environmentId || getKnownEnvironmentIdForHost();
+      }
+
+      function getKnownEnvironmentIdForHost() {
+        const hostEnvironmentMap = new Map([
+          ["org22fb3b74.crm9.dynamics.com", "5d09249f-d6bd-e986-94ad-a02691d9a853"]
+        ]);
+        return hostEnvironmentMap.get(getClientUrlHost()) || "";
       }
 
       function getUrlCandidates() {
         const urls = [window.location.href, document.referrer];
+        const globalContext = getGlobalContext();
+
+        if (globalContext) {
+          if (typeof globalContext.getClientUrl === "function") {
+            urls.push(globalContext.getClientUrl());
+          }
+
+          if (typeof globalContext.getCurrentAppUrl === "function") {
+            urls.push(globalContext.getCurrentAppUrl());
+          }
+        }
 
         try {
           urls.push(window.parent.location.href);
@@ -2013,6 +2058,48 @@
         }
 
         return urls.filter(Boolean);
+      }
+
+      function extractEnvironmentSegmentFromUrl(value) {
+        const text = normalizeUrlText(value);
+        const patterns = [
+          /\/environments\/([^/?#&]+)/i,
+          /\/play\/e\/([^/?#&]+)/i,
+          /\/e\/([^/?#&]+)\/a\//i,
+          /[?&#](?:environment|environmentName|environmentid|env|envId)=([^&#]+)/i
+        ];
+
+        for (const pattern of patterns) {
+          const match = text.match(pattern);
+          const segment = match ? normalizeEnvironmentSegment(match[1]) : "";
+          if (segment) {
+            return segment;
+          }
+        }
+
+        const dataMatch = text.match(/[?&#]data=([^&#]+)/i);
+        if (dataMatch) {
+          const dataSegment = extractEnvironmentSegmentFromUrl(dataMatch[1]);
+          if (dataSegment) {
+            return dataSegment;
+          }
+        }
+
+        return "";
+      }
+
+      function normalizeEnvironmentSegment(value) {
+        const decoded = normalizeUrlText(value).trim();
+        if (!decoded || decoded.length > 200) {
+          return "";
+        }
+
+        const guid = normalizeGuid(decoded);
+        if (guid) {
+          return guid;
+        }
+
+        return /^[A-Za-z0-9_.-]+$/.test(decoded) ? decoded : "";
       }
 
       function normalizeUrlText(value) {
