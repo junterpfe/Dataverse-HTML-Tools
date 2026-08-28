@@ -451,6 +451,9 @@
       border-color: var(--cp-danger);
       color: var(--cp-danger);
     }
+    .fdv-danger-text {
+      color: var(--cp-danger);
+    }
     .fdv-button-danger:hover:not(:disabled) {
       border-color: var(--cp-danger);
       font-weight: 700;
@@ -1530,6 +1533,11 @@
           if (inactiveExternalPrerequisites.length > 0) {
             blockedReasons.push(`${inactiveExternalPrerequisites.length} external prerequisite flow${inactiveExternalPrerequisites.length === 1 ? " is" : "s are"} off. Turn external prerequisites on first or add them to the solution.`);
           }
+
+          const flowsMissingEnvironmentVariables = orderedFlows.filter((flow) => getMissingEnvironmentVariables(flow).length > 0);
+          if (flowsMissingEnvironmentVariables.length > 0) {
+            blockedReasons.push(`${flowsMissingEnvironmentVariables.length} solution flow${flowsMissingEnvironmentVariables.length === 1 ? " is" : "s are"} missing required environment variable values. Set the missing values before turning flows on.`);
+          }
         }
 
         return { orderedFlows, blockedReasons };
@@ -1626,6 +1634,12 @@
             setMessage("error", `Turn on prerequisite flow${inactivePrerequisites.length === 1 ? "" : "s"} first: ${inactivePrerequisites.map((dependency) => dependency.name).join(", ")}.`);
             return;
           }
+
+          const missingEnvironmentVariables = getMissingEnvironmentVariables(flow);
+          if (missingEnvironmentVariables.length > 0) {
+            setMessage("error", `Set environment variable value${missingEnvironmentVariables.length === 1 ? "" : "s"} first: ${missingEnvironmentVariables.map(getEnvironmentVariableLabel).join(", ")}.`);
+            return;
+          }
         }
 
         const confirmed = await confirmAction(
@@ -1657,6 +1671,13 @@
       async function updateFlowState(flow, turnOn) {
         if (!flow.inSolution) {
           throw new Error(`${flow.name} is outside the selected solution and was not changed.`);
+        }
+
+        if (turnOn) {
+          const missingEnvironmentVariables = getMissingEnvironmentVariables(flow);
+          if (missingEnvironmentVariables.length > 0) {
+            throw new Error(`Set environment variable value${missingEnvironmentVariables.length === 1 ? "" : "s"} first: ${missingEnvironmentVariables.map(getEnvironmentVariableLabel).join(", ")}.`);
+          }
         }
 
         await getWebApi().updateRecord("workflow", flow.id, {
@@ -2508,9 +2529,18 @@
         }
 
         const turnOn = !isFlowActive(flow);
-        actions.appendChild(createButton(turnOn ? "Turn on" : "Turn off", turnOn ? "primary" : "danger", () => {
+        const missingEnvironmentVariables = turnOn ? getMissingEnvironmentVariables(flow) : [];
+        const button = createButton(turnOn ? "Turn on" : "Turn off", turnOn ? "primary" : "danger", () => {
           void setSingleFlowState(flow, turnOn);
-        }, state.isLoading || state.isWorking));
+        }, state.isLoading || state.isWorking || missingEnvironmentVariables.length > 0);
+        if (missingEnvironmentVariables.length > 0) {
+          button.title = `Set environment variable value${missingEnvironmentVariables.length === 1 ? "" : "s"} first: ${missingEnvironmentVariables.map(getEnvironmentVariableLabel).join(", ")}`;
+        }
+        actions.appendChild(button);
+
+        if (missingEnvironmentVariables.length > 0) {
+          actions.appendChild(createElement("div", "fdv-flow-meta fdv-danger-text", `Missing variable value${missingEnvironmentVariables.length === 1 ? "" : "s"}`));
+        }
 
         return cell;
       }
@@ -2781,6 +2811,14 @@
         }
 
         return "Missing value";
+      }
+
+      function getMissingEnvironmentVariables(flow) {
+        return Array.from(flow.environmentVariableIds)
+          .map((id) => state.environmentVariables.get(id))
+          .filter(Boolean)
+          .filter(isEnvironmentVariableValueMissing)
+          .sort(compareEnvironmentVariables);
       }
 
       function getMissingEnvironmentVariableCount(environmentVariableMap = state.environmentVariables, dependencies = state.environmentVariableDependencies) {

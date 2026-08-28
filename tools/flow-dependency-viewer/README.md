@@ -12,6 +12,7 @@ It is designed for scenarios like:
 - Finding environment variables referenced by each flow
 - Flagging environment variables that are missing both current and default values
 - Opening flows directly and editing environment variable values from the table
+- Blocking flow activation until that flow's referenced environment variables have values
 
 ## Files
 
@@ -94,6 +95,8 @@ When activation commands are enabled, admins can:
 - Turn all solution flows on in activation order
 - Turn all solution flows off in reverse activation order
 
+The **Turn on** button is disabled for an individual flow when any environment variable referenced by that flow has no current value and no default value. Bulk activation also blocks until missing environment variable values are set.
+
 The control updates each workflow row to:
 
 | Action | `statecode` | `statuscode` |
@@ -143,6 +146,7 @@ This tool does not bypass Dataverse or Power Automate security checks.
 | Environment variable pill is red | The variable has no active current value and no default value |
 | Opening the Default Solution list fails | The Power Platform environment ID is not available in the URL or `environmentName` parameter, the Default Solution could not be found, or the user lacks access |
 | Saving an environment variable value fails | Current user lacks privileges to create or update `environmentvariablevalue` rows, or the variable type requires additional maker-specific configuration |
+| Turn on button is disabled | One or more environment variables referenced by that flow are missing values |
 | Turning on a flow fails with `XrmEnvironmentVariableAttributeNotFound` | A referenced environment variable is missing a value in this environment |
 | Turn on is blocked by prerequisite flows | A required flow is off; turn prerequisite flows on first |
 | Buttons are missing | Activation commands are disabled |
