@@ -12,6 +12,7 @@ These tools run in the signed-in user's Dataverse context through `Xrm.WebApi`. 
 | [Role Table Permission Copier](tools/role-table-permission-copier/README.md) | [HTML](tools/role-table-permission-copier/src/RoleTablePermissionCopier.html) | [Docs](tools/role-table-permission-copier/README.md) |
 | [Team Role and People Manager](tools/team-role-people-manager/README.md) | [HTML](tools/team-role-people-manager/src/TeamRolePeopleManager.html) | [Docs](tools/team-role-people-manager/README.md) |
 | [Flow Dependency Viewer](tools/flow-dependency-viewer/README.md) | [HTML web resource](tools/flow-dependency-viewer/solution/src/WebResources/fdv_/flowdependencyviewer.htm) | [Docs](tools/flow-dependency-viewer/README.md) |
+| [Solution Service Inspector](tools/solution-service-inspector/README.md) | [HTML](tools/solution-service-inspector/src/SolutionServiceInspector.html) | [Docs](tools/solution-service-inspector/README.md) |
 
 ## Screenshots
 
@@ -33,6 +34,7 @@ Screenshots use sanitized sample data.
 | Role Table Permission Copier | [Unmanaged ZIP](packages/role-table-permission-copier/RoleTablePermissionCopierSolution.zip) | [Managed ZIP](packages/role-table-permission-copier/RoleTablePermissionCopierSolution_managed.zip) |
 | Team Role and People Manager | [Unmanaged ZIP](packages/team-role-people-manager/TeamRolePeopleManagerSolution.zip) | [Managed ZIP](packages/team-role-people-manager/TeamRolePeopleManagerSolution_managed.zip) |
 | Flow Dependency Viewer | [Unmanaged ZIP](packages/flow-dependency-viewer/FlowDependencyViewerSolution.zip) | [Managed ZIP](packages/flow-dependency-viewer/FlowDependencyViewerSolution_managed.zip) |
+| Solution Service Inspector | [Unmanaged ZIP](packages/solution-service-inspector/SolutionServiceInspectorSolution.zip) | [Managed ZIP](packages/solution-service-inspector/SolutionServiceInspectorSolution_managed.zip) |
 
 ## Repository layout
 
@@ -54,7 +56,7 @@ Use one of these deployment paths:
 1. **Packaged install:** import the tool's managed or unmanaged ZIP from [`packages`](packages), publish customizations if prompted, then add the imported web resource to an admin model-driven app.
 2. **Manual install:** add the tool's HTML file as a Dataverse **Webpage (HTML)** web resource, publish customizations, then add that web resource to an admin model-driven app.
 
-Use `themeOption=darkmode` when a model-driven app URL should force dark mode. The pages also handle that flag when it is encoded in the web resource `data` parameter.
+Use `themeOption=darkmode` when a model-driven app URL should force dark mode. The pages also handle that flag when it is encoded in the web resource `data` parameter. Dataverse/Power Platform HTML tools should default to light mode unless that explicit dark-mode flag is present.
 
 ## Security model
 

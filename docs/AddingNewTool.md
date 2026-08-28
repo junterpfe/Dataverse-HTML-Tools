@@ -17,6 +17,6 @@ tools\<tool-slug>\
 3. Update the root `README.md` tool table.
 4. Update `docs\README.md`.
 5. If the tool has packaged outputs, place distributable ZIPs under `packages\<tool-slug>`.
-6. Use `themeOption=darkmode` for dark mode parity with the existing pages.
+6. Default to light mode and only use dark mode when the app explicitly passes `themeOption=darkmode`, including when encoded in the web resource `data` parameter.
 7. Use `textContent` and DOM APIs rather than injecting untrusted HTML.
 8. Keep write actions explicit and confirmed.
