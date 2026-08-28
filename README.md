@@ -49,7 +49,10 @@ Dataverse-HTML-Tools\
 
 ## Deployment
 
-Import the package ZIP for the tool from `packages`, or add the HTML file as a Dataverse **Webpage (HTML)** web resource, publish customizations, and place it in an admin model-driven app.
+Use one of these deployment paths:
+
+1. **Packaged install:** import the tool's managed or unmanaged ZIP from [`packages`](packages), publish customizations if prompted, then add the imported web resource to an admin model-driven app.
+2. **Manual install:** add the tool's HTML file as a Dataverse **Webpage (HTML)** web resource, publish customizations, then add that web resource to an admin model-driven app.
 
 Use `themeOption=darkmode` when a model-driven app URL should force dark mode. The pages also handle that flag when it is encoded in the web resource `data` parameter.
 

@@ -36,7 +36,10 @@ The packaged solution contains the HTML web resource only.
 
 ## Where to use it
 
-Import the solution ZIP, then add the `fdv_\flowdependencyviewer.htm` web resource to an admin model-driven app as a standalone page/navigation item.
+Use one of these deployment paths:
+
+1. **Packaged install:** import the managed or unmanaged solution ZIP, then add the imported `fdv_\flowdependencyviewer.htm` web resource to an admin model-driven app as a standalone page/navigation item.
+2. **Manual install:** add `tools\flow-dependency-viewer\solution\src\WebResources\fdv_\flowdependencyviewer.htm` as a Dataverse **Webpage (HTML)** web resource, publish customizations, then add it to an admin model-driven app.
 
 The page can load a solution by unique name, friendly name, or solution ID. You can also pass a default value through the web resource URL:
 

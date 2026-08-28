@@ -42,10 +42,11 @@ Screenshots use sanitized sample data.
 1. Open **make.powerapps.com**.
 2. Select the target Dataverse environment.
 3. Open or create an admin/customization solution.
-4. Add each standalone HTML file as a **Webpage (HTML) web resource**.
-5. Import the solution ZIP for each tool, or add its HTML web resource manually.
-6. Publish customizations.
-7. Add the web resources to an admin model-driven app.
+4. Choose one deployment path:
+   - **Packaged install:** import the tool's managed or unmanaged solution ZIP from `packages`.
+   - **Manual install:** add the tool's HTML file as a **Webpage (HTML)** web resource.
+5. Publish customizations.
+6. Add the web resource to an admin model-driven app.
 
 Recommended placement:
 
