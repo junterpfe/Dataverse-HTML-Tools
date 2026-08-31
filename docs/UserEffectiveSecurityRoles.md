@@ -8,6 +8,7 @@ It combines:
 
 - Direct security roles assigned to the user
 - Team-inherited security roles
+- Record-specific access team memberships
 - Owner-team memberships
 - Add/remove role and team assignment actions
 - Copy assignments from another user
@@ -89,6 +90,20 @@ Admins can search for another user and copy:
 
 For roles, the tool attempts to map the source user's roles to matching roles in the target user's business unit. Existing assignments are kept.
 
+### Record access teams
+
+The tool also lists record-specific access team memberships for the user. These are unique permissions on individual records, not reusable security roles.
+
+For each access team membership, the page attempts to show:
+
+- Target record name and clickable record link
+- Target table display/logical name
+- Access team name
+- Access team template name
+- Access rights from the template, such as Read, Write, Append, Append To, Delete, Share, and Assign
+
+The page resolves access-team target records dynamically from `team.regardingobjectid` and the team template/object type metadata. If a record or metadata cannot be read by the current admin, the row still appears where possible with an unavailable-record indicator.
+
 ### Role-based access to the tool
 
 The tool includes configurable access rules in the script:
@@ -114,6 +129,7 @@ The current user needs Dataverse privileges to:
 - Read roles
 - Read teams
 - Read team memberships and role associations
+- Read access team records, team templates, and target records where possible
 - Assign/remove security roles
 - Associate/remove users from owner teams
 
@@ -122,6 +138,8 @@ If a user can see data but cannot complete an add/remove action, check their Dat
 ## Limitations
 
 - Does not manage Entra group team membership.
+- Access team membership is shown as record-specific visibility; access teams do not grant reusable security roles.
+- Target record names/links depend on the current admin's read access to those records and metadata.
 - Does not bypass Dataverse security.
 - Role copying maps roles by matching role IDs, root role IDs, or role names where possible.
 - Works best when hosted inside Dataverse as an HTML web resource.
@@ -134,6 +152,8 @@ If a user can see data but cannot complete an add/remove action, check their Dat
 | Add/remove buttons disabled | Current user lacks manage role per `ACCESS_RULES`, or nothing is selected |
 | Add/remove operation fails | Current user lacks Dataverse privileges to manage roles or team memberships |
 | Team is not listed | Tool only manages removable owner-team memberships |
+| Access team row shows record unavailable | Current user may not have read access to the target record or table metadata |
+| No access teams appear | User may not be in any access teams, or current admin cannot read access-team membership/template data |
 | Dark mode does not match | Browser/app URL may not expose the model-driven app theme flag |
 
 ## Related tools

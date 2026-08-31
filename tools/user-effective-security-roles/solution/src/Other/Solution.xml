@@ -8,7 +8,7 @@
     <Descriptions>
       <Description description="User form helper for viewing and managing direct roles, team memberships, and effective team-inherited roles." languagecode="1033" />
     </Descriptions>
-    <Version>1.0.0.0</Version>
+    <Version>1.0.2.0</Version>
     <Managed>2</Managed>
     <Publisher>
       <UniqueName>DataverseHTMLTools</UniqueName>
@@ -30,3 +30,5 @@
     <MissingDependencies />
   </SolutionManifest>
 </ImportExportXml>
+
+

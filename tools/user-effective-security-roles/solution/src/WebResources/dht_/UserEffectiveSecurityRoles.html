@@ -385,6 +385,32 @@
       background: var(--cp-bg-elevated);
     }
 
+    .access-section {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--cp-border);
+      background: var(--cp-surface);
+    }
+
+    .section-header {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .access-toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .access-toolbar .input {
+      flex: 1;
+      min-width: 180px;
+    }
+
     .management-header {
       display: flex;
       gap: 12px;
@@ -643,7 +669,9 @@
     @media (max-width: 780px) {
       .header,
       .toolbar,
-      .management-header {
+      .management-header,
+      .section-header,
+      .access-toolbar {
         align-items: stretch;
         flex-direction: column;
       }
@@ -810,6 +838,43 @@
         </table>
       </div>
 
+      <div class="access-section" aria-label="Access team memberships">
+        <div class="section-header">
+          <div>
+            <h2>Record access teams</h2>
+            <div class="hint">
+              Record-specific access this user has through access teams. These are unique permissions on individual records, not reusable security roles.
+            </div>
+          </div>
+          <div class="stat" style="min-width: 140px;">
+            <div id="accessTeamCount" class="stat-value">0</div>
+            <div class="stat-label">Access teams</div>
+          </div>
+        </div>
+        <div class="access-toolbar">
+          <label for="accessTeamSearch" class="visually-hidden">Search access teams</label>
+          <input id="accessTeamSearch" class="input" type="search" placeholder="Search record, table, access team, template, or rights">
+        </div>
+        <div class="table-wrap">
+          <table aria-label="Record access team memberships">
+            <thead>
+              <tr>
+                <th scope="col">Record</th>
+                <th scope="col">Table</th>
+                <th scope="col">Access team</th>
+                <th scope="col">Template</th>
+                <th scope="col">Rights</th>
+              </tr>
+            </thead>
+            <tbody id="accessTeamsBody">
+              <tr>
+                <td colspan="5" class="empty">Loading access teams...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </section>
   </main>
 
@@ -826,11 +891,16 @@
       const state = {
         availableRoles: [],
         availableTeams: [],
+        accessTeams: [],
+        accessTeamLoadError: "",
+        accessTeamRecords: [],
         canManage: false,
         canView: false,
         copySourceUser: null,
         currentUserRoleNames: [],
         directRecords: [],
+        entityMetadataByLogicalName: new Map(),
+        entityMetadataByObjectTypeCode: new Map(),
         filteredRows: [],
         isLoading: false,
         multiSelects: {
@@ -872,6 +942,7 @@
         document.getElementById("searchInput").addEventListener("input", renderRows);
         document.getElementById("sourceFilter").addEventListener("change", renderRows);
         document.getElementById("customRolesOnlyToggle").addEventListener("change", renderAssignmentOptions);
+        document.getElementById("accessTeamSearch").addEventListener("input", renderAccessTeams);
         loadRoles();
       }
 
@@ -985,7 +1056,8 @@
             retrieveAll("role", getTeamRolesFetchXml(state.userId)),
             retrieveAll("role", getAssignableRolesFetchXml(state.userBusinessUnitId)),
             retrieveAll("team", getUserTeamsFetchXml(state.userId)),
-            retrieveAll("team", getAssignableTeamsFetchXml(state.userBusinessUnitId))
+            retrieveAll("team", getAssignableTeamsFetchXml(state.userBusinessUnitId)),
+            retrieveAccessTeams(state.userId)
           ]);
 
           state.directRecords = results[0];
@@ -993,12 +1065,15 @@
           state.availableRoles = results[2];
           state.userTeams = results[3];
           state.availableTeams = results[4];
+          state.accessTeamRecords = results[5];
           state.rows = aggregateRoles(state.directRecords, state.teamRecords);
+          state.accessTeams = await resolveAccessTeams(state.accessTeamRecords);
 
           renderHeader();
           renderStats();
           renderAccessState();
           renderAssignmentOptions();
+          renderAccessTeams();
           renderRows();
         } catch (error) {
           renderError(error);
@@ -1695,6 +1770,62 @@
         ].join("");
       }
 
+      function getAccessTeamsFetchXml(userId) {
+        const rows = [
+          "<fetch mapping=\"logical\">",
+          "  <entity name=\"team\">",
+          "    <attribute name=\"teamid\" />",
+          "    <attribute name=\"name\" />",
+          "    <attribute name=\"businessunitid\" />",
+          "    <attribute name=\"teamtype\" />",
+          "    <attribute name=\"teamtemplateid\" />",
+          "    <attribute name=\"regardingobjectid\" />",
+          "    <attribute name=\"regardingobjecttypecode\" />",
+          "    <order attribute=\"name\" />",
+          "    <filter>",
+          "      <condition attribute=\"teamtype\" operator=\"eq\" value=\"1\" />",
+          "    </filter>",
+          "    <link-entity name=\"teammembership\" from=\"teamid\" to=\"teamid\" intersect=\"true\">",
+          "      <filter>",
+          "        <condition attribute=\"systemuserid\" operator=\"eq\" value=\"" + userId + "\" />",
+          "      </filter>",
+          "    </link-entity>",
+          "  </entity>",
+          "</fetch>"
+        ];
+
+        return rows.join("");
+      }
+
+      async function retrieveAccessTeams(userId) {
+        state.accessTeamLoadError = "";
+
+        try {
+          const teams = await retrieveAll("team", getAccessTeamsFetchXml(userId));
+          await enrichAccessTeamsWithTemplates(teams);
+          return teams;
+        } catch (error) {
+          state.accessTeamLoadError = getErrorMessage(error);
+          return [];
+        }
+      }
+
+      async function enrichAccessTeamsWithTemplates(teams) {
+        for (const team of teams) {
+          const templateId = lookupId(team, "teamtemplateid");
+          if (!templateId) {
+            continue;
+          }
+
+          try {
+            const template = await state.xrm.WebApi.retrieveRecord("teamtemplate", templateId, "?$select=teamtemplatename,defaultaccessrightsmask,objecttypecode");
+            team._accessTeamTemplate = template;
+          } catch (error) {
+            team._accessTeamTemplateError = getErrorMessage(error);
+          }
+        }
+      }
+
       function getAssignableTeamsFetchXml(businessUnitId) {
         const filterValue = businessUnitId || EMPTY_GUID;
         return [
@@ -1843,6 +1974,216 @@
         };
       }
 
+      async function resolveAccessTeams(records) {
+        const resolved = [];
+
+        for (const record of records) {
+          resolved.push(await resolveAccessTeam(record));
+        }
+
+        return resolved.sort(function (left, right) {
+          return left.tableName.localeCompare(right.tableName) ||
+            left.recordName.localeCompare(right.recordName) ||
+            left.teamName.localeCompare(right.teamName);
+        });
+      }
+
+      async function resolveAccessTeam(record) {
+        const accessTeam = getAccessTeam(record);
+        const metadata = await resolveAccessTeamMetadata(accessTeam);
+        const recordInfo = metadata && accessTeam.recordId
+          ? await retrieveTargetRecordInfo(metadata, accessTeam.recordId)
+          : null;
+
+        return {
+          recordId: accessTeam.recordId,
+          recordName: recordInfo ? recordInfo.name : "(Record unavailable)",
+          rights: accessRightsFromMask(accessTeam.defaultAccessRightsMask),
+          rightsText: accessRightsFromMask(accessTeam.defaultAccessRightsMask).join(", ") || "None",
+          tableLogicalName: metadata ? metadata.LogicalName : accessTeam.regardingObjectType || "",
+          tableName: metadata ? getMetadataDisplayName(metadata) : accessTeam.regardingObjectType || "(Unknown table)",
+          teamId: accessTeam.teamId,
+          teamName: accessTeam.teamName,
+          templateName: accessTeam.templateName || "(No template name)"
+        };
+      }
+
+      function getAccessTeam(record) {
+        const template = record._accessTeamTemplate || {};
+        return {
+          defaultAccessRightsMask: Number(template.defaultaccessrightsmask || 0),
+          objectTypeCode: template.objecttypecode || record.regardingobjecttypecode || "",
+          recordId: getRegardingObjectId(record),
+          regardingObjectType: getRegardingObjectType(record),
+          teamId: cleanGuid(record.teamid),
+          teamName: record.name || "(Unnamed access team)",
+          templateName: template.teamtemplatename || lookupName(record, "teamtemplateid")
+        };
+      }
+
+      function getRegardingObjectId(record) {
+        return cleanGuid(
+          record._regardingobjectid_value ||
+          record.regardingobjectid ||
+          record["regardingobjectid.id"] ||
+          record["regardingobjectid"]
+        );
+      }
+
+      function getRegardingObjectType(record) {
+        const lookupType = record["_regardingobjectid_value@Microsoft.Dynamics.CRM.lookuplogicalname"] ||
+          record["regardingobjectid@Microsoft.Dynamics.CRM.lookuplogicalname"] ||
+          "";
+        const typeCode = record.regardingobjecttypecode || record["regardingobjecttypecode" + FORMATTED_VALUE] || "";
+
+        if (lookupType) {
+          return String(lookupType).toLowerCase();
+        }
+
+        if (typeCode && !/^\d+$/.test(String(typeCode))) {
+          return String(typeCode).toLowerCase();
+        }
+
+        return String(typeCode || "");
+      }
+
+      async function resolveAccessTeamMetadata(accessTeam) {
+        if (accessTeam.regardingObjectType && !/^\d+$/.test(String(accessTeam.regardingObjectType))) {
+          return getEntityMetadata(accessTeam.regardingObjectType);
+        }
+
+        const objectTypeCode = accessTeam.objectTypeCode || accessTeam.regardingObjectType;
+        if (objectTypeCode) {
+          return getEntityMetadataByObjectTypeCode(objectTypeCode);
+        }
+
+        return null;
+      }
+
+      async function getEntityMetadata(logicalName) {
+        const key = String(logicalName || "").toLowerCase();
+        if (!key) {
+          return null;
+        }
+
+        if (state.entityMetadataByLogicalName.has(key)) {
+          return state.entityMetadataByLogicalName.get(key);
+        }
+
+        try {
+          const metadata = await state.xrm.Utility.getEntityMetadata(key, ["PrimaryNameAttribute", "ObjectTypeCode"]);
+          state.entityMetadataByLogicalName.set(key, metadata);
+          if (metadata.ObjectTypeCode != null) {
+            state.entityMetadataByObjectTypeCode.set(String(metadata.ObjectTypeCode), metadata);
+          }
+          return metadata;
+        } catch (error) {
+          state.entityMetadataByLogicalName.set(key, null);
+          return null;
+        }
+      }
+
+      async function getEntityMetadataByObjectTypeCode(objectTypeCode) {
+        const key = String(objectTypeCode || "");
+        if (!key) {
+          return null;
+        }
+
+        if (state.entityMetadataByObjectTypeCode.has(key)) {
+          return state.entityMetadataByObjectTypeCode.get(key);
+        }
+
+        try {
+          const clientUrl = getClientUrl();
+          const query = "/api/data/v9.2/EntityDefinitions?$select=LogicalName,DisplayName,PrimaryNameAttribute,ObjectTypeCode&$filter=ObjectTypeCode eq " + encodeURIComponent(key);
+          const data = await rawFetchJson(clientUrl + query);
+          const metadata = data.value && data.value.length > 0 ? data.value[0] : null;
+          state.entityMetadataByObjectTypeCode.set(key, metadata);
+          if (metadata && metadata.LogicalName) {
+            state.entityMetadataByLogicalName.set(String(metadata.LogicalName).toLowerCase(), metadata);
+          }
+          return metadata;
+        } catch (error) {
+          state.entityMetadataByObjectTypeCode.set(key, null);
+          return null;
+        }
+      }
+
+      async function retrieveTargetRecordInfo(metadata, recordId) {
+        const logicalName = metadata.LogicalName;
+        const primaryNameAttribute = metadata.PrimaryNameAttribute;
+        if (!logicalName || !recordId) {
+          return null;
+        }
+
+        try {
+          const select = primaryNameAttribute ? "?$select=" + encodeURIComponent(primaryNameAttribute) : "";
+          const targetRecord = await state.xrm.WebApi.retrieveRecord(logicalName, recordId, select);
+          return {
+            name: primaryNameAttribute && targetRecord[primaryNameAttribute]
+              ? targetRecord[primaryNameAttribute]
+              : "(Unnamed record)"
+          };
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function getMetadataDisplayName(metadata) {
+        if (metadata.DisplayName && metadata.DisplayName.UserLocalizedLabel && metadata.DisplayName.UserLocalizedLabel.Label) {
+          return metadata.DisplayName.UserLocalizedLabel.Label;
+        }
+
+        if (metadata.DisplayName && Array.isArray(metadata.DisplayName.LocalizedLabels) && metadata.DisplayName.LocalizedLabels.length > 0) {
+          return metadata.DisplayName.LocalizedLabels[0].Label || metadata.LogicalName;
+        }
+
+        return metadata.LogicalName || "(Unknown table)";
+      }
+
+      async function rawFetchJson(url) {
+        const response = await fetch(url, {
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+            "OData-MaxVersion": "4.0",
+            "OData-Version": "4.0"
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error("Dataverse Web API returned HTTP " + response.status + ".");
+        }
+
+        return response.status === 204 ? {} : response.json();
+      }
+
+      function getClientUrl() {
+        return state.xrm && state.xrm.Utility && typeof state.xrm.Utility.getGlobalContext === "function"
+          ? state.xrm.Utility.getGlobalContext().getClientUrl()
+          : "";
+      }
+
+      function accessRightsFromMask(mask) {
+        const numericMask = Number(mask) || 0;
+        const rights = [
+          { mask: 1, label: "Read" },
+          { mask: 2, label: "Write" },
+          { mask: 4, label: "Append" },
+          { mask: 16, label: "Append To" },
+          { mask: 32, label: "Create" },
+          { mask: 65536, label: "Delete" },
+          { mask: 262144, label: "Share" },
+          { mask: 524288, label: "Assign" }
+        ];
+
+        return rights.filter(function (right) {
+          return (numericMask & right.mask) === right.mask;
+        }).map(function (right) {
+          return right.label;
+        });
+      }
+
       function lookupId(record, logicalName) {
         return cleanGuid(record["_" + logicalName + "_value"] || record[logicalName]);
       }
@@ -1856,6 +2197,12 @@
       function getAliasedValue(record, alias, attribute) {
         return record[alias + "." + attribute + FORMATTED_VALUE] ||
           record[alias + "." + attribute] ||
+          record[alias + "_" + attribute] ||
+          "";
+      }
+
+      function getAliasedRawValue(record, alias, attribute) {
+        return record[alias + "." + attribute] ||
           record[alias + "_" + attribute] ||
           "";
       }
@@ -1886,6 +2233,103 @@
         document.getElementById("directRoles").textContent = String(directCount);
         document.getElementById("teamRoles").textContent = String(teamRoleCount);
         document.getElementById("sourceTeams").textContent = String(sourceTeamIds.size);
+      }
+
+      function renderAccessTeams() {
+        const body = document.getElementById("accessTeamsBody");
+        const searchText = document.getElementById("accessTeamSearch").value.trim().toLowerCase();
+        const rows = state.accessTeams.filter(function (row) {
+          return matchesAccessTeamSearch(row, searchText);
+        });
+
+        document.getElementById("accessTeamCount").textContent = String(state.accessTeams.length);
+        body.textContent = "";
+
+        if (rows.length === 0) {
+          const tr = document.createElement("tr");
+          const td = document.createElement("td");
+          td.colSpan = 5;
+          td.className = "empty";
+          td.textContent = state.accessTeamLoadError
+            ? "Access teams could not be loaded: " + state.accessTeamLoadError
+            : state.accessTeams.length === 0
+            ? "No record-specific access team memberships found for this user."
+            : "No access team memberships match the current search.";
+          tr.appendChild(td);
+          body.appendChild(tr);
+          return;
+        }
+
+        for (const row of rows) {
+          body.appendChild(createAccessTeamRow(row));
+        }
+      }
+
+      function matchesAccessTeamSearch(row, searchText) {
+        if (!searchText) {
+          return true;
+        }
+
+        return [
+          row.recordName,
+          row.recordId,
+          row.tableName,
+          row.tableLogicalName,
+          row.teamName,
+          row.teamId,
+          row.templateName,
+          row.rightsText
+        ].join(" ").toLowerCase().indexOf(searchText) >= 0;
+      }
+
+      function createAccessTeamRow(row) {
+        const tr = document.createElement("tr");
+
+        const recordCell = document.createElement("td");
+        const recordName = document.createElement("div");
+        recordName.className = "role-name";
+        if (row.tableLogicalName && row.recordId) {
+          recordName.appendChild(createRecordLink(row.recordName, row.tableLogicalName, row.recordId));
+        } else {
+          recordName.textContent = row.recordName;
+        }
+        const recordMeta = document.createElement("div");
+        recordMeta.className = "meta";
+        recordMeta.textContent = row.recordId ? "recordid: " + row.recordId : "record id unavailable";
+        recordCell.appendChild(recordName);
+        recordCell.appendChild(recordMeta);
+
+        const tableCell = document.createElement("td");
+        tableCell.textContent = row.tableName;
+        const tableMeta = document.createElement("div");
+        tableMeta.className = "meta";
+        tableMeta.textContent = row.tableLogicalName || "(unknown logical name)";
+        tableCell.appendChild(tableMeta);
+
+        const teamCell = document.createElement("td");
+        teamCell.appendChild(createRecordLink(row.teamName, "team", row.teamId));
+
+        const templateCell = document.createElement("td");
+        templateCell.textContent = row.templateName;
+
+        const rightsCell = document.createElement("td");
+        if (row.rights.length === 0) {
+          rightsCell.textContent = "None";
+        } else {
+          const chips = document.createElement("div");
+          chips.className = "chips";
+          for (const right of row.rights) {
+            chips.appendChild(createChip(right, "team"));
+          }
+          rightsCell.appendChild(chips);
+        }
+
+        tr.appendChild(recordCell);
+        tr.appendChild(tableCell);
+        tr.appendChild(teamCell);
+        tr.appendChild(templateCell);
+        tr.appendChild(rightsCell);
+        return tr;
       }
 
       function renderAssignmentOptions() {
@@ -2345,6 +2789,8 @@
         tr.appendChild(td);
         document.getElementById("rolesBody").appendChild(tr);
         setMessage(error && error.message ? error.message : String(error), "error");
+        state.accessTeams = [];
+        renderAccessTeams();
         renderMultiSelect("roleSelect", "Search direct roles...", "Roles unavailable", [], function () {
           return {};
         });
