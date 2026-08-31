@@ -2,7 +2,7 @@
 
 This documentation covers five HTML web resources built to make Dataverse and Power Platform administration easier inside model-driven apps:
 
-1. **User Effective Security Roles** - a User form helper for viewing and managing direct roles, team memberships, and effective team-inherited roles.
+1. **User Effective Security Roles** - User form helpers for viewing and managing roles and team memberships, plus a read-only record-access view for shares, Field Security Profiles, and hierarchy context.
 2. **Role Table Permission Copier** - an admin helper for cloning roles and copying table permission patterns across many tables.
 3. **Team Role and People Manager** - a Team form helper for managing team security roles and owner-team membership, with read-only Entra group membership handling.
 4. **Flow Dependency Viewer** - a solution-level helper for viewing cloud-flow dependencies, activation order, required environment variables, and missing environment-variable values.
@@ -37,6 +37,7 @@ Screenshots use sanitized sample data.
 | Tool | Screenshot |
 |---|---|
 | User Effective Security Roles | ![User Effective Security Roles screenshot](assets/screenshots/user-effective-security-roles.png) |
+| User Record Access | ![User Record Access screenshot](assets/screenshots/user-record-access.png) |
 | Role Table Permission Copier | ![Role Table Permission Copier screenshot](assets/screenshots/role-table-permission-copier.png) |
 | Team Role and People Manager | ![Team Role and People Manager screenshot](assets/screenshots/team-role-people-manager.png) |
 | Flow Dependency Viewer | ![Flow Dependency Viewer screenshot](assets/screenshots/flow-dependency-viewer.png) |

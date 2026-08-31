@@ -6,9 +6,9 @@
       <LocalizedName description="User Effective Security Roles" languagecode="1033" />
     </LocalizedNames>
     <Descriptions>
-      <Description description="User form helper for viewing and managing direct roles, team memberships, and effective team-inherited roles." languagecode="1033" />
+      <Description description="User form helpers for reviewing effective roles, record shares, field security profiles, and hierarchy context." languagecode="1033" />
     </Descriptions>
-    <Version>1.0.2.0</Version>
+    <Version>1.0.3.0</Version>
     <Managed>2</Managed>
     <Publisher>
       <UniqueName>DataverseHTMLTools</UniqueName>
@@ -26,6 +26,7 @@
     </Publisher>
     <RootComponents>
       <RootComponent type="61" schemaName="dht_/UserEffectiveSecurityRoles.html" behavior="0" />
+      <RootComponent type="61" schemaName="dht_/UserRecordAccess.html" behavior="0" />
     </RootComponents>
     <MissingDependencies />
   </SolutionManifest>

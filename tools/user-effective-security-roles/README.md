@@ -19,6 +19,8 @@ Repository path:
 
 [src\UserEffectiveSecurityRoles.html](src/UserEffectiveSecurityRoles.html)
 
+[src\UserRecordAccess.html](src/UserRecordAccess.html)
+
 Package paths:
 
 [Unmanaged ZIP](../../packages/user-effective-security-roles/UserEffectiveSecurityRolesSolution.zip)
@@ -29,6 +31,8 @@ Package paths:
 
 ![User Effective Security Roles screenshot](../../docs/assets/screenshots/user-effective-security-roles.png)
 
+![User Record Access screenshot](../../docs/assets/screenshots/user-record-access.png)
+
 ## Where to use it
 
 Add this HTML file as a Dataverse **Webpage (HTML) web resource**, then place it on the **User (`systemuser`) form** in a model-driven app.
@@ -37,7 +41,7 @@ When adding the web resource to the form, enable:
 
 **Pass record object-type code and unique identifier as parameters**
 
-The web resource uses the current User record ID to load and manage assignments for that user.
+Both web resources use the current User record ID to load information for that user. Add either or both to the User form. The Effective Security Roles page includes management actions; User Record Access is read-only.
 
 ## Main features
 
@@ -92,7 +96,7 @@ For roles, the tool attempts to map the source user's roles to matching roles in
 
 ### Record access teams
 
-The tool also lists record-specific access team memberships for the user. These are unique permissions on individual records, not reusable security roles.
+The Effective Security Roles page lists record-specific access team memberships below the effective roles table. These are unique permissions on individual records, not reusable security roles.
 
 For each access team membership, the page attempts to show:
 
@@ -103,6 +107,19 @@ For each access team membership, the page attempts to show:
 - Access rights from the template, such as Read, Write, Append, Append To, Delete, Share, and Assign
 
 The page resolves access-team target records dynamically from `team.regardingobjectid` and the team template/object type metadata. If a record or metadata cannot be read by the current admin, the row still appears where possible with an unavailable-record indicator.
+
+### User Record Access
+
+The companion **User Record Access** page covers record-level and field-level permission sources that are separate from security roles:
+
+- Direct record shares assigned to the user
+- Record shares assigned to owner teams of which the user is a member
+- Direct and owner-team Field Security Profile assignments
+- Manager and position hierarchy context
+
+Record shares come from `principalobjectaccess` and include explicit and inherited access-right masks. The page reports object IDs and table type codes because Dataverse does not expose a universal record-name lookup through `principalobjectaccess`.
+
+Manager and position are context only. The page does not attempt to calculate access granted through a Dataverse hierarchy security model. It also does not duplicate Access Team memberships, which remain on the Effective Security Roles page.
 
 ### Role-based access to the tool
 
@@ -119,7 +136,7 @@ Users without a view role do not see the panel. Users with view access but not m
 
 ### Light and dark mode
 
-The tool supports light/dark display and detects model-driven app dark mode from the URL where possible.
+Both pages support light/dark display, provide a theme selector, and detect model-driven app dark mode from the URL where possible.
 
 ## Required privileges
 
@@ -130,6 +147,8 @@ The current user needs Dataverse privileges to:
 - Read teams
 - Read team memberships and role associations
 - Read access team records, team templates, and target records where possible
+- Read `principalobjectaccess` record-share entries
+- Read Field Security Profiles and profile assignments
 - Assign/remove security roles
 - Associate/remove users from owner teams
 
@@ -139,6 +158,8 @@ If a user can see data but cannot complete an add/remove action, check their Dat
 
 - Does not manage Entra group team membership.
 - Access team membership is shown as record-specific visibility; access teams do not grant reusable security roles.
+- User Record Access reports explicit user and owner-team shares, not every record reachable through role depth, ownership, hierarchy security, app access, or licenses.
+- Field Security Profile assignments are shown, but the page does not enumerate every secured field permission in each profile.
 - Target record names/links depend on the current admin's read access to those records and metadata.
 - Does not bypass Dataverse security.
 - Role copying maps roles by matching role IDs, root role IDs, or role names where possible.
@@ -154,6 +175,7 @@ If a user can see data but cannot complete an add/remove action, check their Dat
 | Team is not listed | Tool only manages removable owner-team memberships |
 | Access team row shows record unavailable | Current user may not have read access to the target record or table metadata |
 | No access teams appear | User may not be in any access teams, or current admin cannot read access-team membership/template data |
+| Record shares or Field Security Profiles cannot be loaded | Current user may lack read access to `principalobjectaccess`, Field Security Profiles, or the required association data |
 | Dark mode does not match | Browser/app URL may not expose the model-driven app theme flag |
 
 ## Related tools

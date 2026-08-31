@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Record Access</title>
+  <script>
+    (() => {
+      const urls = [window.location.href, document.referrer];
+      try { urls.push(window.parent.location.href); } catch (error) { }
+      try { urls.push(window.top.location.href); } catch (error) { }
+      const isDark = urls.filter(Boolean).some(function (url) {
+        let text = String(url).toLowerCase();
+        for (let index = 0; index < 3; index += 1) {
+          try { const decoded = decodeURIComponent(text); if (decoded === text) break; text = decoded; } catch (error) { break; }
+        }
+        return text.includes("themeoption=darkmode") || text.includes("themeoption%3ddarkmode");
+      });
+      document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+    })();
+  </script>
+  <style>
+    :root { color-scheme: light; --bg: #f7f4ef; --surface: #fff; --soft: #f5f5f5; --border: #dedede; --text: #242424; --muted: #5c5c5c; --accent: #b11f4b; --link: #0078d4; --danger: #b42318; }
+    html[data-theme="dark"] { color-scheme: dark; --bg: #3d3b3a; --surface: #292929; --soft: #2e2e2e; --border: #474747; --text: #dedede; --muted: #b0b0b0; --accent: #fd8ea1; --link: #4da6ff; --danger: #f87171; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: "Segoe UI", Aptos, Calibri, sans-serif; font-size: 14px; }
+    .app { min-height: 100vh; padding: 16px; }
+    .panel { overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+    .header, .section-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .header { padding: 16px; border-bottom: 1px solid var(--border); }
+    .actions { display: flex; gap: 8px; align-items: center; }
+    h1, h2 { margin: 0; font-weight: 600; }
+    h1 { font-size: 18px; }
+    h2 { font-size: 16px; }
+    .subtitle, .hint, .meta { color: var(--muted); }
+    .subtitle { margin-top: 4px; }
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+    .stat { padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--soft); }
+    .stat-value { font-size: 20px; font-weight: 600; }
+    .stat-label { margin-top: 2px; color: var(--muted); font-size: 12px; }
+    .toolbar { display: flex; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+    .input { width: min(460px, 100%); min-height: 34px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); }
+    .select { min-height: 34px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font: inherit; }
+    .button { min-height: 34px; padding: 6px 12px; border: 1px solid var(--accent); border-radius: 6px; background: var(--accent); color: #fff; cursor: pointer; font: inherit; font-weight: 600; }
+    .message { min-height: 20px; padding: 0 16px; color: var(--danger); }
+    .section { padding: 16px; border-top: 1px solid var(--border); }
+    .section:first-of-type { border-top: 0; }
+    .hint { margin-top: 4px; line-height: 1.4; }
+    .table-wrap { margin-top: 12px; overflow-x: auto; border: 1px solid var(--border); border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; min-width: 680px; }
+    th, td { padding: 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    th { background: var(--soft); font-size: 12px; font-weight: 600; }
+    tr:last-child td { border-bottom: 0; }
+    .empty { padding: 18px; color: var(--muted); text-align: center; }
+    .chip { display: inline-block; margin: 0 4px 4px 0; padding: 3px 7px; border-radius: 999px; background: #e8eef7; color: #174a7c; font-size: 12px; }
+    .chip.team { background: #fce7f0; color: #8a1740; }
+    .link { color: var(--link); text-decoration: none; }
+    .link:hover { text-decoration: underline; }
+    @media (max-width: 700px) { .app { padding: 8px; } .header, .section-header { display: block; } .actions { margin-top: 12px; } .stats { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="panel">
+      <header class="header">
+        <div>
+          <h1>User Record Access</h1>
+          <div id="subtitle" class="subtitle">Loading record access details...</div>
+        </div>
+        <div class="actions">
+          <select id="themeSelect" class="select" aria-label="Theme"><option value="light">Light</option><option value="dark">Dark</option></select>
+          <button id="refreshButton" class="button" type="button">Refresh</button>
+        </div>
+      </header>
+      <div class="stats">
+        <div class="stat"><div id="directShareCount" class="stat-value">0</div><div class="stat-label">Direct record shares</div></div>
+        <div class="stat"><div id="teamShareCount" class="stat-value">0</div><div class="stat-label">Owner-team record shares</div></div>
+        <div class="stat"><div id="profileCount" class="stat-value">0</div><div class="stat-label">Field Security Profiles</div></div>
+      </div>
+      <div class="toolbar">
+        <label for="searchInput" class="hint">Filter</label>
+        <input id="searchInput" class="input" type="search" placeholder="Search record ID, table code, team, or access right">
+      </div>
+      <div id="message" class="message" role="status"></div>
+      <section class="section" aria-label="Shared record access">
+        <div class="section-header"><div><h2>Shared record access</h2><div class="hint">Direct shares and shares granted to owner teams of which this user is a member. Access-team membership is shown on the Effective Security Roles page.</div></div></div>
+        <div class="table-wrap"><table><thead><tr><th scope="col">Record ID</th><th scope="col">Table type code</th><th scope="col">Source</th><th scope="col">Granted rights</th><th scope="col">Inherited rights</th></tr></thead><tbody id="sharesBody"><tr><td colspan="5" class="empty">Loading shared record access...</td></tr></tbody></table></div>
+      </section>
+      <section class="section" aria-label="Field Security Profile assignments">
+        <div class="section-header"><div><h2>Field Security Profiles</h2><div class="hint">Profiles assigned directly to this user. Field permissions are defined by the profile and can limit or permit field-level access beyond role privileges.</div></div></div>
+        <div class="table-wrap"><table><thead><tr><th scope="col">Profile</th><th scope="col">Source</th><th scope="col">Profile ID</th></tr></thead><tbody id="profilesBody"><tr><td colspan="3" class="empty">Loading Field Security Profiles...</td></tr></tbody></table></div>
+      </section>
+      <section class="section" aria-label="Hierarchy context">
+        <div><h2>Hierarchy context</h2><div class="hint">Manager and position are context for Dataverse hierarchy security. This page does not calculate access inherited through a hierarchy model.</div></div>
+        <div class="table-wrap"><table><thead><tr><th scope="col">Manager</th><th scope="col">Position</th></tr></thead><tbody id="hierarchyBody"><tr><td colspan="2" class="empty">Loading hierarchy context...</td></tr></tbody></table></div>
+      </section>
+    </section>
+  </main>
+  <script>
+    (function () {
+      "use strict";
+      const FORMATTED_VALUE = "@OData.Community.Display.V1.FormattedValue";
+      const state = { directShares: [], profiles: [], teamProfiles: [], teamShares: [], user: null, userId: "", xrm: null };
+      initThemeSelector();
+      document.getElementById("refreshButton").addEventListener("click", load);
+      document.getElementById("searchInput").addEventListener("input", renderShares);
+      load();
+
+      function initThemeSelector() { const select = document.getElementById("themeSelect"); select.value = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light"; select.addEventListener("change", function () { document.documentElement.setAttribute("data-theme", select.value === "dark" ? "dark" : "light"); }); }
+
+      async function load() {
+        setMessage("");
+        try {
+          state.xrm = getXrm();
+          if (!state.xrm || !state.xrm.WebApi) throw new Error("Xrm.WebApi was not found. Open this HTML web resource inside a model-driven app form.");
+          state.userId = getTargetUserId(state.xrm);
+          if (!state.userId) throw new Error("No user record id was found. Enable record id parameters on the web resource form component.");
+          const results = await Promise.all([
+            state.xrm.WebApi.retrieveRecord("systemuser", state.userId, "?$select=fullname,_parentsystemuserid_value,_positionid_value"),
+            retrieveAll("principalobjectaccess", sharesForUserFetchXml(state.userId)),
+            retrieveAll("principalobjectaccess", sharesForOwnerTeamsFetchXml(state.userId)),
+            retrieveAll("fieldsecurityprofile", fieldSecurityProfilesFetchXml(state.userId)),
+            retrieveAll("fieldsecurityprofile", fieldSecurityProfilesForOwnerTeamsFetchXml(state.userId))
+          ]);
+          state.user = results[0]; state.directShares = results[1]; state.teamShares = results[2]; state.profiles = results[3]; state.teamProfiles = results[4];
+          document.getElementById("subtitle").textContent = "Record access details for " + (state.user.fullname || "selected user");
+          document.getElementById("directShareCount").textContent = String(state.directShares.length);
+          document.getElementById("teamShareCount").textContent = String(state.teamShares.length);
+          document.getElementById("profileCount").textContent = String(state.profiles.length + state.teamProfiles.length);
+          renderShares(); renderProfiles(); renderHierarchy();
+        } catch (error) { setMessage("Could not load record access details. " + getErrorMessage(error)); renderEmpty("sharesBody", 5, "Record access could not be loaded."); renderEmpty("profilesBody", 3, "Field Security Profiles could not be loaded."); renderEmpty("hierarchyBody", 2, "Hierarchy context could not be loaded."); }
+      }
+
+      function sharesForUserFetchXml(userId) { return fetchXml("<filter><condition attribute=\"principalid\" operator=\"eq\" value=\"" + userId + "\" /></filter>"); }
+      function sharesForOwnerTeamsFetchXml(userId) { return fetchXml("<link-entity name=\"team\" from=\"teamid\" to=\"principalid\" alias=\"ownerteam\"><attribute name=\"name\" /><filter><condition attribute=\"teamtype\" operator=\"eq\" value=\"0\" /></filter><link-entity name=\"teammembership\" from=\"teamid\" to=\"teamid\" intersect=\"true\"><filter><condition attribute=\"systemuserid\" operator=\"eq\" value=\"" + userId + "\" /></filter></link-entity></link-entity>"); }
+      function fetchXml(filterOrLink) { return ["<fetch mapping=\"logical\"><entity name=\"principalobjectaccess\"><attribute name=\"objectid\" /><attribute name=\"objecttypecode\" /><attribute name=\"accessrightsmask\" /><attribute name=\"inheritedaccessrightsmask\" />", filterOrLink, "</entity></fetch>"].join(""); }
+      function fieldSecurityProfilesFetchXml(userId) { return ["<fetch mapping=\"logical\"><entity name=\"fieldsecurityprofile\"><attribute name=\"fieldsecurityprofileid\" /><attribute name=\"name\" /><order attribute=\"name\" /><link-entity name=\"systemuserprofiles\" from=\"fieldsecurityprofileid\" to=\"fieldsecurityprofileid\" intersect=\"true\"><filter><condition attribute=\"systemuserid\" operator=\"eq\" value=\"" + userId + "\" /></filter></link-entity></entity></fetch>"].join(""); }
+      function fieldSecurityProfilesForOwnerTeamsFetchXml(userId) { return ["<fetch mapping=\"logical\"><entity name=\"fieldsecurityprofile\"><attribute name=\"fieldsecurityprofileid\" /><attribute name=\"name\" /><order attribute=\"name\" /><link-entity name=\"teamprofiles\" from=\"fieldsecurityprofileid\" to=\"fieldsecurityprofileid\" intersect=\"true\"><link-entity name=\"team\" from=\"teamid\" to=\"teamid\" alias=\"profileteam\"><attribute name=\"name\" /><filter><condition attribute=\"teamtype\" operator=\"eq\" value=\"0\" /></filter><link-entity name=\"teammembership\" from=\"teamid\" to=\"teamid\" intersect=\"true\"><filter><condition attribute=\"systemuserid\" operator=\"eq\" value=\"" + userId + "\" /></filter></link-entity></link-entity></link-entity></entity></fetch>"].join(""); }
+      async function retrieveAll(entityName, fetchXmlText) { let options = "?fetchXml=" + encodeURIComponent(fetchXmlText), records = []; while (options) { const result = await state.xrm.WebApi.retrieveMultipleRecords(entityName, options, 5000); records = records.concat(result.entities); options = result.nextLink ? result.nextLink.substring(result.nextLink.indexOf("?")) : ""; } return records; }
+      function renderShares() { const filter = document.getElementById("searchInput").value.trim().toLowerCase(); const rows = state.directShares.map(function (share) { return mapShare(share, "Direct user share", ""); }).concat(state.teamShares.map(function (share) { return mapShare(share, "Owner team share", share["ownerteam.name"] || "(Unnamed owner team)"); })).filter(function (share) { return [share.objectId, share.objectTypeCode, share.source, share.teamName, share.rightsText, share.inheritedRightsText].join(" ").toLowerCase().includes(filter); }); const body = document.getElementById("sharesBody"); body.textContent = ""; if (!rows.length) return renderEmpty("sharesBody", 5, filter ? "No shared record access matches the filter." : "No direct or owner-team record shares found for this user."); rows.forEach(function (share) { const tr = document.createElement("tr"); appendCell(tr, share.objectId || "(Record ID unavailable)"); appendCell(tr, share.objectTypeCode || "(Unavailable)"); appendCell(tr, share.teamName ? share.source + ": " + share.teamName : share.source); appendRights(tr, share.rights); appendRights(tr, share.inheritedRights); body.appendChild(tr); }); }
+      function renderProfiles() { const body = document.getElementById("profilesBody"); body.textContent = ""; const profiles = state.profiles.map(function (profile) { return { profile: profile, source: "Direct user assignment" }; }).concat(state.teamProfiles.map(function (profile) { return { profile: profile, source: "Owner team: " + (profile["profileteam.name"] || "(Unnamed owner team)") }; })); if (!profiles.length) return renderEmpty("profilesBody", 3, "No Field Security Profiles are assigned directly or through owner teams."); profiles.forEach(function (item) { const tr = document.createElement("tr"); appendCell(tr, item.profile.name || "(Unnamed Field Security Profile)"); appendCell(tr, item.source); appendCell(tr, cleanGuid(item.profile.fieldsecurityprofileid)); body.appendChild(tr); }); }
+      function renderHierarchy() { const body = document.getElementById("hierarchyBody"); body.textContent = ""; const tr = document.createElement("tr"); appendCell(tr, formattedOrUnavailable(state.user, "parentsystemuserid", "No manager is assigned.") ); appendCell(tr, formattedOrUnavailable(state.user, "positionid", "No position is assigned.")); body.appendChild(tr); }
+      function mapShare(record, source, teamName) { const rights = accessRights(record.accessrightsmask), inheritedRights = accessRights(record.inheritedaccessrightsmask); return { objectId: cleanGuid(record.objectid), objectTypeCode: String(record.objecttypecode || ""), source: source, teamName: teamName, rights: rights, rightsText: rights.join(", "), inheritedRights: inheritedRights, inheritedRightsText: inheritedRights.join(", ") }; }
+      function accessRights(mask) { const all = [[1, "Read"], [2, "Write"], [4, "Append"], [16, "Append To"], [32, "Create"], [65536, "Delete"], [262144, "Share"], [524288, "Assign"]]; const number = Number(mask) || 0; return all.filter(function (right) { return (number & right[0]) === right[0]; }).map(function (right) { return right[1]; }); }
+      function appendCell(row, text) { const cell = document.createElement("td"); cell.textContent = text; row.appendChild(cell); }
+      function appendRights(row, rights) { const cell = document.createElement("td"); if (!rights.length) cell.textContent = "None"; rights.forEach(function (right) { const chip = document.createElement("span"); chip.className = "chip"; chip.textContent = right; cell.appendChild(chip); }); row.appendChild(cell); }
+      function renderEmpty(id, columns, text) { const body = document.getElementById(id); body.textContent = ""; const tr = document.createElement("tr"), cell = document.createElement("td"); cell.colSpan = columns; cell.className = "empty"; cell.textContent = text; tr.appendChild(cell); body.appendChild(tr); }
+      function formattedOrUnavailable(record, name, fallback) { return record["_" + name + "_value" + FORMATTED_VALUE] || fallback; }
+      function getXrm() { return window.Xrm || (window.parent && window.parent.Xrm) || (window.top && window.top.Xrm) || null; }
+      function getTargetUserId(xrm) { const params = new URLSearchParams(window.location.search), direct = ["id", "recordId", "recordid", "userid", "userId"]; for (const key of direct) { const id = cleanGuid(params.get(key)); if (id) return id; } const data = params.get("data") || ""; for (const key of direct) { const id = cleanGuid(new URLSearchParams(data).get(key)); if (id) return id; } return xrm.Page && xrm.Page.data && xrm.Page.data.entity ? cleanGuid(xrm.Page.data.entity.getId()) : ""; }
+      function cleanGuid(value) { const match = String(value || "").match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i); return match ? match[0].toLowerCase() : ""; }
+      function getErrorMessage(error) { return error && error.message ? error.message : String(error || "Unknown error."); }
+      function setMessage(text) { document.getElementById("message").textContent = text; }
+    })();
+  </script>
+</body>
+</html>
