@@ -55,6 +55,8 @@ The tool shows:
 
 Admins can add or remove one or more security roles from the team using searchable multi-select controls.
 
+The multi-select controls expose their visible labels, selection summaries, grouped checkbox options, and disabled state to assistive technology. Search and option selection remain keyboard accessible.
+
 The tool uses Dataverse Web API `Associate` and `Disassociate` operations with:
 
 - `teamroles_association`

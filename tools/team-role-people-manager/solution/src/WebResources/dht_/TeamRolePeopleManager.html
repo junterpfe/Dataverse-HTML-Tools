@@ -907,6 +907,9 @@
 
       function renderMultiSelect(selectId, placeholder, emptyText, items, mapItem) {
         const container = document.getElementById(selectId);
+        const fieldLabel = container.closest(".field").querySelector("label");
+        const labelId = fieldLabel.id || selectId + "Label";
+        fieldLabel.id = labelId;
         const control = state.multiSelects[selectId];
         const priorSelected = control ? control.selected : new Set();
         const mappedItems = items.map(function (item) {
@@ -935,17 +938,30 @@
         container.className = "multi-select";
         container.dataset.placeholder = placeholder;
         container.dataset.empty = emptyText;
+        container.setAttribute("role", "group");
+        container.setAttribute("aria-labelledby", labelId);
+        container.setAttribute("aria-describedby", selectId + "Summary");
 
         const summary = document.createElement("div");
         summary.className = "multi-summary";
+        summary.id = selectId + "Summary";
         summary.dataset.multiSummary = selectId;
+        summary.setAttribute("role", "status");
+        summary.setAttribute("aria-live", "polite");
+        summary.setAttribute("aria-atomic", "true");
         container.appendChild(summary);
 
         const searchInput = document.createElement("input");
         searchInput.className = "multi-search";
+        searchInput.id = selectId + "Search";
         searchInput.type = "search";
         searchInput.placeholder = placeholder;
         searchInput.value = state.multiSelects[selectId].searchText;
+        searchInput.setAttribute("aria-labelledby", labelId);
+        searchInput.setAttribute("aria-controls", selectId + "Options");
+        if (fieldLabel.getAttribute("for") === selectId) {
+          fieldLabel.setAttribute("for", searchInput.id);
+        }
         searchInput.addEventListener("input", function () {
           state.multiSelects[selectId].searchText = searchInput.value;
           renderMultiSelectOptions(selectId);
@@ -954,7 +970,10 @@
 
         const options = document.createElement("div");
         options.className = "multi-options";
+        options.id = selectId + "Options";
         options.dataset.multiOptions = selectId;
+        options.setAttribute("role", "group");
+        options.setAttribute("aria-labelledby", labelId);
         container.appendChild(options);
 
         renderMultiSelectOptions(selectId);
@@ -1055,6 +1074,7 @@
         }
 
         container.classList.toggle("disabled", isDisabled);
+        container.setAttribute("aria-disabled", String(isDisabled));
         container.querySelectorAll("input").forEach(function (input) {
           input.disabled = isDisabled;
         });
@@ -1314,7 +1334,6 @@
         const text = getCloudUrlText();
 
         if (text.indexOf("microsoftdynamics.us") >= 0 ||
-          text.indexOf("appsplatform.us") >= 0 ||
           text.indexOf("dod.") >= 0 ||
           text.indexOf("high.") >= 0 ||
           text.indexOf("gcch") >= 0) {

@@ -470,6 +470,27 @@
       padding-top: 20px;
     }
 
+    .copy-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      margin: 0 0 12px;
+      padding: 0;
+      border: 0;
+    }
+
+    .copy-options legend {
+      width: 100%;
+      margin-bottom: 2px;
+      color: var(--cp-text-muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .copy-options .checkbox-row[aria-disabled="true"] {
+      color: var(--cp-text-subtle);
+    }
+
     .field {
       display: flex;
       flex-direction: column;
@@ -647,6 +668,14 @@
       border-color: var(--cp-accent);
     }
 
+    .chip.entra-security-group {
+      border-color: #0078d4;
+    }
+
+    .chip.microsoft-365-group {
+      border-color: #107c10;
+    }
+
     .empty,
     .no-access {
       padding: 28px 16px;
@@ -775,6 +804,21 @@
             <button id="copyAssignmentsButton" class="button secondary" type="button" disabled>Copy assignments</button>
           </div>
         </div>
+        <fieldset class="copy-options">
+          <legend>Assignments to copy</legend>
+          <label class="checkbox-row">
+            <input id="copyDirectRolesToggle" data-copy-assignment type="checkbox" checked>
+            Direct roles
+          </label>
+          <label class="checkbox-row">
+            <input id="copyOwnerTeamsToggle" data-copy-assignment type="checkbox" checked>
+            Owner-team memberships
+          </label>
+          <label class="checkbox-row">
+            <input id="copyAccessTeamsToggle" data-copy-assignment type="checkbox">
+            Access-team memberships
+          </label>
+        </fieldset>
         <div class="hint">
           <label class="checkbox-row">
             <input id="customRolesOnlyToggle" type="checkbox">
@@ -935,6 +979,9 @@
         document.getElementById("refreshButton").addEventListener("click", loadRoles);
         document.getElementById("copyAssignmentsButton").addEventListener("click", copyAssignmentsFromUser);
         document.getElementById("copyUserSearch").addEventListener("input", handleCopyUserSearch);
+        document.querySelectorAll("[data-copy-assignment]").forEach(function (toggle) {
+          toggle.addEventListener("change", updateAssignmentButtons);
+        });
         document.getElementById("addRoleButton").addEventListener("click", addDirectRole);
         document.getElementById("addTeamButton").addEventListener("click", addTeamMembership);
         document.getElementById("removeRoleButton").addEventListener("click", removeDirectRole);
@@ -1295,13 +1342,30 @@
           return;
         }
 
-        const confirmed = await confirmManagementAction(
-          "Copy assignments",
-          "Copy direct role assignments and owner-team memberships from " + state.copySourceUser.fullName + " to this user? Existing assignments will be kept.",
-          "Copy"
+        const copyDirectRoles = document.getElementById("copyDirectRolesToggle").checked;
+        const copyOwnerTeams = document.getElementById("copyOwnerTeamsToggle").checked;
+        const copyAccessTeams = document.getElementById("copyAccessTeamsToggle").checked;
+        const selectedCategories = [];
+        if (copyDirectRoles) {
+          selectedCategories.push("direct roles");
+        }
+        if (copyOwnerTeams) {
+          selectedCategories.push("owner-team memberships");
+        }
+        if (copyAccessTeams) {
+          selectedCategories.push("access-team memberships");
+        }
+
+        if (selectedCategories.length === 0) {
+          setMessage("Select at least one assignment category to copy.", "error");
+          return;
+        }
+
+        const copyMode = await chooseCopyMode(
+          "Copy " + selectedCategories.join(", ") + " from " + state.copySourceUser.fullName + " to this user? Add keeps current assignments. Clone removes this user's existing selected assignments before applying the source assignments."
         );
 
-        if (!confirmed) {
+        if (!copyMode) {
           return;
         }
 
@@ -1310,8 +1374,9 @@
 
         try {
           const results = await Promise.all([
-            retrieveAll("role", getDirectRolesFetchXml(state.copySourceUser.userId)),
-            retrieveAll("team", getUserTeamsFetchXml(state.copySourceUser.userId))
+            copyDirectRoles ? retrieveAll("role", getDirectRolesFetchXml(state.copySourceUser.userId)) : Promise.resolve([]),
+            copyOwnerTeams ? retrieveAll("team", getUserTeamsFetchXml(state.copySourceUser.userId)) : Promise.resolve([]),
+            copyAccessTeams ? retrieveAll("team", getAccessTeamsFetchXml(state.copySourceUser.userId)) : Promise.resolve([])
           ]);
           const currentDirectRoleIds = new Set(state.directRecords.map(function (record) {
             return cleanGuid(record.roleid);
@@ -1320,15 +1385,44 @@
             return cleanGuid(record.teamid);
           }));
           const targetAssignableRoles = state.availableRoles.map(getRole);
-          const rolesToAdd = getCopiedRoleIds(results[0], targetAssignableRoles, currentDirectRoleIds);
+          const rolesToAdd = getCopiedRoleIds(results[0], targetAssignableRoles, copyMode === "clone" ? new Set() : currentDirectRoleIds);
           const teamsToAdd = results[1]
             .map(getTeam)
             .filter(function (team) {
-              return isRemovableTeam(team) && !currentTeamIds.has(team.teamId);
+              return isRemovableTeam(team) && (copyMode === "clone" || !currentTeamIds.has(team.teamId));
             })
             .map(function (team) {
               return team.teamId;
             });
+          const currentAccessTeamIds = new Set(state.accessTeamRecords.map(function (record) {
+            return cleanGuid(record.teamid);
+          }));
+          const accessTeamsToAdd = results[2]
+            .map(getTeam)
+            .filter(function (team) {
+              return team.teamId && (copyMode === "clone" || !currentAccessTeamIds.has(team.teamId));
+            })
+            .map(function (team) {
+              return team.teamId;
+            });
+
+          if (copyMode === "clone") {
+            if (copyDirectRoles) {
+              for (const roleId of currentDirectRoleIds) {
+                await disassociateRecords("systemuser", state.userId, "systemuserroles_association", roleId);
+              }
+            }
+            if (copyOwnerTeams) {
+              for (const team of state.userTeams.map(getTeam).filter(isRemovableTeam)) {
+                await disassociateRecords("systemuser", state.userId, "teammembership_association", team.teamId);
+              }
+            }
+            if (copyAccessTeams) {
+              for (const teamId of currentAccessTeamIds) {
+                await disassociateRecords("systemuser", state.userId, "teammembership_association", teamId);
+              }
+            }
+          }
 
           for (const roleId of rolesToAdd.ids) {
             await associateRecords("systemuser", state.userId, "systemuserroles_association", "role", roleId);
@@ -1338,11 +1432,16 @@
             await associateRecords("systemuser", state.userId, "teammembership_association", "team", teamId);
           }
 
+          for (const teamId of accessTeamsToAdd) {
+            await associateRecords("systemuser", state.userId, "teammembership_association", "team", teamId);
+          }
+
           await loadRoles();
           clearCopySourceUser();
           setMessage(
-            "Copied " + rolesToAdd.ids.length + " direct " + pluralize("role", rolesToAdd.ids.length) +
-            " and " + teamsToAdd.length + " team " + pluralize("association", teamsToAdd.length) +
+            (copyMode === "clone" ? "Cloned " : "Copied ") + rolesToAdd.ids.length + " direct " + pluralize("role", rolesToAdd.ids.length) +
+            ", " + teamsToAdd.length + " owner-team " + pluralize("association", teamsToAdd.length) +
+            ", and " + accessTeamsToAdd.length + " access-team " + pluralize("membership", accessTeamsToAdd.length) +
             (rolesToAdd.skipped > 0 ? ". Skipped " + rolesToAdd.skipped + " source " + pluralize("role", rolesToAdd.skipped) + " without a matching role in this user's business unit." : "."),
             "success"
           );
@@ -1589,6 +1688,45 @@
         return window.confirm(text);
       }
 
+      function chooseCopyMode(text) {
+        return new Promise(function (resolve) {
+          const dialog = document.createElement("dialog");
+          const message = document.createElement("p");
+          const actions = document.createElement("div");
+          const addButton = document.createElement("button");
+          const cloneButton = document.createElement("button");
+          const cancelButton = document.createElement("button");
+
+          dialog.setAttribute("aria-label", "Copy assignments");
+          message.textContent = text;
+          actions.className = "dialog-actions";
+          addButton.className = "button secondary";
+          addButton.textContent = "Add";
+          cloneButton.className = "button";
+          cloneButton.textContent = "Clone";
+          cancelButton.className = "button ghost";
+          cancelButton.textContent = "Cancel";
+
+          function close(mode) {
+            dialog.close();
+            dialog.remove();
+            resolve(mode);
+          }
+
+          addButton.addEventListener("click", function () { close("add"); });
+          cloneButton.addEventListener("click", function () { close("clone"); });
+          cancelButton.addEventListener("click", function () { close(""); });
+          dialog.addEventListener("cancel", function () { close(""); });
+          actions.appendChild(addButton);
+          actions.appendChild(cloneButton);
+          actions.appendChild(cancelButton);
+          dialog.appendChild(message);
+          dialog.appendChild(actions);
+          document.body.appendChild(dialog);
+          dialog.showModal();
+        });
+      }
+
       function getXrm() {
         if (window.Xrm) {
           return window.Xrm;
@@ -1718,6 +1856,8 @@
           "      <link-entity name=\"team\" from=\"teamid\" to=\"teamid\" alias=\"sourceteam\">",
           "        <attribute name=\"teamid\" />",
           "        <attribute name=\"name\" />",
+          "        <attribute name=\"teamtype\" />",
+          "        <attribute name=\"azureactivedirectoryobjectid\" />",
           "        <link-entity name=\"teammembership\" from=\"teamid\" to=\"teamid\" intersect=\"true\">",
           "          <filter>",
           "            <condition attribute=\"systemuserid\" operator=\"eq\" value=\"" + userId + "\" />",
@@ -1887,7 +2027,10 @@
           addRole(roles, record, {
             type: "team",
             teamId: cleanGuid(getAliasedValue(record, "sourceteam", "teamid")),
-            teamName: getAliasedValue(record, "sourceteam", "name") || "(Unnamed team)"
+            teamName: getAliasedValue(record, "sourceteam", "name") || "(Unnamed team)",
+            teamType: getAliasedRawValue(record, "sourceteam", "teamtype"),
+            teamTypeName: getAliasedValue(record, "sourceteam", "teamtype"),
+            azureAdObjectId: cleanGuid(getAliasedValue(record, "sourceteam", "azureactivedirectoryobjectid"))
           });
         }
 
@@ -1927,7 +2070,10 @@
         if (!alreadyListed) {
           row.teams.push({
             teamId: source.teamId,
-            teamName: source.teamName
+            teamName: source.teamName,
+            teamType: source.teamType,
+            teamTypeName: source.teamTypeName,
+            azureAdObjectId: source.azureAdObjectId
           });
           row.teams.sort(function (left, right) {
             return left.teamName.localeCompare(right.teamName);
@@ -2207,6 +2353,33 @@
           "";
       }
 
+      function getTeamInheritanceLabel(team) {
+        const teamType = String(team.teamType || "");
+        const teamTypeName = String(team.teamTypeName || "").toLowerCase();
+
+        if (teamType === "2" || teamTypeName.includes("azure") || teamTypeName.includes("security group")) {
+          return "Entra security group";
+        }
+
+        if (teamType === "3" || teamTypeName.includes("office group") || teamTypeName.includes("microsoft 365")) {
+          return "Microsoft 365 group";
+        }
+
+        return "Team";
+      }
+
+      function getTeamInheritanceClass(label) {
+        if (label === "Entra security group") {
+          return "entra-security-group";
+        }
+
+        if (label === "Microsoft 365 group") {
+          return "microsoft-365-group";
+        }
+
+        return "team";
+      }
+
       function renderHeader() {
         const name = state.user && state.user.fullname ? state.user.fullname : "this user";
         const email = state.user && (state.user.internalemailaddress || state.user.domainname);
@@ -2422,6 +2595,9 @@
 
       function renderMultiSelect(selectId, placeholder, emptyText, items, mapItem) {
         const container = document.getElementById(selectId);
+        const fieldLabel = container.closest(".field").querySelector("label");
+        const labelId = fieldLabel.id || selectId + "Label";
+        fieldLabel.id = labelId;
         const control = state.multiSelects[selectId];
         const priorSelected = control ? control.selected : new Set();
         const mappedItems = items.map(function (item) {
@@ -2450,18 +2626,31 @@
         container.className = "multi-select";
         container.dataset.placeholder = placeholder;
         container.dataset.empty = emptyText;
+        container.setAttribute("role", "group");
+        container.setAttribute("aria-labelledby", labelId);
+        container.setAttribute("aria-describedby", selectId + "Summary");
 
         const summary = document.createElement("div");
         summary.className = "multi-summary";
+        summary.id = selectId + "Summary";
         summary.dataset.multiSummary = selectId;
+        summary.setAttribute("role", "status");
+        summary.setAttribute("aria-live", "polite");
+        summary.setAttribute("aria-atomic", "true");
         container.appendChild(summary);
 
         const searchInput = document.createElement("input");
         searchInput.className = "multi-search";
+        searchInput.id = selectId + "Search";
         searchInput.type = "search";
         searchInput.placeholder = placeholder;
         searchInput.value = state.multiSelects[selectId].searchText;
         searchInput.dataset.multiSearch = selectId;
+        searchInput.setAttribute("aria-labelledby", labelId);
+        searchInput.setAttribute("aria-controls", selectId + "Options");
+        if (fieldLabel.getAttribute("for") === selectId) {
+          fieldLabel.setAttribute("for", searchInput.id);
+        }
         searchInput.addEventListener("input", function () {
           state.multiSelects[selectId].searchText = searchInput.value;
           renderMultiSelectOptions(selectId);
@@ -2470,7 +2659,10 @@
 
         const options = document.createElement("div");
         options.className = "multi-options";
+        options.id = selectId + "Options";
         options.dataset.multiOptions = selectId;
+        options.setAttribute("role", "group");
+        options.setAttribute("aria-labelledby", labelId);
         container.appendChild(options);
 
         renderMultiSelectOptions(selectId);
@@ -2620,7 +2812,7 @@
         }
 
         if (row.teams.length > 0) {
-          return "Team";
+          return row.teams.map(getTeamInheritanceLabel).join(", ");
         }
 
         return "";
@@ -2666,7 +2858,7 @@
         }
 
         const teamNames = row.teams.map(function (team) {
-          return team.teamName;
+          return team.teamName + " " + getTeamInheritanceLabel(team);
         }).join(" ");
 
         return [
@@ -2703,7 +2895,19 @@
           sourceChips.appendChild(createChip("Direct", "direct"));
         }
         if (row.teams.length > 0) {
-          sourceChips.appendChild(createChip("Team", "team"));
+          const renderedGroupIds = new Set();
+          row.teams.forEach(function (team) {
+            const label = getTeamInheritanceLabel(team);
+            if (team.azureAdObjectId && label !== "Team" && !renderedGroupIds.has(team.azureAdObjectId)) {
+              sourceChips.appendChild(createEntraGroupChip(label, team.azureAdObjectId));
+              renderedGroupIds.add(team.azureAdObjectId);
+              return;
+            }
+
+            if (!sourceChips.querySelector("." + getTeamInheritanceClass(label))) {
+              sourceChips.appendChild(createChip(label, getTeamInheritanceClass(label)));
+            }
+          });
         }
         sourceCell.appendChild(sourceChips);
 
@@ -2714,7 +2918,9 @@
           const teamList = document.createElement("div");
           teamList.className = "chips";
           for (const team of row.teams) {
-            teamList.appendChild(createRecordChip(team.teamName, "team", "team", team.teamId));
+            const teamChip = createRecordChip(team.teamName, "team", "team", team.teamId);
+            teamChip.title = getTeamInheritanceLabel(team) + (team.azureAdObjectId ? " | Entra object ID: " + team.azureAdObjectId : "");
+            teamList.appendChild(teamChip);
           }
           teamCell.appendChild(teamList);
         }
@@ -2730,6 +2936,17 @@
         const chip = document.createElement("span");
         chip.className = "chip " + className;
         chip.textContent = text;
+        return chip;
+      }
+
+      function createEntraGroupChip(text, groupId) {
+        const chip = document.createElement("a");
+        chip.className = "chip " + getTeamInheritanceClass(text) + " record-link";
+        chip.href = getEntraGroupLink(groupId);
+        chip.target = "_blank";
+        chip.rel = "noopener";
+        chip.textContent = text;
+        chip.title = "Open group in Microsoft Entra";
         return chip;
       }
 
@@ -2755,6 +2972,41 @@
         link.dataset.recordId = recordId;
         link.textContent = text;
         return link;
+      }
+
+      function getEntraGroupLink(groupId) {
+        return getEntraPortalBaseUrl() + "/#view/Microsoft_AAD_IAM/GroupDetailsMenuBlade/~/Members/groupId/" + encodeURIComponent(groupId);
+      }
+
+      function getEntraPortalBaseUrl() {
+        const cloudText = getCloudUrlText();
+
+        if (cloudText.includes("microsoftdynamics.us") ||
+          cloudText.includes("dod.") ||
+          cloudText.includes("high.") ||
+          cloudText.includes("gcch")) {
+          return "https://entra.microsoft.us";
+        }
+
+        return "https://entra.microsoft.com";
+      }
+
+      function getCloudUrlText() {
+        const candidates = [window.location.href, document.referrer, getClientUrl()];
+
+        try {
+          candidates.push(window.parent.location.href);
+        } catch (error) {
+          // Parent can be cross-origin in some host shells.
+        }
+
+        try {
+          candidates.push(window.top.location.href);
+        } catch (error) {
+          // Top can be cross-origin in some host shells.
+        }
+
+        return candidates.filter(Boolean).join(" ").toLowerCase();
       }
 
       function handleRecordLinkClick(event) {
@@ -2836,7 +3088,8 @@
         document.getElementById("addTeamButton").disabled = state.isLoading || !state.canManage || addTeamCount === 0;
         document.getElementById("removeRoleButton").disabled = state.isLoading || !state.canManage || removeRoleCount === 0;
         document.getElementById("removeTeamButton").disabled = state.isLoading || !state.canManage || removeTeamCount === 0;
-        document.getElementById("copyAssignmentsButton").disabled = state.isLoading || !state.canManage || !state.copySourceUser;
+        const hasCopyCategory = document.querySelectorAll("[data-copy-assignment]:checked").length > 0;
+        document.getElementById("copyAssignmentsButton").disabled = state.isLoading || !state.canManage || !state.copySourceUser || !hasCopyCategory;
       }
 
       function setMultiSelectDisabled(selectId, isDisabled) {
@@ -2846,6 +3099,7 @@
         }
 
         container.classList.toggle("disabled", isDisabled);
+        container.setAttribute("aria-disabled", String(isDisabled));
         container.querySelectorAll("input").forEach(function (input) {
           input.disabled = isDisabled;
         });

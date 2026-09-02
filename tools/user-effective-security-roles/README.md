@@ -52,6 +52,8 @@ The tool shows both:
 - **Direct roles** from `systemuserroles`
 - **Team-inherited roles** from `teammembership` -> `teamroles`
 
+Inherited-role sources are identified as `Team`, `Entra security group`, or `Microsoft 365 group` from the related Dataverse team type. When Dataverse exposes the Entra group object ID, the group-type pill links to the group in the Entra admin center. Commercial and standard GCC use `https://entra.microsoft.com`; GCC High and DoD use `https://entra.microsoft.us`.
+
 This helps admins see what a user actually has, not just what is directly assigned.
 
 ### Search and sorting
@@ -66,6 +68,8 @@ The results table supports:
 ### Manage direct roles
 
 Admins can add or remove one or more direct role assignments using searchable multi-select controls.
+
+The multi-select controls expose their visible labels, selection summaries, grouped checkbox options, and disabled state to assistive technology. Search and option selection remain keyboard accessible.
 
 The tool uses the Dataverse Web API `Associate` and `Disassociate` operations with:
 
@@ -87,12 +91,18 @@ Microsoft Entra group team membership is intentionally not managed by this tool 
 
 ### Copy assignments from another user
 
-Admins can search for another user and copy:
+Admins can search for another user and select assignments to copy:
 
 - Direct security role assignments
 - Removable owner-team memberships
+- Record-specific access-team memberships
 
-For roles, the tool attempts to map the source user's roles to matching roles in the target user's business unit. Existing assignments are kept.
+Direct roles and owner-team memberships are selected by default. Access-team memberships are optional because they transfer record-specific access. The confirmation dialog provides two modes:
+
+- **Add** keeps the target user's current selected assignments and adds any missing source assignments.
+- **Clone** removes the target user's current assignments in the selected categories before applying the source assignments.
+
+For roles, the tool maps source roles to matching roles in the target user's business unit. It matches role IDs, root role IDs, or role names where possible.
 
 ### Record access teams
 
@@ -117,7 +127,14 @@ The companion **User Record Access** page covers record-level and field-level pe
 - Direct and owner-team Field Security Profile assignments
 - Manager and position hierarchy context
 
-Record shares come from `principalobjectaccess` and include explicit and inherited access-right masks. The page reports object IDs and table type codes because Dataverse does not expose a universal record-name lookup through `principalobjectaccess`.
+Record shares come from `principalobjectaccess`. The page includes only rows with a nonzero explicit access-right mask, so access-team and other inherited-only permissions are not presented as removable shares. Inherited rights associated with an explicit share remain visible for context. The page reports object IDs and table type codes because Dataverse does not expose a universal record-name lookup through `principalobjectaccess`.
+
+Record IDs link to the corresponding model-driven app record. Each row also provides a **Remove access** action that calls Dataverse `RevokeAccess` after confirmation:
+
+- For a direct user share, it revokes all explicitly shared access for the selected user on that record.
+- For an owner-team share, it revokes all explicitly shared access for that team on the record. This affects every team member who relies on that share.
+
+Inherited access from ownership, security roles, hierarchy security, access teams, or another principal is not removed.
 
 Manager and position are context only. The page does not attempt to calculate access granted through a Dataverse hierarchy security model. It also does not duplicate Access Team memberships, which remain on the Effective Security Roles page.
 
@@ -148,6 +165,7 @@ The current user needs Dataverse privileges to:
 - Read team memberships and role associations
 - Read access team records, team templates, and target records where possible
 - Read `principalobjectaccess` record-share entries
+- Open target records and revoke shared access where permitted
 - Read Field Security Profiles and profile assignments
 - Assign/remove security roles
 - Associate/remove users from owner teams
@@ -156,7 +174,7 @@ If a user can see data but cannot complete an add/remove action, check their Dat
 
 ## Limitations
 
-- Does not manage Entra group team membership.
+- Does not manage Entra group membership; group-based permissions are visible only when Dataverse has synchronized membership to a related group team.
 - Access team membership is shown as record-specific visibility; access teams do not grant reusable security roles.
 - User Record Access reports explicit user and owner-team shares, not every record reachable through role depth, ownership, hierarchy security, app access, or licenses.
 - Field Security Profile assignments are shown, but the page does not enumerate every secured field permission in each profile.
@@ -176,6 +194,7 @@ If a user can see data but cannot complete an add/remove action, check their Dat
 | Access team row shows record unavailable | Current user may not have read access to the target record or table metadata |
 | No access teams appear | User may not be in any access teams, or current admin cannot read access-team membership/template data |
 | Record shares or Field Security Profiles cannot be loaded | Current user may lack read access to `principalobjectaccess`, Field Security Profiles, or the required association data |
+| Remove access fails | Current user lacks permission to share the target record, or the target table does not support the operation |
 | Dark mode does not match | Browser/app URL may not expose the model-driven app theme flag |
 
 ## Related tools

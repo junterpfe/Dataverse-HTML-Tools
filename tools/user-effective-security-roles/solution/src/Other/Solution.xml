@@ -8,7 +8,7 @@
     <Descriptions>
       <Description description="User form helpers for reviewing effective roles, record shares, field security profiles, and hierarchy context." languagecode="1033" />
     </Descriptions>
-    <Version>1.0.3.0</Version>
+    <Version>1.0.11.0</Version>
     <Managed>2</Managed>
     <Publisher>
       <UniqueName>DataverseHTMLTools</UniqueName>
@@ -18,7 +18,7 @@
       <Descriptions>
         <Description description="Dataverse HTML Tools" languagecode="1033" />
       </Descriptions>
-      <EMailAddress xsi:nil="true"></EMailAddress>
+      <EMailAddress>junterse@hotmail.com</EMailAddress>
       <SupportingWebsiteUrl xsi:nil="true"></SupportingWebsiteUrl>
       <CustomizationPrefix>dht</CustomizationPrefix>
       <CustomizationOptionValuePrefix>45369</CustomizationOptionValuePrefix>

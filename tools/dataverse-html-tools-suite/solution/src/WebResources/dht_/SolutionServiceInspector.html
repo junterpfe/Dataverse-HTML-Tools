@@ -1,0 +1,2747 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Power Platform Solution Service Inspector</title>
+  <script>
+    (() => {
+      const params = new URLSearchParams(window.location.search);
+      const nestedData = params.get("data");
+      const dataParams = nestedData ? new URLSearchParams(safeDecode(nestedData)) : new URLSearchParams();
+      const themeOption = params.get("themeOption") || dataParams.get("themeOption") || params.get("scoutTheme") || dataParams.get("scoutTheme");
+      if (themeOption && /darkmode|dark/i.test(themeOption)) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      } else if (themeOption && /lightmode|light/i.test(themeOption)) {
+        document.documentElement.setAttribute("data-theme", "light");
+      } else {
+        const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.setAttribute("data-theme", systemTheme);
+      }
+
+      function safeDecode(value) {
+        try {
+          return decodeURIComponent(value);
+        } catch (_error) {
+          return value;
+        }
+      }
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --cp-bg: #f7f4ef;
+      --cp-bg-elevated: #fcfbf8;
+      --cp-surface: #ffffff;
+      --cp-surface-soft: #f5f5f5;
+      --cp-border: #dedede;
+      --cp-border-strong: #919191;
+      --cp-text: #242424;
+      --cp-text-muted: #5c5c5c;
+      --cp-text-soft: #6f6f6f;
+      --cp-accent: #b11f4b;
+      --cp-accent-hover: #9a1a41;
+      --cp-accent-soft: rgba(177, 31, 75, 0.08);
+      --cp-accent-fg: #ffffff;
+      --cp-success: #16a34a;
+      --cp-danger: #dc2626;
+      --cp-warning: #f59e0b;
+      --cp-link: #0078d4;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+      --cp-overlay: rgba(255, 255, 255, 0.8);
+      --cp-panel: rgba(255, 255, 255, 0.86);
+      --cp-panel-strong: rgba(255, 255, 255, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.55);
+      --cp-highlight: rgba(177, 31, 75, 0.12);
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --cp-bg: #3d3b3a;
+      --cp-bg-elevated: #343231;
+      --cp-surface: #292929;
+      --cp-surface-soft: #2e2e2e;
+      --cp-border: #474747;
+      --cp-border-strong: #5f5f5f;
+      --cp-text: #dedede;
+      --cp-text-muted: #919191;
+      --cp-text-soft: #b0b0b0;
+      --cp-accent: #fd8ea1;
+      --cp-accent-hover: #fb7b91;
+      --cp-accent-soft: rgba(253, 142, 161, 0.14);
+      --cp-accent-fg: #1a1a1a;
+      --cp-success: #4ade80;
+      --cp-danger: #f87171;
+      --cp-warning: #fbbf24;
+      --cp-link: #4da6ff;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      --cp-overlay: rgba(41, 41, 41, 0.88);
+      --cp-panel: rgba(41, 41, 41, 0.72);
+      --cp-panel-strong: rgba(41, 41, 41, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.04);
+      --cp-highlight: rgba(253, 142, 161, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--cp-bg);
+      color: var(--cp-text);
+      font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.45;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    a {
+      color: var(--cp-link);
+    }
+
+    .app-shell {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: start;
+      margin-bottom: 20px;
+    }
+
+    .eyebrow {
+      color: var(--cp-accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      margin: 0 0 8px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      font-size: clamp(28px, 4vw, 44px);
+      line-height: 1.08;
+      margin: 0 0 12px;
+      max-width: 860px;
+    }
+
+    .subhead {
+      color: var(--cp-text-muted);
+      font-size: 16px;
+      margin: 0;
+      max-width: 900px;
+    }
+
+    .panel,
+    .card {
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      box-shadow: 0 0 0 1px var(--cp-sheen);
+    }
+
+    .panel {
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+
+    .card {
+      padding: 16px;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1.3fr 0.8fr 2fr auto auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .field label,
+    .toggle label {
+      color: var(--cp-text-muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .field-hint {
+      color: var(--cp-text-muted);
+      font-size: 12px;
+    }
+
+    .field-hint.warning {
+      color: var(--cp-warning);
+    }
+
+    .field input,
+    .field select,
+    .search-box,
+    textarea {
+      width: 100%;
+      background: var(--cp-bg-elevated);
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      color: var(--cp-text);
+      min-height: 40px;
+      padding: 8px 10px;
+    }
+
+    .field input:focus,
+    .field select:focus,
+    .search-box:focus,
+    textarea:focus {
+      border-color: var(--cp-accent);
+      outline: 2px solid var(--cp-accent-soft);
+      outline-offset: 0;
+    }
+
+    .button {
+      align-items: center;
+      background: var(--cp-surface-soft);
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      color: var(--cp-text);
+      cursor: pointer;
+      display: inline-flex;
+      font-weight: 700;
+      gap: 8px;
+      justify-content: center;
+      min-height: 40px;
+      padding: 8px 14px;
+      white-space: nowrap;
+    }
+
+    .button:hover:not(:disabled) {
+      border-color: var(--cp-border-strong);
+    }
+
+    .button.primary {
+      background: var(--cp-accent);
+      border-color: var(--cp-accent);
+      color: var(--cp-accent-fg);
+    }
+
+    .button.primary:hover:not(:disabled) {
+      background: var(--cp-accent-hover);
+      border-color: var(--cp-accent-hover);
+    }
+
+    .button:disabled {
+      cursor: not-allowed;
+      opacity: 0.56;
+    }
+
+    .secondary-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 12px;
+    }
+
+    .toggle-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 20px;
+      margin-top: 12px;
+    }
+
+    .toggle {
+      align-items: center;
+      display: flex;
+      gap: 8px;
+    }
+
+    .toggle input {
+      accent-color: var(--cp-accent);
+      height: 16px;
+      width: 16px;
+    }
+
+    .status {
+      align-items: center;
+      color: var(--cp-text-muted);
+      display: flex;
+      font-size: 13px;
+      gap: 10px;
+      margin-top: 12px;
+      min-height: 22px;
+    }
+
+    .status.error {
+      color: var(--cp-danger);
+    }
+
+    .status.success {
+      color: var(--cp-success);
+    }
+
+    .spinner {
+      animation: spin 1s linear infinite;
+      border: 2px solid var(--cp-border);
+      border-radius: 999px;
+      border-top-color: var(--cp-accent);
+      display: none;
+      height: 16px;
+      width: 16px;
+    }
+
+    .busy .spinner {
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(1turn);
+      }
+    }
+
+    .stats-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(5, minmax(140px, 1fr));
+      margin-bottom: 16px;
+    }
+
+    .metric {
+      color: var(--cp-text-muted);
+      font-size: 13px;
+      margin: 0;
+    }
+
+    .metric strong {
+      color: var(--cp-text);
+      display: block;
+      font-size: 28px;
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      overflow-x: auto;
+    }
+
+    .tab-button {
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-border);
+      border-radius: 999px;
+      color: var(--cp-text-muted);
+      cursor: pointer;
+      font-weight: 700;
+      padding: 8px 12px;
+      white-space: nowrap;
+    }
+
+    .tab-button.active {
+      background: var(--cp-accent-soft);
+      border-color: var(--cp-accent);
+      color: var(--cp-text);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .table-shell {
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      overflow: auto;
+      max-height: 620px;
+    }
+
+    table {
+      border-collapse: collapse;
+      min-width: 100%;
+      width: max-content;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--cp-border);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--cp-bg-elevated);
+      color: var(--cp-text-muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    code,
+    .mono {
+      font-family: Consolas, "Courier New", Courier, monospace;
+      font-size: 12px;
+    }
+
+    .muted {
+      color: var(--cp-text-muted);
+    }
+
+    .soft {
+      color: var(--cp-text-soft);
+    }
+
+    .badge-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-width: 680px;
+    }
+
+    .badge {
+      align-items: center;
+      background: var(--cp-surface-soft);
+      border: 1px solid var(--cp-border);
+      border-radius: 999px;
+      color: var(--cp-text);
+      display: inline-flex;
+      font-size: 12px;
+      gap: 6px;
+      max-width: 520px;
+      padding: 4px 8px;
+    }
+
+    .badge.accent {
+      background: var(--cp-accent-soft);
+      border-color: var(--cp-accent);
+    }
+
+    .badge.warning {
+      border-color: var(--cp-warning);
+    }
+
+    .badge.danger {
+      border-color: var(--cp-danger);
+    }
+
+    .truncate {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .empty-state {
+      color: var(--cp-text-muted);
+      padding: 28px;
+      text-align: center;
+    }
+
+    .search-row {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: minmax(220px, 1fr) auto;
+      margin-bottom: 12px;
+    }
+
+    .notice {
+      background: var(--cp-accent-soft);
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      color: var(--cp-text);
+      margin-bottom: 16px;
+      padding: 14px 16px;
+    }
+
+    .notice p {
+      margin: 0;
+    }
+
+    .details-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .details-grid .card {
+      min-height: 120px;
+    }
+
+    .section-title {
+      align-items: center;
+      display: flex;
+      gap: 8px;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .section-title h2 {
+      font-size: 18px;
+      margin: 0;
+    }
+
+    .section-title p {
+      color: var(--cp-text-muted);
+      font-size: 13px;
+      margin: 4px 0 0;
+    }
+
+    .log {
+      background: var(--cp-bg-elevated);
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      color: var(--cp-text-muted);
+      font-family: Consolas, "Courier New", Courier, monospace;
+      font-size: 12px;
+      max-height: 220px;
+      overflow: auto;
+      padding: 10px;
+      white-space: pre-wrap;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 1000px) {
+      .hero,
+      .toolbar,
+      .search-row,
+      .details-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .secondary-actions {
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .app-shell {
+        padding: 16px;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Dataverse Web API inspector</p>
+        <h1>Power Platform Solution Service Inspector</h1>
+        <div class="badge-list" aria-label="Build information">
+          <span id="appVersion" class="badge accent">Version loading</span>
+          <span class="badge">Commercial + GCC + GCC High + DoD</span>
+        </div>
+        <p class="subhead">
+          Load solutions or environment-level apps and flows, select one, and scan cloud flows,
+          canvas apps, connection references, custom connectors, and environment variables for
+          connected services and SharePoint URLs.
+        </p>
+      </div>
+      <button id="themeToggle" class="button" type="button">Toggle theme</button>
+    </section>
+
+    <section class="notice" id="environmentNotice">
+      <p>
+        Use this as an HTML web resource inside a model-driven app or open it from the Dataverse
+      environment origin. It supports Commercial, GCC, GCC High, and DoD environment hostnames,
+      and only reads metadata/content that your account can access.
+      </p>
+    </section>
+
+    <section class="panel">
+      <div class="toolbar">
+        <div class="field">
+          <label for="environmentUrl">Environment URL</label>
+          <input id="environmentUrl" type="url" placeholder="Auto-detected from Xrm, or enter the Dataverse environment URL">
+          <small id="environmentHint" class="field-hint"></small>
+        </div>
+        <div class="field">
+          <label for="inspectionMode">Inspect</label>
+          <select id="inspectionMode">
+            <option value="solution">Solution</option>
+            <option value="target">App or cloud flow</option>
+          </select>
+        </div>
+        <div class="field">
+          <label id="targetSelectLabel" for="solutionSelect">Solution</label>
+          <select id="solutionSelect" disabled>
+            <option value="">Load solutions first</option>
+          </select>
+        </div>
+        <button id="loadSolutionsButton" class="button" type="button">Load solutions</button>
+        <button id="analyzeButton" class="button primary" type="button" disabled>Analyze solution</button>
+      </div>
+      <div class="toggle-row">
+        <div class="toggle">
+          <input id="visibleOnlyToggle" type="checkbox" checked>
+          <label for="visibleOnlyToggle">Visible solutions only</label>
+        </div>
+        <div class="toggle">
+          <input id="includeManagedToggle" type="checkbox" checked>
+          <label for="includeManagedToggle">Include managed solutions</label>
+        </div>
+        <div class="toggle">
+          <input id="includeRawUrlsToggle" type="checkbox">
+          <label for="includeRawUrlsToggle">Show non-platform dependency URLs</label>
+        </div>
+      </div>
+      <div id="status" class="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <span id="statusText">Ready.</span>
+      </div>
+    </section>
+
+    <section id="results" class="hidden">
+      <div class="stats-grid">
+        <div class="card">
+          <p class="metric"><strong id="metricComponents">0</strong><span id="metricComponentsLabel">solution components</span></p>
+        </div>
+        <div class="card">
+          <p class="metric"><strong id="metricScanned">0</strong>scanned records</p>
+        </div>
+        <div class="card">
+          <p class="metric"><strong id="metricServices">0</strong>services found</p>
+        </div>
+        <div class="card">
+          <p class="metric"><strong id="metricSharePoint">0</strong>SharePoint URLs</p>
+        </div>
+        <div class="card">
+          <p class="metric"><strong id="metricShares">0</strong>direct shares</p>
+        </div>
+        <div class="card">
+          <p class="metric"><strong id="metricWarnings">0</strong>heuristic signals</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="section-title">
+          <div>
+            <h2 id="selectedSolutionTitle">Selected solution</h2>
+            <p id="selectedSolutionMeta"></p>
+          </div>
+          <div class="secondary-actions">
+            <button id="exportJsonButton" class="button" type="button">Export JSON</button>
+            <button id="exportCsvButton" class="button" type="button">Export CSV</button>
+            <button id="copySummaryButton" class="button" type="button">Copy summary</button>
+          </div>
+        </div>
+        <div class="search-row">
+          <input id="resultFilter" class="search-box" type="search" placeholder="Filter by component, service, connector, URL, or source">
+          <button id="clearFilterButton" class="button" type="button">Clear filter</button>
+        </div>
+
+        <nav class="tabs" aria-label="Result views">
+          <button class="tab-button active" type="button" data-tab="inventoryPanel">Inventory</button>
+          <button class="tab-button" type="button" data-tab="assessmentPanel">Migration signals</button>
+          <button class="tab-button" type="button" data-tab="componentsPanel">Components</button>
+          <button class="tab-button" type="button" data-tab="sharepointPanel">SharePoint URLs</button>
+          <button class="tab-button" type="button" data-tab="servicesPanel">Services</button>
+          <button class="tab-button" type="button" data-tab="connectionsPanel">Connection references</button>
+          <button class="tab-button" type="button" data-tab="warningsPanel">Warnings</button>
+        </nav>
+
+        <section id="inventoryPanel" class="tab-panel active">
+          <div class="table-shell">
+            <table>
+              <thead>
+                <tr>
+                  <th>Asset</th>
+                  <th>Type</th>
+                  <th>Owner</th>
+                  <th>Status</th>
+                  <th>Modified</th>
+                  <th>Shared users</th>
+                  <th>Shared teams</th>
+                  <th>Risk signals</th>
+                </tr>
+              </thead>
+              <tbody id="inventoryBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="assessmentPanel" class="tab-panel">
+          <p class="muted">
+            These are heuristic signals derived from readable metadata. They are not an authoritative
+            migration readiness result; validate usage, ownership, licensing, DLP, security, and target
+            environment compatibility before making decisions.
+          </p>
+          <div class="table-shell">
+            <table>
+              <thead>
+                <tr>
+                  <th>Severity</th>
+                  <th>Area</th>
+                  <th>Signal</th>
+                  <th>Suggested follow-up</th>
+                  <th>Components</th>
+                </tr>
+              </thead>
+              <tbody id="assessmentBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="componentsPanel" class="tab-panel">
+          <div class="table-shell">
+            <table>
+              <thead>
+                <tr>
+                  <th>Component</th>
+                  <th>Type</th>
+                  <th>Services</th>
+                  <th>SharePoint URLs</th>
+                  <th>Sources</th>
+                </tr>
+              </thead>
+              <tbody id="componentsBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="sharepointPanel" class="tab-panel">
+          <div class="table-shell">
+            <table>
+              <thead>
+                <tr>
+                  <th>SharePoint URL</th>
+                  <th>Host</th>
+                  <th>Components</th>
+                  <th>Sources</th>
+                </tr>
+              </thead>
+              <tbody id="sharepointBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="servicesPanel" class="tab-panel">
+          <div class="table-shell">
+            <table>
+              <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>Connector/API id</th>
+                  <th>Components</th>
+                  <th>Count</th>
+                </tr>
+              </thead>
+              <tbody id="servicesBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="connectionsPanel" class="tab-panel">
+          <div class="table-shell">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Logical name</th>
+                  <th>Service</th>
+                  <th>Connector/API id</th>
+                  <th>SharePoint URLs</th>
+                </tr>
+              </thead>
+              <tbody id="connectionsBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="warningsPanel" class="tab-panel">
+          <div id="warningsLog" class="log"></div>
+        </section>
+      </div>
+
+      <div class="details-grid">
+        <section class="card">
+          <div class="section-title">
+            <div>
+              <h2>What this scans</h2>
+              <p>Records are read through the Dataverse Web API using the current user's privileges.</p>
+            </div>
+          </div>
+          <div class="badge-list" id="scanScopeBadges"></div>
+        </section>
+        <section class="card">
+          <div class="section-title">
+            <div>
+              <h2>Notes</h2>
+                <p>Dependency URLs may be in flow definitions, canvas app connection metadata, or environment variables.</p>
+            </div>
+          </div>
+          <div id="notes" class="muted"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const APP_VERSION = "2026.08.28.1114";
+
+    const COMPONENT_TYPES = new Map([
+      [1, "Table"],
+      [2, "Column"],
+      [3, "Relationship"],
+      [9, "Choice"],
+      [24, "Form"],
+      [26, "View"],
+      [29, "Workflow / cloud flow"],
+      [59, "Chart"],
+      [60, "System form"],
+      [61, "Web resource"],
+      [62, "Site map"],
+      [80, "Model-driven app"],
+      [90, "Plugin type"],
+      [91, "Plugin assembly"],
+      [92, "SDK message processing step"],
+      [95, "Service endpoint"],
+      [300, "Canvas app"],
+      [371, "Connector"],
+      [372, "Connection reference / connector"],
+      [380, "Environment variable definition"],
+      [381, "Environment variable value"]
+    ]);
+
+    const CONNECTOR_LABELS = new Map([
+      ["shared_sharepointonline", "SharePoint"],
+      ["shared_commondataservice", "Dataverse"],
+      ["shared_commondataserviceforapps", "Dataverse"],
+      ["shared_office365", "Office 365 Outlook"],
+      ["shared_office365users", "Office 365 Users"],
+      ["shared_teams", "Microsoft Teams"],
+      ["shared_onedriveforbusiness", "OneDrive for Business"],
+      ["shared_excelonlinebusiness", "Excel Online Business"],
+      ["shared_wordonlinebusiness", "Word Online Business"],
+      ["shared_planner", "Planner"],
+      ["shared_approvals", "Approvals"],
+      ["shared_powerappsforadmins", "Power Apps for Admins"],
+      ["shared_powerplatformforadmins", "Power Platform for Admins"],
+      ["shared_flowmanagement", "Power Automate Management"],
+      ["shared_http", "HTTP"],
+      ["shared_sql", "SQL Server"],
+      ["shared_azureblob", "Azure Blob Storage"],
+      ["shared_azurequeues", "Azure Queues"],
+      ["shared_azuread", "Microsoft Entra ID"],
+      ["shared_msnweather", "MSN Weather"],
+      ["shared_sendmail", "Mail"],
+      ["shared_outlook", "Outlook.com"],
+      ["shared_gmail", "Gmail"],
+      ["shared_dropbox", "Dropbox"],
+      ["shared_box", "Box"],
+      ["shared_sftpwithssh", "SFTP with SSH"],
+      ["shared_ftp", "FTP"],
+      ["shared_salesforce", "Salesforce"],
+      ["shared_jira", "Jira"],
+      ["shared_servicenow", "ServiceNow"],
+      ["shared_twitter", "X"],
+      ["shared_powerbi", "Power BI"]
+    ]);
+
+    const SERVICE_HINTS = [
+      { pattern: /sharepoint(?:-df)?\.(?:com|us|cn)|sharepoint-mil\.us|\.dps\.mil/i, service: "SharePoint", connector: "shared_sharepointonline" },
+      { pattern: /(?:dod-)?graph\.microsoft\.(?:com|us|cn)|graph\.microsoftazure\.us/i, service: "Microsoft Graph", connector: "graph.microsoft.com" },
+      { pattern: /logic\.azure\.com|azure-apim\.net/i, service: "Azure Logic Apps / connector runtime", connector: "azure connector runtime" },
+      { pattern: /dynamics\.com|dynamics\.cn|microsoftdynamics\.us|appsplatform\.us|crm\d*\.powerapps\.com/i, service: "Dataverse", connector: "shared_commondataserviceforapps" },
+      { pattern: /service-now\.com|servicenow/i, service: "ServiceNow", connector: "shared_servicenow" },
+      { pattern: /salesforce\.com/i, service: "Salesforce", connector: "shared_salesforce" },
+      { pattern: /jira/i, service: "Jira", connector: "shared_jira" }
+    ];
+
+    const state = {
+      solutions: [],
+      environmentTargets: [],
+      solutionsLoaded: false,
+      environmentTargetsLoaded: false,
+      selectedSolution: null,
+      lastResult: null,
+      detectedClientUrl: "",
+      isBusy: false
+    };
+
+    const elements = {
+      environmentUrl: document.getElementById("environmentUrl"),
+      environmentHint: document.getElementById("environmentHint"),
+      inspectionMode: document.getElementById("inspectionMode"),
+      targetSelectLabel: document.getElementById("targetSelectLabel"),
+      solutionSelect: document.getElementById("solutionSelect"),
+      loadSolutionsButton: document.getElementById("loadSolutionsButton"),
+      analyzeButton: document.getElementById("analyzeButton"),
+      visibleOnlyToggle: document.getElementById("visibleOnlyToggle"),
+      includeManagedToggle: document.getElementById("includeManagedToggle"),
+      includeRawUrlsToggle: document.getElementById("includeRawUrlsToggle"),
+      status: document.getElementById("status"),
+      statusText: document.getElementById("statusText"),
+      results: document.getElementById("results"),
+      selectedSolutionTitle: document.getElementById("selectedSolutionTitle"),
+      selectedSolutionMeta: document.getElementById("selectedSolutionMeta"),
+      metricComponents: document.getElementById("metricComponents"),
+      metricComponentsLabel: document.getElementById("metricComponentsLabel"),
+      metricScanned: document.getElementById("metricScanned"),
+      metricServices: document.getElementById("metricServices"),
+      metricSharePoint: document.getElementById("metricSharePoint"),
+      metricShares: document.getElementById("metricShares"),
+      metricWarnings: document.getElementById("metricWarnings"),
+      resultFilter: document.getElementById("resultFilter"),
+      clearFilterButton: document.getElementById("clearFilterButton"),
+      inventoryBody: document.getElementById("inventoryBody"),
+      assessmentBody: document.getElementById("assessmentBody"),
+      componentsBody: document.getElementById("componentsBody"),
+      sharepointBody: document.getElementById("sharepointBody"),
+      servicesBody: document.getElementById("servicesBody"),
+      connectionsBody: document.getElementById("connectionsBody"),
+      warningsLog: document.getElementById("warningsLog"),
+      scanScopeBadges: document.getElementById("scanScopeBadges"),
+      notes: document.getElementById("notes"),
+      appVersion: document.getElementById("appVersion"),
+      exportJsonButton: document.getElementById("exportJsonButton"),
+      exportCsvButton: document.getElementById("exportCsvButton"),
+      copySummaryButton: document.getElementById("copySummaryButton"),
+      themeToggle: document.getElementById("themeToggle")
+    };
+
+    initialize();
+
+    function initialize() {
+      const detected = detectClientUrl();
+      state.detectedClientUrl = detected;
+      if (detected) {
+        elements.environmentUrl.value = detected;
+      }
+      elements.appVersion.textContent = `Build ${APP_VERSION}`;
+
+      elements.inspectionMode.addEventListener("change", handleInspectionModeChange);
+      elements.loadSolutionsButton.addEventListener("click", () => runSafely(loadCurrentList));
+      elements.analyzeButton.addEventListener("click", () => runSafely(analyzeCurrentSelection));
+      elements.solutionSelect.addEventListener("change", updateAnalyzeState);
+      elements.environmentUrl.addEventListener("input", updateEnvironmentHint);
+      elements.environmentUrl.addEventListener("change", resetEnvironmentSelection);
+      elements.resultFilter.addEventListener("input", renderResults);
+      elements.clearFilterButton.addEventListener("click", () => {
+        elements.resultFilter.value = "";
+        renderResults();
+      });
+      elements.includeRawUrlsToggle.addEventListener("change", renderResults);
+      elements.exportJsonButton.addEventListener("click", exportJson);
+      elements.exportCsvButton.addEventListener("click", exportCsv);
+      elements.copySummaryButton.addEventListener("click", () => runSafely(copySummary));
+      elements.themeToggle.addEventListener("click", toggleTheme);
+
+      for (const button of document.querySelectorAll(".tab-button")) {
+        button.addEventListener("click", () => activateTab(button.dataset.tab));
+      }
+
+      updateEnvironmentHint();
+      handleInspectionModeChange();
+      setStatus("Ready. Load solutions or apps/flows to begin.");
+    }
+
+    function detectClientUrl() {
+      const context = getGlobalContext();
+      if (context && typeof context.getClientUrl === "function") {
+        return stripTrailingSlash(context.getClientUrl());
+      }
+
+      const origin = stripTrailingSlash(window.location.origin);
+      try {
+        if (isDataverseHost(new URL(origin).hostname)) {
+          return origin;
+        }
+      } catch (_error) {
+        return "";
+      }
+
+      return "";
+    }
+
+    function getGlobalContext() {
+      const candidates = [
+        () => window.Xrm,
+        () => window.parent && window.parent.Xrm,
+        () => window.top && window.top.Xrm
+      ];
+
+      for (const getCandidate of candidates) {
+        try {
+          const xrm = getCandidate();
+          if (xrm && xrm.Utility && typeof xrm.Utility.getGlobalContext === "function") {
+            return xrm.Utility.getGlobalContext();
+          }
+        } catch (_error) {
+          continue;
+        }
+      }
+
+      return null;
+    }
+
+    function getInspectionMode() {
+      return elements.inspectionMode.value === "target" ? "target" : "solution";
+    }
+
+    function handleInspectionModeChange() {
+      state.solutions = [];
+      state.environmentTargets = [];
+      state.solutionsLoaded = false;
+      state.environmentTargetsLoaded = false;
+      state.selectedSolution = null;
+      state.lastResult = null;
+      elements.results.classList.add("hidden");
+
+      const targetMode = getInspectionMode() === "target";
+      elements.targetSelectLabel.textContent = targetMode ? "App or cloud flow" : "Solution";
+      elements.loadSolutionsButton.textContent = targetMode ? "Load apps/flows" : "Load solutions";
+      elements.analyzeButton.textContent = targetMode ? "Analyze target" : "Analyze solution";
+      elements.visibleOnlyToggle.disabled = targetMode;
+      elements.includeManagedToggle.disabled = targetMode;
+      renderSelectionOptions();
+      updateAnalyzeState();
+      setStatus(targetMode
+        ? "Ready. Load environment apps/flows to inspect records that are not in a custom solution."
+        : "Ready. Load solutions to begin.");
+    }
+
+    async function loadCurrentList() {
+      if (getInspectionMode() === "target") {
+        await loadEnvironmentTargets();
+        return;
+      }
+      await loadSolutions();
+    }
+
+    async function analyzeCurrentSelection() {
+      if (getInspectionMode() === "target") {
+        await analyzeSelectedEnvironmentTarget();
+        return;
+      }
+      await analyzeSelectedSolution();
+    }
+
+    async function loadSolutions() {
+      const clientUrl = getClientUrl();
+      setBusy(true, `Loading solutions from ${getUrlHost(clientUrl)}...`);
+
+      const select = "$select=solutionid,uniquename,friendlyname,version,ismanaged,isvisible,modifiedon";
+      const filters = [];
+      if (elements.visibleOnlyToggle.checked) filters.push("isvisible eq true");
+      if (!elements.includeManagedToggle.checked) filters.push("ismanaged eq false");
+      const filter = filters.length ? `&$filter=${encodeURIComponent(filters.join(" and "))}` : "";
+      const query = `solutions?${select}${filter}&$orderby=friendlyname asc`;
+
+      let solutions;
+      try {
+        solutions = await retrieveAll(query);
+      } catch (error) {
+        addWarning(`Could not query solutions with visibility filter. Retrying with a minimal solution query. Details: ${error.message}`);
+        const fallbackFilter = !elements.includeManagedToggle.checked ? "&$filter=ismanaged eq false" : "";
+        solutions = await retrieveAll(`solutions?$select=solutionid,uniquename,friendlyname,version,ismanaged,modifiedon${fallbackFilter}&$orderby=friendlyname asc`);
+      }
+
+      state.solutions = solutions
+        .filter((solution) => solution.solutionid && solution.uniquename)
+        .sort((a, b) => displaySolutionName(a).localeCompare(displaySolutionName(b)));
+      state.solutionsLoaded = true;
+
+      renderSelectionOptions();
+      setBusy(false, `Loaded ${state.solutions.length} solutions from ${getUrlHost(clientUrl)}.`);
+    }
+
+    async function loadEnvironmentTargets() {
+      const clientUrl = getClientUrl();
+      setBusy(true, `Loading environment apps and cloud flows from ${getUrlHost(clientUrl)}...`);
+      const warnings = [];
+
+      const [canvasApps, modelDrivenApps, workflows] = await Promise.all([
+        fetchEntityList("canvasapps", [
+          { select: "canvasappid,name,displayname,modifiedon", query: `$orderby=${encodeURIComponent("displayname asc")}` },
+          { select: "canvasappid,name,displayname,modifiedon", query: `$orderby=${encodeURIComponent("name asc")}` },
+          { select: "canvasappid,name,displayname" }
+        ], warnings),
+        fetchEntityList("appmodules", [
+          { select: "appmoduleid,name,uniquename,modifiedon", query: `$orderby=${encodeURIComponent("name asc")}` },
+          { select: "appmoduleid,name,uniquename" },
+          { select: "appmoduleid,name" }
+        ], warnings),
+        fetchEntityList("workflows", [
+          { select: "workflowid,name,category,statecode,statuscode,modifiedon", query: `$filter=${encodeURIComponent("category eq 5")}&$orderby=${encodeURIComponent("name asc")}` },
+          { select: "workflowid,name,category,statecode,statuscode,modifiedon", query: `$orderby=${encodeURIComponent("name asc")}` },
+          { select: "workflowid,name,category" }
+        ], warnings)
+      ]);
+
+      const appTargets = canvasApps
+        .filter((record) => record.canvasappid)
+        .map((record) => ({
+          kind: "canvasapp",
+          id: normalizeGuid(record.canvasappid),
+          value: `canvasapp:${normalizeGuid(record.canvasappid)}`,
+          name: record.displayname || record.name || "(unnamed canvas app)",
+          modifiedon: record.modifiedon,
+          label: `${record.displayname || record.name || "(unnamed canvas app)"} - Canvas app`
+        }));
+
+      const modelDrivenAppTargets = modelDrivenApps
+        .filter((record) => record.appmoduleid)
+        .map((record) => ({
+          kind: "appmodule",
+          id: normalizeGuid(record.appmoduleid),
+          value: `appmodule:${normalizeGuid(record.appmoduleid)}`,
+          name: record.name || record.uniquename || "(unnamed model-driven app)",
+          modifiedon: record.modifiedon,
+          label: `${record.name || record.uniquename || "(unnamed model-driven app)"} - Model-driven app`
+        }));
+
+      const flowTargets = workflows
+        .filter((record) => record.workflowid && looksLikeCloudFlow(record))
+        .map((record) => ({
+          kind: "workflow",
+          id: normalizeGuid(record.workflowid),
+          value: `workflow:${normalizeGuid(record.workflowid)}`,
+          name: record.name || "(unnamed cloud flow)",
+          modifiedon: record.modifiedon,
+          label: `${record.name || "(unnamed cloud flow)"} - Cloud flow`
+        }));
+
+      state.environmentTargets = [...appTargets, ...modelDrivenAppTargets, ...flowTargets]
+        .sort((a, b) => a.name.localeCompare(b.name) || a.kind.localeCompare(b.kind));
+      state.environmentTargetsLoaded = true;
+
+      renderSelectionOptions();
+      const warningSuffix = warnings.length ? ` Warnings: ${warnings.join(" ")}` : "";
+      setBusy(false, `Loaded ${state.environmentTargets.length} apps/flows from ${getUrlHost(clientUrl)}.${warningSuffix}`);
+    }
+
+    async function analyzeSelectedSolution() {
+      const solutionId = elements.solutionSelect.value;
+      const solution = state.solutions.find((item) => normalizeGuid(item.solutionid) === normalizeGuid(solutionId));
+      if (!solution) {
+        throw new Error("Select a solution before analyzing.");
+      }
+
+      state.selectedSolution = solution;
+      state.lastResult = null;
+      elements.results.classList.add("hidden");
+      setBusy(true, `Reading components for ${displaySolutionName(solution)}...`);
+
+      const solutionGuid = normalizeGuid(solution.solutionid);
+      const components = await retrieveAll(
+        `solutioncomponents?$select=solutioncomponentid,componenttype,objectid,ismetadata&$filter=_solutionid_value eq ${solutionGuid}`
+      );
+      const warnings = [];
+      const relevant = partitionComponents(components);
+      setBusy(true, `Found ${components.length} components. Reading inspectable records...`);
+
+      const [
+        workflows,
+        canvasApps,
+        modelDrivenApps,
+        connectionReferences,
+        connectors,
+        environmentDefinitions,
+        environmentValues
+      ] = await Promise.all([
+        fetchRecordsByIds("workflows", "workflowid", relevant.workflowIds, [
+          "workflowid,name,category,type,clientdata,description,mode,statecode,statuscode,primaryentity,createdon,modifiedon,_ownerid_value,_createdby_value,_modifiedby_value",
+          "workflowid,name,category,clientdata,description,statecode,statuscode,createdon,modifiedon,_ownerid_value",
+          "workflowid,name,clientdata"
+        ], warnings),
+        fetchRecordsByIds("canvasapps", "canvasappid", relevant.canvasAppIds, [
+          "canvasappid,name,displayname,appopenuri,connectionreferences,authorizationreferences,appcomponents,cdsdependencies,databasereferences,description,createdtime,lastmodifiedtime,lastpublishtime,appversion,status,modifiedon,_ownerid_value,_createdby_value,_modifiedby_value",
+          "canvasappid,name,displayname,connectionreferences,authorizationreferences,appcomponents,description,lastmodifiedtime,lastpublishtime,status,_ownerid_value",
+          "canvasappid,name,displayname,connectionreferences"
+        ], warnings),
+        fetchRecordsByIds("appmodules", "appmoduleid", relevant.modelDrivenAppIds, [
+          "appmoduleid,name,uniquename,description,appmodulexml,configxml,createdon,modifiedon,statecode,statuscode,_createdby_value,_modifiedby_value",
+          "appmoduleid,name,uniquename,description,createdon,modifiedon,statecode,statuscode",
+          "appmoduleid,name,uniquename"
+        ], warnings),
+        fetchRecordsByIds("connectionreferences", "connectionreferenceid", relevant.connectionReferenceIds, [
+          "connectionreferenceid,connectionreferencedisplayname,connectionreferencelogicalname,connectorid,description,statecode,statuscode,_customconnectorid_value,modifiedon",
+          "connectionreferenceid,connectionreferencedisplayname,connectionreferencelogicalname,connectorid,description",
+          "connectionreferenceid,connectionreferencedisplayname,connectorid"
+        ], warnings),
+        fetchRecordsByIds("connectors", "connectorid", relevant.connectorIds, [
+          "connectorid,name,displayname,connectorinternalid,description,metadata",
+          "connectorid,name,displayname,description",
+          "connectorid,name"
+        ], warnings),
+        fetchRecordsByIds("environmentvariabledefinitions", "environmentvariabledefinitionid", relevant.environmentDefinitionIds, [
+          "environmentvariabledefinitionid,schemaname,displayname,defaultvalue,description,type,valueschema,parameterkey",
+          "environmentvariabledefinitionid,schemaname,displayname,defaultvalue,description,type",
+          "environmentvariabledefinitionid,schemaname,displayname,defaultvalue"
+        ], warnings),
+        fetchRecordsByIds("environmentvariablevalues", "environmentvariablevalueid", relevant.environmentValueIds, [
+          "environmentvariablevalueid,schemaname,value,_environmentvariabledefinitionid_value,modifiedon",
+          "environmentvariablevalueid,schemaname,value,_environmentvariabledefinitionid_value",
+          "environmentvariablevalueid,value"
+        ], warnings)
+      ]);
+
+      const result = buildInspectionResult({
+        solution,
+        components,
+        workflows,
+        canvasApps,
+        modelDrivenApps,
+        connectionReferences,
+        connectors,
+        environmentDefinitions,
+        environmentValues,
+        warnings
+      });
+
+      await enrichInventory(result);
+      state.lastResult = result;
+      renderResults();
+      elements.results.classList.remove("hidden");
+      setBusy(false, `Analysis complete. Found ${result.services.length} services and ${result.sharePointUrls.length} SharePoint URLs.`);
+    }
+
+    async function analyzeSelectedEnvironmentTarget() {
+      const targetValue = elements.solutionSelect.value;
+      const target = state.environmentTargets.find((item) => item.value === targetValue);
+      if (!target) {
+        throw new Error("Select an app or cloud flow before analyzing.");
+      }
+
+      state.selectedSolution = null;
+      state.lastResult = null;
+      elements.results.classList.add("hidden");
+      setBusy(true, `Reading ${getTargetKindLabel(target.kind)} ${target.name}...`);
+
+      const warnings = [];
+      let canvasApps = [];
+      let modelDrivenApps = [];
+      let workflows = [];
+
+      if (target.kind === "canvasapp") {
+        canvasApps = await fetchRecordsByIds("canvasapps", "canvasappid", [target.id], [
+          "canvasappid,name,displayname,appopenuri,connectionreferences,authorizationreferences,appcomponents,cdsdependencies,databasereferences,description,createdtime,lastmodifiedtime,lastpublishtime,appversion,status,modifiedon,_ownerid_value,_createdby_value,_modifiedby_value",
+          "canvasappid,name,displayname,connectionreferences,authorizationreferences,appcomponents,description,lastmodifiedtime,lastpublishtime,status,_ownerid_value",
+          "canvasappid,name,displayname,connectionreferences"
+        ], warnings);
+      } else if (target.kind === "appmodule") {
+        modelDrivenApps = await fetchRecordsByIds("appmodules", "appmoduleid", [target.id], [
+          "appmoduleid,name,uniquename,description,appmodulexml,configxml,createdon,modifiedon,statecode,statuscode,_createdby_value,_modifiedby_value",
+          "appmoduleid,name,uniquename,description,createdon,modifiedon,statecode,statuscode",
+          "appmoduleid,name,uniquename"
+        ], warnings);
+      } else {
+        workflows = await fetchRecordsByIds("workflows", "workflowid", [target.id], [
+          "workflowid,name,category,type,clientdata,description,mode,statecode,statuscode,primaryentity,createdon,modifiedon,_ownerid_value,_createdby_value,_modifiedby_value",
+          "workflowid,name,category,clientdata,description,statecode,statuscode,createdon,modifiedon,_ownerid_value",
+          "workflowid,name,clientdata"
+        ], warnings);
+      }
+
+      const readCount = canvasApps.length + modelDrivenApps.length + workflows.length;
+      if (!readCount) {
+        throw new Error(warnings[0] || `Could not read the selected ${getTargetKindLabel(target.kind)}.`);
+      }
+
+      const component = {
+        solutioncomponentid: `target-${target.id}`,
+        componenttype: getComponentTypeForTarget(target.kind),
+        objectid: target.id,
+        ismetadata: false
+      };
+
+      const result = buildInspectionResult({
+        mode: "target",
+        target,
+        solution: {
+          friendlyname: target.name,
+          uniquename: getTargetKindLabel(target.kind),
+          version: "",
+          ismanaged: false,
+          modifiedon: target.modifiedon || ""
+        },
+        components: [component],
+        workflows,
+        canvasApps,
+        modelDrivenApps,
+        connectionReferences: [],
+        connectors: [],
+        environmentDefinitions: [],
+        environmentValues: [],
+        warnings
+      });
+
+      await enrichInventory(result);
+      state.lastResult = result;
+      renderResults();
+      elements.results.classList.remove("hidden");
+      setBusy(false, `Analysis complete. Found ${result.services.length} services and ${result.sharePointUrls.length} SharePoint URLs.`);
+    }
+
+    function partitionComponents(components) {
+      const byType = new Map();
+      for (const component of components) {
+        const type = Number(component.componenttype);
+        if (!byType.has(type)) byType.set(type, []);
+        byType.get(type).push(component);
+      }
+
+      const idsFor = (types) => types.flatMap((type) => byType.get(type) || [])
+        .map((component) => normalizeGuid(component.objectid))
+        .filter(Boolean);
+
+      return {
+        workflowIds: idsFor([29]),
+        canvasAppIds: idsFor([300]),
+        modelDrivenAppIds: idsFor([80]),
+        connectorIds: idsFor([371, 372]),
+        connectionReferenceIds: idsFor([372, 10039]),
+        environmentDefinitionIds: idsFor([380]),
+        environmentValueIds: idsFor([381]),
+        byType
+      };
+    }
+
+    function buildInspectionResult(input) {
+      const warnings = [...input.warnings];
+      const inspectableRecords = [
+        ...input.workflows.map((record) => toInspectableRecord("Workflow / cloud flow", record.workflowid, record.name, record, [
+          "clientdata",
+          "description",
+          "primaryentity"
+        ])),
+        ...input.canvasApps.map((record) => toInspectableRecord("Canvas app", record.canvasappid, record.displayname || record.name, record, [
+          "connectionreferences",
+          "authorizationreferences",
+          "appcomponents",
+          "cdsdependencies",
+          "databasereferences",
+          "description"
+        ])),
+        ...(input.modelDrivenApps || []).map((record) => toInspectableRecord("Model-driven app", record.appmoduleid, record.name || record.uniquename, {
+          ...record,
+          _inspectorServiceHint: "shared_commondataserviceforapps"
+        }, [
+          "_inspectorServiceHint",
+          "uniquename",
+          "description",
+          "appmodulexml",
+          "configxml"
+        ])),
+        ...input.connectionReferences.map((record) => toInspectableRecord("Connection reference", record.connectionreferenceid, record.connectionreferencedisplayname || record.connectionreferencelogicalname, record, [
+          "connectorid",
+          "description"
+        ])),
+        ...input.connectors.map((record) => toInspectableRecord("Custom connector", record.connectorid, record.displayname || record.name, record, [
+          "connectorinternalid",
+          "description",
+          "metadata"
+        ])),
+        ...input.environmentDefinitions.map((record) => toInspectableRecord("Environment variable definition", record.environmentvariabledefinitionid, record.displayname || record.schemaname, record, [
+          "schemaname",
+          "defaultvalue",
+          "description",
+          "valueschema",
+          "parameterkey"
+        ])),
+        ...input.environmentValues.map((record) => toInspectableRecord("Environment variable value", record.environmentvariablevalueid, record.schemaname || record.environmentvariablevalueid, record, [
+          "value",
+          "schemaname"
+        ]))
+      ];
+
+      const componentRows = [];
+      const serviceMap = new Map();
+      const sharePointMap = new Map();
+      const connectionRows = [];
+      const rawUrls = new Map();
+
+      for (const record of inspectableRecords) {
+        const text = makeSearchableText(record.raw, record.fieldsToScan);
+        const services = detectServices(text, record.raw);
+        const allUrls = extractDependencyUrls(text);
+        const sharePointUrls = allUrls.filter((url) => isSharePointHost(getUrlHost(url)));
+        const urls = allUrls.filter((url) => !isSharePointHost(getUrlHost(url)));
+        const sources = detectSources(record.raw, record.fieldsToScan);
+
+        for (const service of services) {
+          const key = `${service.name}|${service.connector}`;
+          const entry = serviceMap.get(key) || {
+            service: service.name,
+            connector: service.connector,
+            components: new Set(),
+            count: 0
+          };
+          entry.components.add(record.name);
+          entry.count += 1;
+          serviceMap.set(key, entry);
+        }
+
+        for (const url of sharePointUrls) {
+          const normalized = normalizeUrl(url);
+          const entry = sharePointMap.get(normalized) || {
+            url: normalized,
+            host: getUrlHost(normalized),
+            components: new Set(),
+            sources: new Set()
+          };
+          entry.components.add(record.name);
+          for (const source of sources) entry.sources.add(source);
+          sharePointMap.set(normalized, entry);
+        }
+
+        for (const url of urls) {
+          const normalized = normalizeUrl(url);
+          const entry = rawUrls.get(normalized) || {
+            url: normalized,
+            host: getUrlHost(normalized),
+            components: new Set()
+          };
+          entry.components.add(record.name);
+          rawUrls.set(normalized, entry);
+        }
+
+        const row = {
+          id: record.id,
+          component: record.name,
+          type: record.type,
+          metadata: buildComponentMetadata(record.raw, record.type),
+          sharing: {
+            status: "not checked",
+            users: null,
+            teams: null,
+            other: null,
+            total: null
+          },
+          services,
+          sharePointUrls: sharePointUrls.map(normalizeUrl),
+          rawUrls: urls.map(normalizeUrl),
+          sources,
+          risks: []
+        };
+        componentRows.push(row);
+
+        if (record.type === "Connection reference") {
+          const connectorId = normalizeConnectorId(record.raw.connectorid || "");
+          connectionRows.push({
+            name: record.name,
+            logicalName: record.raw.connectionreferencelogicalname || "",
+            service: connectorToService(connectorId),
+            connector: connectorId,
+            sharePointUrls: sharePointUrls.map(normalizeUrl)
+          });
+        }
+      }
+
+      addComponentTypeWarnings(input.components, inspectableRecords, warnings);
+
+      return {
+        mode: input.mode || "solution",
+        target: input.target || null,
+        solution: input.solution,
+        componentCount: input.components.length,
+        scannedCount: inspectableRecords.length,
+        shareSummary: {
+          totalDirectShares: 0,
+          unknownComponents: 0
+        },
+        assessment: [],
+        components: componentRows.sort((a, b) => a.component.localeCompare(b.component)),
+        services: Array.from(serviceMap.values())
+          .map((entry) => ({
+            service: entry.service,
+            connector: entry.connector,
+            components: Array.from(entry.components).sort(),
+            count: entry.count
+          }))
+          .sort((a, b) => a.service.localeCompare(b.service)),
+        sharePointUrls: Array.from(sharePointMap.values())
+          .map((entry) => ({
+            url: entry.url,
+            host: entry.host,
+            components: Array.from(entry.components).sort(),
+            sources: Array.from(entry.sources).sort()
+          }))
+          .sort((a, b) => a.host.localeCompare(b.host) || a.url.localeCompare(b.url)),
+        connections: connectionRows.sort((a, b) => a.name.localeCompare(b.name)),
+        rawUrls: Array.from(rawUrls.values())
+          .map((entry) => ({
+            url: entry.url,
+            host: entry.host,
+            components: Array.from(entry.components).sort()
+          }))
+          .sort((a, b) => a.host.localeCompare(b.host) || a.url.localeCompare(b.url)),
+        warnings
+      };
+    }
+
+    function toInspectableRecord(type, id, name, raw, fieldsToScan) {
+      return {
+        type,
+        id: normalizeGuid(id),
+        name: name || "(unnamed component)",
+        raw,
+        fieldsToScan
+      };
+    }
+
+    function buildComponentMetadata(record, type) {
+      const modified = record.lastmodifiedtime || record.modifiedon || "";
+      const created = record.createdtime || record.createdon || "";
+      const published = record.lastpublishtime || "";
+      const owner = getLookupName(record, "_ownerid_value")
+        || getLookupName(record, "_createdby_value")
+        || getLookupName(record, "_modifiedby_value")
+        || "";
+      const status = getFormattedValue(record, "status")
+        || getFormattedValue(record, "statuscode")
+        || getFormattedValue(record, "statecode")
+        || valueLabel(record.status)
+        || valueLabel(record.statuscode)
+        || valueLabel(record.statecode)
+        || "";
+      const lifecycle = [
+        status,
+        getFormattedValue(record, "category"),
+        getFormattedValue(record, "type"),
+        getFormattedValue(record, "mode")
+      ].filter(Boolean).join(" | ");
+
+      return {
+        owner,
+        created,
+        modified,
+        published,
+        status: lifecycle,
+        version: record.appversion || "",
+        primaryEntity: record.primaryentity || "",
+        type
+      };
+    }
+
+    function getLookupName(record, propertyName) {
+      return record[`${propertyName}@OData.Community.Display.V1.FormattedValue`] || "";
+    }
+
+    function getFormattedValue(record, propertyName) {
+      return record[`${propertyName}@OData.Community.Display.V1.FormattedValue`] || "";
+    }
+
+    function valueLabel(value) {
+      if (value === undefined || value === null || value === "") return "";
+      return String(value);
+    }
+
+    function addComponentTypeWarnings(components, inspectableRecords, warnings) {
+      const scannedIds = new Set(inspectableRecords.map((record) => normalizeGuid(record.id)));
+      const wantedTypes = new Set([29, 80, 300, 371, 372, 380, 381, 10039]);
+      const missed = components.filter((component) => wantedTypes.has(Number(component.componenttype)) && !scannedIds.has(normalizeGuid(component.objectid)));
+      if (missed.length) {
+        const typeCounts = countBy(missed, (component) => getComponentTypeLabel(component.componenttype));
+        warnings.push(`Some expected inspectable records could not be read, usually because the table is unavailable or the current user lacks privileges: ${formatCounts(typeCounts)}.`);
+      }
+    }
+
+    async function enrichInventory(result) {
+      const context = { shareWarningAdded: false };
+      for (const batch of chunkArray(result.components, 8)) {
+        await Promise.all(batch.map(async (row) => {
+          row.sharing = await fetchDirectShareCounts(row.id, context, result.warnings);
+        }));
+      }
+
+      result.shareSummary = {
+        totalDirectShares: result.components.reduce((sum, row) => sum + (Number(row.sharing.total) || 0), 0),
+        unknownComponents: result.components.filter((row) => row.sharing.status === "unknown").length
+      };
+
+      for (const row of result.components) {
+        row.risks = deriveRiskSignals(row, result);
+      }
+      result.assessment = buildMigrationAssessment(result);
+    }
+
+    async function fetchDirectShareCounts(objectId, context, warnings) {
+      if (!objectId) {
+        return { status: "unknown", users: null, teams: null, other: null, total: null };
+      }
+
+      const filters = [
+        `objectid eq ${objectId}`,
+        `_objectid_value eq ${objectId}`,
+        `objectid/objectid eq ${objectId}`
+      ];
+      const entitySets = ["principalobjectaccessset", "principalobjectaccesses"];
+
+      for (const entitySet of entitySets) {
+        for (const filter of filters) {
+          try {
+            const records = await retrieveAll(`${entitySet}?$select=principaltypecode,accessrightsmask,inheritedaccessrightsmask&$filter=${encodeURIComponent(filter)}`);
+            return summarizeShares(records);
+          } catch (error) {
+            if (entitySet === entitySets[entitySets.length - 1] && filter === filters[filters.length - 1] && !context.shareWarningAdded) {
+              warnings.push(`Direct share counts are unavailable in this environment/user context. The inspector tried PrincipalObjectAccess and received: ${error.message}`);
+              context.shareWarningAdded = true;
+            }
+          }
+        }
+      }
+
+      return { status: "unknown", users: null, teams: null, other: null, total: null };
+    }
+
+    function summarizeShares(records) {
+      let users = 0;
+      let teams = 0;
+      let other = 0;
+
+      for (const record of records) {
+        const label = String(getFormattedValue(record, "principaltypecode") || record.principaltypecode || "").toLowerCase();
+        if (/user|systemuser|\b8\b/.test(label)) {
+          users += 1;
+        } else if (/team|\b9\b/.test(label)) {
+          teams += 1;
+        } else {
+          other += 1;
+        }
+      }
+
+      return {
+        status: "available",
+        users,
+        teams,
+        other,
+        total: users + teams + other
+      };
+    }
+
+    function deriveRiskSignals(row, result) {
+      const risks = [];
+      const serviceNames = row.services.map((service) => `${service.name} ${service.connector}`).join(" ");
+      const envVarBacked = row.sources.some((source) => /environment/i.test(source)) || /environment variable/i.test(row.type);
+
+      if (result.mode === "target") {
+        risks.push({ severity: "medium", label: "Not solution-scoped" });
+      }
+      if (row.sharePointUrls.length) {
+        risks.push({ severity: "medium", label: "SharePoint URL dependency" });
+      }
+      if (row.sharePointUrls.length && !envVarBacked) {
+        risks.push({ severity: "medium", label: "Likely hard-coded URL" });
+      }
+      if (row.rawUrls.length) {
+        risks.push({ severity: "medium", label: "External URL dependency" });
+      }
+      if (/shared_http|HTTP/i.test(serviceNames)) {
+        risks.push({ severity: "high", label: "HTTP/custom endpoint" });
+      }
+      if (/Custom connector/i.test(row.type) || /custom connector/i.test(serviceNames)) {
+        risks.push({ severity: "medium", label: "Custom connector" });
+      }
+      if (row.sharing.status === "unknown") {
+        risks.push({ severity: "low", label: "Share count unknown" });
+      } else if (row.sharing.total > 50) {
+        risks.push({ severity: "high", label: "Broadly shared" });
+      } else if (row.sharing.total > 10 || row.sharing.teams > 0) {
+        risks.push({ severity: "medium", label: "Shared dependency" });
+      }
+      if (isProbablyInactive(row.metadata.status)) {
+        risks.push({ severity: "low", label: "Inactive/disabled" });
+      }
+      if (isStale(row.metadata.modified, 365)) {
+        risks.push({ severity: "low", label: "Not modified in 1+ year" });
+      }
+      if (!row.metadata.owner) {
+        risks.push({ severity: "low", label: "Owner not visible" });
+      }
+
+      return dedupeRisks(risks);
+    }
+
+    function buildMigrationAssessment(result) {
+      const findings = [];
+      const rows = result.components;
+
+      addFindingIf(findings, result.mode === "target", "medium", "Packaging", "Selected asset was inspected outside a custom solution.", "Add the app/flow and dependencies to a dedicated unmanaged solution before migration/rebuild analysis.", rows.map((row) => row.component));
+      addFindingIf(findings, result.sharePointUrls.length > 0, "medium", "Data locations", `${result.sharePointUrls.length} SharePoint URL${result.sharePointUrls.length === 1 ? "" : "s"} detected.`, "Confirm each site/list exists in the target tenant/environment and replace hard-coded URLs with environment variables where possible.", result.sharePointUrls.flatMap((entry) => entry.components));
+      addFindingIf(findings, result.rawUrls.length > 0, "medium", "External dependencies", `${result.rawUrls.length} non-platform URL dependenc${result.rawUrls.length === 1 ? "y" : "ies"} detected.`, "Validate endpoint availability, authentication, firewall rules, and cloud boundary constraints before migration.", result.rawUrls.flatMap((entry) => entry.components));
+
+      const httpRows = rows.filter((row) => row.services.some((service) => /shared_http|HTTP/i.test(`${service.name} ${service.connector}`)));
+      addFindingIf(findings, httpRows.length > 0, "high", "Connectors", "HTTP connector or custom endpoint usage detected.", "Review authentication, secrets, DLP policy impact, and whether the endpoint is allowed in Commercial/GCC/GCC High/DoD.", httpRows.map((row) => row.component));
+
+      const customConnectorRows = rows.filter((row) => /Custom connector/i.test(row.type));
+      addFindingIf(findings, customConnectorRows.length > 0, "medium", "Connectors", "Custom connector components detected.", "Export connector definitions, verify policy/templates, and confirm target-cloud connector compatibility.", customConnectorRows.map((row) => row.component));
+
+      const broadShareRows = rows.filter((row) => Number(row.sharing.total) > 50);
+      addFindingIf(findings, broadShareRows.length > 0, "high", "Access", "One or more assets appear broadly shared.", "Plan a communication, access review, and staged cutover before migration.", broadShareRows.map((row) => row.component));
+
+      const teamShareRows = rows.filter((row) => Number(row.sharing.teams) > 0);
+      addFindingIf(findings, teamShareRows.length > 0, "medium", "Access", "Team-based direct shares detected.", "Map teams/security groups to the target environment and validate role assignments.", teamShareRows.map((row) => row.component));
+
+      const unknownShareRows = rows.filter((row) => row.sharing.status === "unknown");
+      addFindingIf(findings, unknownShareRows.length > 0, "low", "Access", "Share counts could not be read for one or more assets.", "Use Power Platform Admin Center, PowerShell, or an app-registration version to confirm role assignments/run-only users.", unknownShareRows.map((row) => row.component));
+
+      const inactiveRows = rows.filter((row) => isProbablyInactive(row.metadata.status));
+      addFindingIf(findings, inactiveRows.length > 0, "low", "Lifecycle", "Inactive or disabled assets detected.", "Decide whether to retire these instead of migrating or rebuilding them.", inactiveRows.map((row) => row.component));
+
+      const staleRows = rows.filter((row) => isStale(row.metadata.modified, 365));
+      addFindingIf(findings, staleRows.length > 0, "low", "Lifecycle", "Assets not modified in over a year detected.", "Validate actual usage before spending migration/rebuild effort.", staleRows.map((row) => row.component));
+
+      const ownerUnknownRows = rows.filter((row) => !row.metadata.owner);
+      addFindingIf(findings, ownerUnknownRows.length > 0, "low", "Ownership", "Owner was not visible on one or more records.", "Identify accountable business and technical owners before migration.", ownerUnknownRows.map((row) => row.component));
+
+      if (!findings.length) {
+        findings.push({
+          severity: "info",
+          area: "Signals",
+          finding: "No major migration signals were detected from the readable metadata.",
+          recommendation: "Still validate real usage, business criticality, DLP policies, licensing, and target environment dependencies.",
+          components: []
+        });
+      }
+
+      return findings.sort((a, b) => severityRank(b.severity) - severityRank(a.severity) || a.area.localeCompare(b.area));
+    }
+
+    function addFindingIf(findings, condition, severity, area, finding, recommendation, components) {
+      if (!condition) return;
+      findings.push({
+        severity,
+        area,
+        finding,
+        recommendation,
+        components: unique((components || []).filter(Boolean)).sort()
+      });
+    }
+
+    function dedupeRisks(risks) {
+      const seen = new Set();
+      return risks.filter((risk) => {
+        const key = `${risk.severity}|${risk.label}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
+    function isProbablyInactive(status) {
+      return /inactive|disabled|draft|suspended|off/i.test(status || "");
+    }
+
+    function isStale(value, days) {
+      if (!value) return false;
+      const time = new Date(value).getTime();
+      if (!Number.isFinite(time)) return false;
+      return Date.now() - time > days * 24 * 60 * 60 * 1000;
+    }
+
+    function severityRank(severity) {
+      if (severity === "high") return 3;
+      if (severity === "medium") return 2;
+      if (severity === "low") return 1;
+      return 0;
+    }
+
+    function makeSearchableText(record, fields) {
+      const parts = [];
+      for (const field of fields) {
+        if (record[field] !== undefined && record[field] !== null) {
+          parts.push(String(record[field]));
+          const decoded = decodeDeep(String(record[field]));
+          if (decoded !== String(record[field])) parts.push(decoded);
+          const parsed = parseMaybeJson(record[field]);
+          if (parsed) parts.push(JSON.stringify(parsed));
+        }
+      }
+      parts.push(JSON.stringify(record));
+      return parts.join("\n");
+    }
+
+    function detectSources(record, fields) {
+      const sources = [];
+      for (const field of fields) {
+        const value = record[field];
+        if (value !== undefined && value !== null && String(value).trim()) {
+          sources.push(field);
+        }
+      }
+      return sources.length ? sources : ["record"];
+    }
+
+    function detectServices(text, record) {
+      const services = new Map();
+      const connectorIds = extractConnectorIds(text);
+
+      if (record && record.connectorid) {
+        connectorIds.add(normalizeConnectorId(record.connectorid));
+      }
+
+      for (const connector of connectorIds) {
+        if (!connector) continue;
+        services.set(connector, {
+          name: connectorToService(connector),
+          connector
+        });
+      }
+
+      for (const hint of SERVICE_HINTS) {
+        if (hint.pattern.test(text)) {
+          const key = hint.connector;
+          services.set(key, {
+            name: hint.service,
+            connector: key
+          });
+        }
+      }
+
+      return Array.from(services.values()).sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    function extractConnectorIds(text) {
+      const found = new Set();
+      const patterns = [
+        /(?:shared|commondataservice|providers\/Microsoft\.PowerApps\/apis\/shared)[A-Za-z0-9_./-]*/gi,
+        /\/providers\/Microsoft\.PowerApps\/apis\/([A-Za-z0-9_.-]+)/gi,
+        /"apiId"\s*:\s*"([^"]+)"/gi,
+        /"connectorId"\s*:\s*"([^"]+)"/gi
+      ];
+
+      for (const pattern of patterns) {
+        let match = pattern.exec(text);
+        while (match) {
+          found.add(normalizeConnectorId(match[1] || match[0]));
+          match = pattern.exec(text);
+        }
+      }
+
+      return found;
+    }
+
+    function connectorToService(connector) {
+      const normalized = normalizeConnectorId(connector);
+      if (!normalized) return "Unknown";
+      if (CONNECTOR_LABELS.has(normalized)) return CONNECTOR_LABELS.get(normalized);
+
+      if (normalized.startsWith("shared_")) {
+        return titleCase(normalized.replace(/^shared_/, "").replace(/_/g, " "));
+      }
+
+      if (/http/i.test(normalized)) return "HTTP";
+      if (/sharepoint/i.test(normalized)) return "SharePoint";
+      if (/commondataservice|dataverse|cds/i.test(normalized)) return "Dataverse";
+      if (/office365|outlook/i.test(normalized)) return "Office 365 Outlook";
+      if (/teams/i.test(normalized)) return "Microsoft Teams";
+      if (/onedrive/i.test(normalized)) return "OneDrive for Business";
+
+      return titleCase(normalized.replace(/[_.-]/g, " "));
+    }
+
+    function normalizeConnectorId(value) {
+      if (!value) return "";
+      const raw = String(value).trim();
+      const apiMatch = raw.match(/\/providers\/Microsoft\.PowerApps\/apis\/([^/?#"]+)/i);
+      if (apiMatch) return apiMatch[1].toLowerCase();
+      const sharedMatch = raw.match(/shared_[a-z0-9_]+/i);
+      if (sharedMatch) return sharedMatch[0].toLowerCase();
+      return raw.toLowerCase();
+    }
+
+    function extractDependencyUrls(text) {
+      return unique(extractUrls(text)
+        .map((url) => isSharePointHost(getUrlHost(url)) ? cleanSharePointUrl(url) : normalizeUrl(url))
+        .filter((url) => !isPlatformMetadataUrl(url)));
+    }
+
+    function extractUrls(text) {
+      const decoded = `${text}\n${decodeDeep(text)}`;
+      const urls = [];
+      const regex = /https?:\/\/[^\s"'<>\\\]\[{}|^`]+/gi;
+      let match = regex.exec(decoded);
+      while (match) {
+        urls.push(cleanUrl(match[0]));
+        match = regex.exec(decoded);
+      }
+      return unique(urls.filter(Boolean));
+    }
+
+    function isPlatformMetadataUrl(url) {
+      const normalized = normalizeUrl(url);
+      const host = getUrlHost(normalized);
+      const path = getUrlPath(normalized);
+
+      if (!host) return true;
+      if (/\/providers\/Microsoft\.PowerApps\//i.test(path)) return true;
+      if (/\/providers\/Microsoft\.Flow\//i.test(path)) return true;
+
+      return /(?:^|\.)powerapps\.com$/i.test(host)
+        || /(?:^|\.)powerapps\.us$/i.test(host)
+        || /(?:^|\.)appsplatform\.us$/i.test(host)
+        || /(?:^|\.)powerplatform\.microsoft\.com$/i.test(host)
+        || /(?:^|\.)powerplatform\.microsoft\.us$/i.test(host)
+        || /(?:^|\.)dynamics\.com$/i.test(host)
+        || /(?:^|\.)microsoftdynamics\.us$/i.test(host)
+        || /(?:^|\.)dynamics\.cn$/i.test(host)
+        || /(?:^|\.)microsoftonline\.com$/i.test(host)
+        || /(?:^|\.)microsoftonline\.us$/i.test(host)
+        || /(?:^|\.)msauth\.net$/i.test(host)
+        || /(?:^|\.)msauthimages\.us$/i.test(host)
+        || /(?:^|\.)msftauth\.net$/i.test(host)
+        || /(?:^|\.)msftauthimages\.us$/i.test(host)
+        || /(?:^|\.)office\.net$/i.test(host)
+        || /(?:^|\.)office365\.us$/i.test(host)
+        || /(?:^|\.)azureedge\.net$/i.test(host)
+        || /(?:^|\.)azureedge\.us$/i.test(host)
+        || /(?:^|\.)azurefd\.net$/i.test(host)
+        || /(?:^|\.)usgovcloud-static\.microsoft$/i.test(host)
+        || /(?:^|\.)usgovcloud-usercontent\.microsoft$/i.test(host)
+        || /(?:^|\.)usgovcloud\.microsoft$/i.test(host)
+        || host === getUrlHost(getClientUrl());
+    }
+
+    function cleanSharePointUrl(url) {
+      let cleaned = cleanUrl(url);
+      const markerMatch = cleaned.match(/^(https?:\/\/[^/]+\/(?:sites|teams|personal)\/[^/?#]+)(?:[/?#].*)?$/i);
+      if (markerMatch) return markerMatch[1];
+      return cleaned;
+    }
+
+    function cleanUrl(url) {
+      let cleaned = decodeDeep(String(url).trim());
+      cleaned = cleaned.replace(/[),.;]+$/g, "");
+      cleaned = cleaned.replace(/&amp;/g, "&");
+      return cleaned;
+    }
+
+    function normalizeUrl(url) {
+      try {
+        const parsed = new URL(cleanUrl(url));
+        parsed.hash = "";
+        if (parsed.pathname !== "/") {
+          parsed.pathname = parsed.pathname.replace(/\/+$/g, "");
+        }
+        return parsed.toString().replace(/\/$/g, "");
+      } catch (_error) {
+        return cleanUrl(url);
+      }
+    }
+
+    function getUrlHost(url) {
+      try {
+        return new URL(url).hostname.toLowerCase();
+      } catch (_error) {
+        return "";
+      }
+    }
+
+    function getUrlPath(url) {
+      try {
+        return new URL(url).pathname;
+      } catch (_error) {
+        return "";
+      }
+    }
+
+    function sameOrigin(urlA, urlB) {
+      try {
+        return new URL(urlA).origin.toLowerCase() === new URL(urlB).origin.toLowerCase();
+      } catch (_error) {
+        return false;
+      }
+    }
+
+    function formatUnauthorizedMessage(url, detail) {
+      const requestHost = getUrlHost(url);
+      const detectedHost = state.detectedClientUrl ? getUrlHost(state.detectedClientUrl) : getUrlHost(window.location.href);
+      if (detectedHost && requestHost && requestHost !== detectedHost) {
+        return (
+          `401 Unauthorized from ${requestHost}. This web resource is running in ${detectedHost}, ` +
+          `so the browser does not have a reusable Dataverse session for ${requestHost}. ` +
+          `Open the inspector from the target environment or use an OAuth/MSAL app-registration version for central cross-environment scanning.`
+        );
+      }
+
+      return `401 Unauthorized from ${requestHost || "Dataverse"}. Your session may be expired or your user may lack read access.${detail ? ` Details: ${detail}` : ""}`;
+    }
+
+    function isSharePointHost(host) {
+      return /(?:^|\.)sharepoint(?:-df)?\.(?:com|us|cn)$/i.test(host)
+        || /(?:^|\.)sharepoint-mil\.us$/i.test(host)
+        || /(?:^|\.)dps\.mil$/i.test(host);
+    }
+
+    function isDataverseHost(host) {
+      return /(?:^|\.)crm\d*\.dynamics\.com$/i.test(host)
+        || /(?:^|\.)crm\d*\.powerapps\.com$/i.test(host)
+        || /(?:^|\.)dynamics\.com$/i.test(host)
+        || /(?:^|\.)dynamics\.cn$/i.test(host)
+        || /(?:^|\.)crm\.microsoftdynamics\.us$/i.test(host)
+        || /(?:^|\.)microsoftdynamics\.us$/i.test(host)
+        || /(?:^|\.)crm\.appsplatform\.us$/i.test(host)
+        || /(?:^|\.)appsplatform\.us$/i.test(host);
+    }
+
+    function parseMaybeJson(value) {
+      if (typeof value !== "string") return null;
+      const trimmed = value.trim();
+      if (!trimmed || !/^[\[{]/.test(trimmed)) return null;
+      try {
+        return JSON.parse(trimmed);
+      } catch (_error) {
+        return null;
+      }
+    }
+
+    function decodeDeep(value) {
+      let current = String(value);
+      for (let index = 0; index < 3; index += 1) {
+        try {
+          const decoded = decodeURIComponent(current);
+          if (decoded === current) break;
+          current = decoded;
+        } catch (_error) {
+          break;
+        }
+      }
+      return current;
+    }
+
+    async function fetchRecordsByIds(entitySet, idField, ids, selectAttempts, warnings) {
+      const cleanIds = unique(ids.map(normalizeGuid).filter(Boolean));
+      if (!cleanIds.length) return [];
+
+      for (const select of selectAttempts) {
+        try {
+          const records = [];
+          for (const chunk of chunkArray(cleanIds, 12)) {
+            const filter = chunk.map((id) => `${idField} eq ${id}`).join(" or ");
+            const data = await retrieveAll(`${entitySet}?$select=${select}&$filter=${encodeURIComponent(filter)}`);
+            records.push(...data);
+          }
+          return records;
+        } catch (error) {
+          if (select === selectAttempts[selectAttempts.length - 1]) {
+            warnings.push(`Could not read ${entitySet}: ${error.message}`);
+          }
+        }
+      }
+
+      return [];
+    }
+
+    async function fetchEntityList(entitySet, attempts, warnings) {
+      for (let index = 0; index < attempts.length; index += 1) {
+        const attempt = attempts[index];
+        try {
+          const query = `${entitySet}?$select=${attempt.select}${attempt.query ? `&${attempt.query}` : ""}`;
+          return await retrieveAll(query);
+        } catch (error) {
+          if (index === attempts.length - 1) {
+            warnings.push(`Could not list ${entitySet}: ${error.message}`);
+          }
+        }
+      }
+
+      return [];
+    }
+
+    function looksLikeCloudFlow(record) {
+      const formatted = record["category@OData.Community.Display.V1.FormattedValue"] || "";
+      return Number(record.category) === 5 || /modern flow|cloud flow/i.test(formatted);
+    }
+
+    async function retrieveAll(relativeUrl) {
+      const values = [];
+      let nextUrl = relativeUrl;
+      while (nextUrl) {
+        const page = await dataverseGet(nextUrl);
+        values.push(...(page.value || []));
+        nextUrl = page["@odata.nextLink"] || "";
+      }
+      return values;
+    }
+
+    async function dataverseGet(relativeOrAbsoluteUrl) {
+      const clientUrl = getClientUrl();
+      const url = /^https?:\/\//i.test(relativeOrAbsoluteUrl)
+        ? relativeOrAbsoluteUrl
+        : `${clientUrl}/api/data/v9.2/${relativeOrAbsoluteUrl.replace(/^\/+/, "")}`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json; charset=utf-8",
+          "OData-MaxVersion": "4.0",
+          "OData-Version": "4.0",
+          "Prefer": "odata.include-annotations=\"OData.Community.Display.V1.FormattedValue\""
+        }
+      });
+
+      if (!response.ok) {
+        const detailText = await response.text().catch(() => "");
+        let detail = detailText;
+        try {
+          const body = detailText ? JSON.parse(detailText) : null;
+          detail = body && body.error && body.error.message ? body.error.message : JSON.stringify(body);
+        } catch (_error) {
+          detail = detailText;
+        }
+        if (response.status === 401) {
+          throw new Error(formatUnauthorizedMessage(url, detail));
+        }
+        throw new Error(`${response.status} ${response.statusText}${detail ? ` - ${detail}` : ""}`);
+      }
+
+      return response.status === 204 ? {} : response.json();
+    }
+
+    function getClientUrl() {
+      const manual = stripTrailingSlash(elements.environmentUrl.value.trim());
+      if (manual) return validateClientUrl(manual);
+
+      const detected = detectClientUrl();
+      if (detected) return validateClientUrl(detected);
+
+      throw new Error("Could not detect the Dataverse environment URL. Enter the environment URL and try again.");
+    }
+
+    function validateClientUrl(clientUrl) {
+      const detected = state.detectedClientUrl || detectClientUrl();
+      if (detected && !sameOrigin(clientUrl, detected)) {
+        throw new Error(
+          `Cross-environment inspection is not available in this no-app-registration web resource. ` +
+          `This page is running in ${getUrlHost(detected)} and can only use that environment's Dataverse session. ` +
+          `To inspect ${getUrlHost(clientUrl)}, upload/open this same web resource in that environment, or use an OAuth/MSAL app-registration version.`
+        );
+      }
+      return clientUrl;
+    }
+
+    function updateEnvironmentHint() {
+      const selected = stripTrailingSlash(elements.environmentUrl.value.trim());
+      const detected = state.detectedClientUrl || detectClientUrl();
+      elements.environmentHint.classList.remove("warning");
+
+      if (!detected) {
+        elements.environmentHint.textContent = "Open from a Dataverse web resource for automatic same-environment authentication.";
+        return;
+      }
+
+      if (selected && !sameOrigin(selected, detected)) {
+        elements.environmentHint.classList.add("warning");
+        elements.environmentHint.textContent =
+          `Current build is same-environment only. Open this web resource in ${getUrlHost(selected)} to inspect that environment.`;
+        return;
+      }
+
+      elements.environmentHint.textContent = `Using current Dataverse session for ${getUrlHost(detected)}.`;
+    }
+
+    function resetEnvironmentSelection() {
+      state.solutions = [];
+      state.environmentTargets = [];
+      state.solutionsLoaded = false;
+      state.environmentTargetsLoaded = false;
+      state.selectedSolution = null;
+      state.lastResult = null;
+      elements.results.classList.add("hidden");
+      renderSelectionOptions();
+      updateEnvironmentHint();
+    }
+
+    function renderSelectionOptions() {
+      if (getInspectionMode() === "target") {
+        renderEnvironmentTargetOptions();
+        return;
+      }
+      renderSolutionOptions();
+    }
+
+    function renderSolutionOptions() {
+      elements.solutionSelect.innerHTML = "";
+      if (!state.solutions.length) {
+        appendOption(elements.solutionSelect, "", state.solutionsLoaded ? "No solutions found" : "Load solutions first");
+        elements.solutionSelect.disabled = true;
+        elements.analyzeButton.disabled = true;
+        return;
+      }
+
+      appendOption(elements.solutionSelect, "", "Select a solution");
+      for (const solution of state.solutions) {
+        const label = `${displaySolutionName(solution)} (${solution.uniquename})${solution.ismanaged ? " - managed" : ""}`;
+        appendOption(elements.solutionSelect, normalizeGuid(solution.solutionid), label);
+      }
+      elements.solutionSelect.disabled = false;
+      updateAnalyzeState();
+    }
+
+    function renderEnvironmentTargetOptions() {
+      elements.solutionSelect.innerHTML = "";
+      if (!state.environmentTargets.length) {
+        appendOption(elements.solutionSelect, "", state.environmentTargetsLoaded ? "No apps or cloud flows found" : "Load apps/flows first");
+        elements.solutionSelect.disabled = true;
+        elements.analyzeButton.disabled = true;
+        return;
+      }
+
+      appendOption(elements.solutionSelect, "", "Select an app or cloud flow");
+      for (const target of state.environmentTargets) {
+        appendOption(elements.solutionSelect, target.value, target.label);
+      }
+      elements.solutionSelect.disabled = false;
+      updateAnalyzeState();
+    }
+
+    function renderResults() {
+      const result = state.lastResult;
+      if (!result) return;
+
+      const query = elements.resultFilter.value.trim().toLowerCase();
+      const includeRawUrls = elements.includeRawUrlsToggle.checked;
+      const filteredComponents = result.components.filter((row) => matchesQuery(row, query));
+      const filteredSharePoint = result.sharePointUrls.filter((row) => matchesQuery(row, query));
+      const filteredServices = result.services.filter((row) => matchesQuery(row, query));
+      const filteredConnections = result.connections.filter((row) => matchesQuery(row, query));
+      const filteredAssessment = result.assessment.filter((row) => matchesQuery(row, query));
+
+      elements.selectedSolutionTitle.textContent = displaySolutionName(result.solution);
+      elements.selectedSolutionMeta.textContent = result.mode === "target"
+        ? [
+            result.solution.uniquename,
+            "environment-level inspection",
+            result.solution.modifiedon ? `modified ${new Date(result.solution.modifiedon).toLocaleString()}` : ""
+          ].filter(Boolean).join(" | ")
+        : [
+            result.solution.uniquename,
+            result.solution.version ? `version ${result.solution.version}` : "",
+            result.solution.ismanaged ? "managed" : "unmanaged",
+            result.solution.modifiedon ? `modified ${new Date(result.solution.modifiedon).toLocaleString()}` : ""
+          ].filter(Boolean).join(" | ");
+
+      elements.metricComponents.textContent = String(result.componentCount);
+      elements.metricComponentsLabel.textContent = result.mode === "target" ? "selected target" : "solution components";
+      elements.metricScanned.textContent = String(result.scannedCount);
+      elements.metricServices.textContent = String(result.services.length);
+      elements.metricSharePoint.textContent = String(result.sharePointUrls.length);
+      elements.metricShares.textContent = String(result.shareSummary.totalDirectShares);
+      elements.metricWarnings.textContent = String(result.assessment.length);
+
+      renderInventoryTable(filteredComponents);
+      renderAssessmentTable(filteredAssessment);
+      renderComponentsTable(filteredComponents, includeRawUrls);
+      renderSharePointTable(filteredSharePoint);
+      renderServicesTable(filteredServices);
+      renderConnectionsTable(filteredConnections);
+      elements.warningsLog.textContent = result.warnings.length
+        ? result.warnings.join("\n\n")
+        : "No warnings.";
+
+      renderScanScope();
+      renderNotes(result);
+    }
+
+    function renderInventoryTable(rows) {
+      clearNode(elements.inventoryBody);
+      if (!rows.length) {
+        appendEmptyRow(elements.inventoryBody, 8, "No matching inventory rows.");
+        return;
+      }
+
+      for (const row of rows) {
+        const tr = document.createElement("tr");
+        appendCell(tr, row.component, "strong");
+        appendCell(tr, row.type);
+        appendCell(tr, row.metadata.owner || "Unknown");
+        appendCell(tr, row.metadata.status || "Unknown");
+        appendCell(tr, formatDate(row.metadata.modified));
+        appendCell(tr, formatShareCount(row.sharing, "users"), "mono");
+        appendCell(tr, formatShareCount(row.sharing, "teams"), "mono");
+        appendRiskCell(tr, row.risks);
+        elements.inventoryBody.appendChild(tr);
+      }
+    }
+
+    function renderAssessmentTable(rows) {
+      clearNode(elements.assessmentBody);
+      if (!rows.length) {
+        appendEmptyRow(elements.assessmentBody, 5, "No matching heuristic signals.");
+        return;
+      }
+
+      for (const row of rows) {
+        const tr = document.createElement("tr");
+        appendBadgeCell(tr, [titleCase(row.severity)], severityToBadgeVariant(row.severity));
+        appendCell(tr, row.area);
+        appendCell(tr, row.finding);
+        appendCell(tr, row.recommendation);
+        appendBadgeCell(tr, row.components, "accent", "Overall finding");
+        elements.assessmentBody.appendChild(tr);
+      }
+    }
+
+    function renderComponentsTable(rows, includeRawUrls) {
+      clearNode(elements.componentsBody);
+      if (!rows.length) {
+        appendEmptyRow(elements.componentsBody, 5, "No matching components.");
+        return;
+      }
+
+      for (const row of rows) {
+        const tr = document.createElement("tr");
+        appendCell(tr, row.component, "strong");
+        appendCell(tr, row.type);
+        appendBadgeCell(tr, row.services.map((service) => service.name), "accent");
+        const urls = includeRawUrls ? [...row.sharePointUrls, ...row.rawUrls] : row.sharePointUrls;
+        appendBadgeCell(tr, urls, "warning", "No SharePoint URLs found");
+        appendBadgeCell(tr, row.sources);
+        elements.componentsBody.appendChild(tr);
+      }
+    }
+
+    function renderSharePointTable(rows) {
+      clearNode(elements.sharepointBody);
+      if (!rows.length) {
+        appendEmptyRow(elements.sharepointBody, 4, "No matching SharePoint URLs.");
+        return;
+      }
+
+      for (const row of rows) {
+        const tr = document.createElement("tr");
+        appendLinkCell(tr, row.url);
+        appendCell(tr, row.host, "mono");
+        appendBadgeCell(tr, row.components, "accent");
+        appendBadgeCell(tr, row.sources);
+        elements.sharepointBody.appendChild(tr);
+      }
+    }
+
+    function renderServicesTable(rows) {
+      clearNode(elements.servicesBody);
+      if (!rows.length) {
+        appendEmptyRow(elements.servicesBody, 4, "No matching services.");
+        return;
+      }
+
+      for (const row of rows) {
+        const tr = document.createElement("tr");
+        appendCell(tr, row.service, "strong");
+        appendCell(tr, row.connector, "mono");
+        appendBadgeCell(tr, row.components, "accent");
+        appendCell(tr, String(row.count), "mono");
+        elements.servicesBody.appendChild(tr);
+      }
+    }
+
+    function renderConnectionsTable(rows) {
+      clearNode(elements.connectionsBody);
+      if (!rows.length) {
+        appendEmptyRow(elements.connectionsBody, 5, "No matching connection references.");
+        return;
+      }
+
+      for (const row of rows) {
+        const tr = document.createElement("tr");
+        appendCell(tr, row.name, "strong");
+        appendCell(tr, row.logicalName, "mono");
+        appendCell(tr, row.service);
+        appendCell(tr, row.connector, "mono");
+        appendBadgeCell(tr, row.sharePointUrls, "warning", "None detected");
+        elements.connectionsBody.appendChild(tr);
+      }
+    }
+
+    function renderScanScope() {
+      clearNode(elements.scanScopeBadges);
+      const result = state.lastResult;
+      const scopes = result && result.mode === "target"
+        ? [
+            result.target && result.target.kind === "workflow" ? "workflows" : "",
+            result.target && result.target.kind === "canvasapp" ? "canvasapps" : "",
+            result.target && result.target.kind === "appmodule" ? "appmodules" : "",
+            "selected record metadata"
+          ].filter(Boolean)
+        : [
+            "solutioncomponents",
+            "workflows",
+            "canvasapps",
+            "appmodules",
+            "connectionreferences",
+            "connectors",
+            "environmentvariabledefinitions",
+            "environmentvariablevalues"
+          ];
+      for (const scope of scopes) {
+        elements.scanScopeBadges.appendChild(createBadge(scope));
+      }
+    }
+
+    function renderNotes(result) {
+      clearNode(elements.notes);
+      const notes = [
+        result.mode === "target"
+          ? "Standalone app/flow mode bypasses custom solution membership and reads the selected environment record directly. Every component still appears somewhere in Dataverse, often the Default Solution."
+          : "Solution mode starts from solutioncomponents, then reads the component records referenced by the selected solution.",
+        "Direct share counts are best-effort from Dataverse PrincipalObjectAccess. Group membership, security role access, and some canvas app run-only sharing may require Power Platform Admin APIs or PowerShell to fully enumerate.",
+        "Connection references reliably identify connector/service usage, but URLs are usually found in flow definitions, app metadata, or environment variables.",
+        "The page does not send data anywhere except the selected Dataverse environment API.",
+        result.rawUrls.length
+          ? `${result.rawUrls.length} non-platform dependency URL${result.rawUrls.length === 1 ? "" : "s"} were also found. Enable \"Show non-platform dependency URLs\" to include them in the component view.`
+          : "No non-platform dependency URLs were found in scanned records."
+      ];
+      for (const note of notes) {
+        const p = document.createElement("p");
+        p.textContent = note;
+        elements.notes.appendChild(p);
+      }
+    }
+
+    function matchesQuery(row, query) {
+      if (!query) return true;
+      return JSON.stringify(row).toLowerCase().includes(query);
+    }
+
+    function appendCell(row, value, className) {
+      const cell = document.createElement("td");
+      if (className === "strong") {
+        const strong = document.createElement("strong");
+        strong.textContent = value || "";
+        cell.appendChild(strong);
+      } else {
+        cell.textContent = value || "";
+        if (className) cell.classList.add(className);
+      }
+      row.appendChild(cell);
+    }
+
+    function appendRiskCell(row, risks) {
+      const values = (risks || []).map((risk) => risk.label);
+      const highest = (risks || []).sort((a, b) => severityRank(b.severity) - severityRank(a.severity))[0];
+      appendBadgeCell(row, values, highest ? severityToBadgeVariant(highest.severity) : "", "None detected");
+    }
+
+    function severityToBadgeVariant(severity) {
+      if (severity === "high") return "danger";
+      if (severity === "medium") return "warning";
+      if (severity === "low") return "";
+      return "accent";
+    }
+
+    function appendLinkCell(row, url) {
+      const cell = document.createElement("td");
+      const link = document.createElement("a");
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = url;
+      link.className = "mono";
+      cell.appendChild(link);
+      row.appendChild(cell);
+    }
+
+    function appendBadgeCell(row, values, variant, emptyText = "None detected") {
+      const cell = document.createElement("td");
+      const list = document.createElement("div");
+      list.className = "badge-list";
+
+      const cleanValues = unique((values || []).filter(Boolean));
+      if (!cleanValues.length) {
+        const span = document.createElement("span");
+        span.className = "muted";
+        span.textContent = emptyText;
+        cell.appendChild(span);
+      } else {
+        for (const value of cleanValues) {
+          list.appendChild(createBadge(value, variant));
+        }
+        cell.appendChild(list);
+      }
+
+      row.appendChild(cell);
+    }
+
+    function createBadge(value, variant) {
+      const span = document.createElement("span");
+      span.className = `badge${variant ? ` ${variant}` : ""}`;
+      span.textContent = value;
+      span.title = value;
+      return span;
+    }
+
+    function appendEmptyRow(body, colSpan, message) {
+      const row = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.colSpan = colSpan;
+      const div = document.createElement("div");
+      div.className = "empty-state";
+      div.textContent = message;
+      cell.appendChild(div);
+      row.appendChild(cell);
+      body.appendChild(row);
+    }
+
+    function appendOption(select, value, label) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      select.appendChild(option);
+    }
+
+    function formatDate(value) {
+      if (!value) return "Unknown";
+      const date = new Date(value);
+      if (!Number.isFinite(date.getTime())) return String(value);
+      return date.toLocaleDateString();
+    }
+
+    function formatShareCount(sharing, field) {
+      if (!sharing || sharing.status === "unknown") return "Unknown";
+      return String(Number(sharing[field]) || 0);
+    }
+
+    function clearNode(node) {
+      while (node.firstChild) {
+        node.removeChild(node.firstChild);
+      }
+    }
+
+    function activateTab(tabId) {
+      for (const button of document.querySelectorAll(".tab-button")) {
+        button.classList.toggle("active", button.dataset.tab === tabId);
+      }
+      for (const panel of document.querySelectorAll(".tab-panel")) {
+        panel.classList.toggle("active", panel.id === tabId);
+      }
+    }
+
+    function updateAnalyzeState() {
+      elements.analyzeButton.disabled = !elements.solutionSelect.value || state.isBusy;
+    }
+
+    function setBusy(isBusy, message) {
+      state.isBusy = isBusy;
+      elements.status.classList.toggle("busy", isBusy);
+      elements.loadSolutionsButton.disabled = isBusy;
+      updateAnalyzeState();
+      if (message) setStatus(message);
+    }
+
+    function setStatus(message, type) {
+      elements.status.classList.toggle("error", type === "error");
+      elements.status.classList.toggle("success", type === "success");
+      elements.statusText.textContent = message;
+    }
+
+    async function runSafely(action) {
+      try {
+        await action();
+      } catch (error) {
+        setBusy(false);
+        setStatus(error.message || String(error), "error");
+      }
+    }
+
+    function addWarning(message) {
+      if (!state.lastResult) return;
+      state.lastResult.warnings.push(message);
+    }
+
+    function exportJson() {
+      if (!state.lastResult) return;
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        ...serializeResult(state.lastResult)
+      };
+      downloadText(makeExportName("json"), JSON.stringify(payload, null, 2), "application/json");
+    }
+
+    function exportCsv() {
+      if (!state.lastResult) return;
+      const rows = [
+        ["Component", "Type", "Owner", "Status", "Modified", "Shared Users", "Shared Teams", "Shared Other", "Total Shares", "Risk Signals", "Services", "SharePoint URLs", "Sources"],
+        ...state.lastResult.components.map((row) => [
+          row.component,
+          row.type,
+          row.metadata.owner,
+          row.metadata.status,
+          row.metadata.modified,
+          formatShareCount(row.sharing, "users"),
+          formatShareCount(row.sharing, "teams"),
+          formatShareCount(row.sharing, "other"),
+          formatShareCount(row.sharing, "total"),
+          row.risks.map((risk) => `${risk.severity}: ${risk.label}`).join("; "),
+          row.services.map((service) => service.name).join("; "),
+          row.sharePointUrls.join("; "),
+          row.sources.join("; ")
+        ])
+      ];
+      const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
+      downloadText(makeExportName("csv"), csv, "text/csv");
+    }
+
+    async function copySummary() {
+      if (!state.lastResult) return;
+      const result = state.lastResult;
+      const summary = [
+        `Solution: ${displaySolutionName(result.solution)} (${result.solution.uniquename})`,
+        `Components: ${result.componentCount}`,
+        `Scanned records: ${result.scannedCount}`,
+        `Direct shares: ${result.shareSummary.totalDirectShares}${result.shareSummary.unknownComponents ? ` (${result.shareSummary.unknownComponents} unknown)` : ""}`,
+        `Heuristic migration signals: ${result.assessment.length}`,
+        `Services: ${result.services.map((service) => service.service).join(", ") || "None detected"}`,
+        `SharePoint URLs:`,
+        ...(result.sharePointUrls.length ? result.sharePointUrls.map((entry) => `- ${entry.url}`) : ["- None detected"])
+      ].join("\n");
+      await navigator.clipboard.writeText(summary);
+      setStatus("Copied summary to clipboard.", "success");
+    }
+
+    function downloadText(filename, text, mimeType) {
+      const blob = new Blob([text], { type: `${mimeType};charset=utf-8` });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function makeExportName(extension) {
+      const uniqueName = state.lastResult && state.lastResult.mode === "target"
+        ? `${state.lastResult.target.kind}-${state.lastResult.target.name}`
+        : state.lastResult && state.lastResult.solution
+          ? state.lastResult.solution.uniquename
+          : "solution";
+      return `${safeFilePart(uniqueName)}-service-inspection.${extension}`;
+    }
+
+    function serializeResult(result) {
+      return {
+        solution: result.solution,
+        componentCount: result.componentCount,
+        scannedCount: result.scannedCount,
+        shareSummary: result.shareSummary,
+        assessment: result.assessment,
+        components: result.components,
+        services: result.services,
+        sharePointUrls: result.sharePointUrls,
+        connections: result.connections,
+        warnings: result.warnings
+      };
+    }
+
+    function csvEscape(value) {
+      const text = String(value ?? "");
+      return /[",\n]/.test(text) ? `"${text.replace(/"/g, "\"\"")}"` : text;
+    }
+
+    function toggleTheme() {
+      const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+    }
+
+    function stripTrailingSlash(value) {
+      return String(value || "").replace(/\/+$/, "");
+    }
+
+    function safeFilePart(value) {
+      return String(value || "target")
+        .replace(/[<>:"/\\|?*\x00-\x1F]/g, "-")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 120) || "target";
+    }
+
+    function normalizeGuid(value) {
+      return String(value || "").replace(/[{}]/g, "").toLowerCase();
+    }
+
+    function displaySolutionName(solution) {
+      return solution.friendlyname || solution.uniquename || "(unnamed solution)";
+    }
+
+    function getComponentTypeLabel(type) {
+      const numeric = Number(type);
+      return COMPONENT_TYPES.get(numeric) || `Component type ${numeric}`;
+    }
+
+    function titleCase(value) {
+      return String(value || "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .replace(/\w\S*/g, (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
+    }
+
+    function getTargetKindLabel(kind) {
+      if (kind === "canvasapp") return "Canvas app";
+      if (kind === "appmodule") return "Model-driven app";
+      return "Cloud flow";
+    }
+
+    function getComponentTypeForTarget(kind) {
+      if (kind === "canvasapp") return 300;
+      if (kind === "appmodule") return 80;
+      return 29;
+    }
+
+    function countBy(items, getKey) {
+      const counts = new Map();
+      for (const item of items) {
+        const key = getKey(item);
+        counts.set(key, (counts.get(key) || 0) + 1);
+      }
+      return counts;
+    }
+
+    function formatCounts(counts) {
+      return Array.from(counts.entries())
+        .map(([key, count]) => `${key}: ${count}`)
+        .join(", ");
+    }
+
+    function unique(values) {
+      return Array.from(new Set(values));
+    }
+
+    function chunkArray(values, size) {
+      const chunks = [];
+      for (let index = 0; index < values.length; index += size) {
+        chunks.push(values.slice(index, index + size));
+      }
+      return chunks;
+    }
+  </script>
+</body>
+</html>

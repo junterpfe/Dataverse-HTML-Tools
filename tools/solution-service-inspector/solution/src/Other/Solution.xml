@@ -8,7 +8,7 @@
     <Descriptions>
       <Description description="Inventory Power Platform solutions, apps, flows, connected services, SharePoint URLs, sharing signals, and migration review signals." languagecode="1033" />
     </Descriptions>
-    <Version>1.0.0.0</Version>
+    <Version>1.0.1.0</Version>
     <Managed>2</Managed>
     <Publisher>
       <UniqueName>DataverseHTMLTools</UniqueName>
@@ -18,7 +18,7 @@
       <Descriptions>
         <Description description="Dataverse HTML Tools" languagecode="1033" />
       </Descriptions>
-      <EMailAddress xsi:nil="true"></EMailAddress>
+      <EMailAddress>junterse@hotmail.com</EMailAddress>
       <SupportingWebsiteUrl xsi:nil="true"></SupportingWebsiteUrl>
       <CustomizationPrefix>dht</CustomizationPrefix>
       <CustomizationOptionValuePrefix>45369</CustomizationOptionValuePrefix>

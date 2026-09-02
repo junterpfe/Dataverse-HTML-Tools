@@ -71,6 +71,7 @@ For Entra-backed teams, membership is shown read-only and managed through Micros
 
 ## Documentation
 
+- [Dataverse HTML Tools Suite](DataverseHTMLToolsSuite.md)
 - [User Effective Security Roles](UserEffectiveSecurityRoles.md)
 - [Role Table Permission Copier](RoleTablePermissionCopier.md)
 - [Team Role and People Manager](TeamRolePeopleManager.md)

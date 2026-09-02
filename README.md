@@ -36,8 +36,11 @@ Screenshots use sanitized sample data.
 | Flow Dependency Viewer | [Unmanaged ZIP](packages/flow-dependency-viewer/FlowDependencyViewerSolution.zip) | [Managed ZIP](packages/flow-dependency-viewer/FlowDependencyViewerSolution_managed.zip) |
 | Solution Service Inspector | [Unmanaged ZIP](packages/solution-service-inspector/SolutionServiceInspectorSolution.zip) | [Managed ZIP](packages/solution-service-inspector/SolutionServiceInspectorSolution_managed.zip) |
 
-## Repository layout
+## Suite Install
 
+Install the complete experience from [Dataverse HTML Tools Suite](tools/dataverse-html-tools-suite/README.md). The managed and unmanaged archives are in [packages/dataverse-html-tools-suite](packages/dataverse-html-tools-suite), and the installer details are in [docs/DataverseHTMLToolsSuite.md](docs/DataverseHTMLToolsSuite.md).
+
+## Repository layout
 ```text
 Dataverse-HTML-Tools\
   docs\                         Suite-level docs, article drafts, and shared assets

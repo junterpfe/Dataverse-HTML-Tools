@@ -18,6 +18,7 @@ node_modules/
 Thumbs.db
 
 # Temporary files
+.pac-readonly/
 *.tmp
 *.bak
 *.log

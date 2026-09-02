@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ImportExportXml version="9.2.26073.168" SolutionPackageVersion="9.2" languagecode="1033" generatedBy="CrmLive" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" OrganizationVersion="9.2.26073.168" OrganizationSchemaType="Standard" CRMServerServiceabilityVersion="9.2.26073.00168">
+  <SolutionManifest>
+    <UniqueName>DataverseHTMLToolsSuite</UniqueName>
+    <LocalizedNames>
+      <LocalizedName description="Dataverse HTML Tools Suite" languagecode="1033" />
+    </LocalizedNames>
+    <Descriptions />
+    <Version>1.0.6.0</Version>
+    <Managed>2</Managed>
+    <Publisher>
+      <UniqueName>DataverseHTMLTools</UniqueName>
+      <LocalizedNames>
+        <LocalizedName description="Dataverse HTML Tools" languagecode="1033" />
+      </LocalizedNames>
+      <Descriptions>
+        <Description description="Dataverse HTML Tools" languagecode="1033" />
+      </Descriptions>
+      <EMailAddress>junterse@hotmail.com</EMailAddress>
+      <SupportingWebsiteUrl xsi:nil="true"></SupportingWebsiteUrl>
+      <CustomizationPrefix>dht</CustomizationPrefix>
+      <CustomizationOptionValuePrefix>45369</CustomizationOptionValuePrefix>
+      <Addresses />
+    </Publisher>
+    <RootComponents>
+      <RootComponent type="1" schemaName="systemuser" behavior="1" />
+      <RootComponent type="1" schemaName="team" behavior="1" />
+      <RootComponent type="61" schemaName="dht_/RoleTablePermissionCopier.html" behavior="0" />
+      <RootComponent type="61" schemaName="dht_/SolutionServiceInspector.html" behavior="0" />
+      <RootComponent type="61" schemaName="dht_/TeamRolePeopleManager.html" behavior="0" />
+      <RootComponent type="61" schemaName="dht_/UserEffectiveSecurityRoles.html" behavior="0" />
+      <RootComponent type="61" schemaName="dht_/UserRecordAccess.html" behavior="0" />
+      <RootComponent type="61" schemaName="fdv_/flowdependencyviewer.htm" behavior="0" />
+      <RootComponent type="62" schemaName="admin_tools_0b5e60bd" behavior="0" />
+      <RootComponent type="80" schemaName="admin_tools_0b5e60bd" behavior="0" />
+    </RootComponents>
+    <MissingDependencies>
+      <MissingDependency>
+        <Required type="2" schemaName="membershiptype" displayName="Membership Type" parentSchemaName="team" parentDisplayName="Team" solution="AuthorizationCore (1.137.0.0)">
+          <package appName="Authorization Package" version="1.7.0.0">msft_PrivilegeChecker (1.7.0.0)</package>
+        </Required>
+        <Dependent type="60" displayName="Admin Tools Team" parentDisplayName="Team" id="{4d7fdadd-16a6-f111-b8dd-001dd804f0e8}" />
+      </MissingDependency>
+      <MissingDependency>
+        <Required type="61" schemaName="msdyn_/Images/AppModule_Default_Icon.png" displayName="msdyn_/Images/AppModule_Default_Icon.png" solution="AppModuleWebResources (2.5)">
+          <package appName="AppModule Web Resources Package" version="2.5">AppModuleWebResources (2.5)</package>
+        </Required>
+        <Dependent type="80" schemaName="admin_tools_0b5e60bd" displayName="Admin Tools" />
+      </MissingDependency>
+      <MissingDependency>
+        <Required type="SettingDefinition" displayName="AppChannel" solution="msdyn_AppFrameworkInfraExtensions (1.0.0.19)" id.uniquename="AppChannel">
+          <package appName="PowerAppsAppFramework Package" version="1.0.0.25">PowerAppsAppFramework_Anchor (1.0.0.25)</package>
+        </Required>
+        <Dependent type="AppSetting" displayName="parentappmoduleid.uniquename=admin_tools_0b5e60bd,settingdefinitionid.uniquename=AppChannel" id.parentappmoduleid.uniquename="admin_tools_0b5e60bd" id.settingdefinitionid.uniquename="AppChannel" />
+      </MissingDependency>
+    </MissingDependencies>
+  </SolutionManifest>
+</ImportExportXml>

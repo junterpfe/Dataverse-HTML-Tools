@@ -18,7 +18,7 @@
       <Descriptions>
         <Description description="Dataverse HTML Tools" languagecode="1033" />
       </Descriptions>
-      <EMailAddress xsi:nil="true"></EMailAddress>
+      <EMailAddress>junterse@hotmail.com</EMailAddress>
       <SupportingWebsiteUrl xsi:nil="true"></SupportingWebsiteUrl>
       <CustomizationPrefix>dht</CustomizationPrefix>
       <CustomizationOptionValuePrefix>45369</CustomizationOptionValuePrefix>

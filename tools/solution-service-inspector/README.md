@@ -88,13 +88,14 @@ These signals are prompts for review, not a migration readiness score.
 
 ## Light and dark mode
 
-The page defaults to light mode. To force dark mode, include:
+The page defaults to light mode, matching the other HTML tools. To enable dark mode, include:
 
 ```text
 themeOption=darkmode
 ```
 
 This also works when the value is encoded inside the model-driven app web resource `data` parameter.
+Dataverse `themeOption=darkmode` signals are detected in the web resource URL, encoded URL values, and accessible parent host URLs.
 
 ## Required privileges
 
@@ -127,7 +128,7 @@ The tool does not bypass Dataverse, Power Platform, or tenant security.
 | Share counts show Unknown | Current user lacks access to principal object access data, or the table is unavailable in that context |
 | No apps or flows are listed | Current user lacks read access, or the environment stores the target asset type in APIs not exposed to this web resource |
 | Platform URLs appear as dependencies | Confirm the page shows the latest build and re-publish the web resource |
-| Page opens in dark mode unexpectedly | Remove `themeOption=darkmode` from the URL/data parameter |
+| Page opens in dark mode unexpectedly | Remove `themeOption=darkmode` from the web resource or parent host URL |
 
 ## Related tools
 

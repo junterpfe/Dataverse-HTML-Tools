@@ -6,6 +6,10 @@ Some tools may be available as source-only until their managed and unmanaged ZIP
 
 Current packages:
 
+| Suite | Unmanaged package | Managed package |
+|---|---|---|
+| Dataverse HTML Tools Suite | [Unmanaged ZIP](dataverse-html-tools-suite/DataverseHTMLToolsSuite.zip) | [Managed ZIP](dataverse-html-tools-suite/DataverseHTMLToolsSuite_managed.zip) |
+
 | Tool | Unmanaged package | Managed package |
 |---|---|---|
 | User Effective Security Roles | [Unmanaged ZIP](user-effective-security-roles/UserEffectiveSecurityRolesSolution.zip) | [Managed ZIP](user-effective-security-roles/UserEffectiveSecurityRolesSolution_managed.zip) |

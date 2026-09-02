@@ -22,7 +22,7 @@
         <!-- Description of Cds Publisher in language code -->
         <Description description="FlowTools" languagecode="1033" />
       </Descriptions>
-      <EMailAddress xsi:nil="true"></EMailAddress>
+      <EMailAddress>junterse@hotmail.com</EMailAddress>
       <SupportingWebsiteUrl xsi:nil="true"></SupportingWebsiteUrl>
       <!-- Customization Prefix for the Cds Publisher-->
       <CustomizationPrefix>fdv</CustomizationPrefix>
