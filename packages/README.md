@@ -2,7 +2,7 @@
 
 This folder contains importable Dataverse solution packages.
 
-Some tools may be available as source-only until their managed and unmanaged ZIPs are generated from the tool's `solution` folder.
+Each listed tool currently has managed and unmanaged ZIP packages. The Suite is the recommended package for a complete installation.
 
 ## Recommended: Full Suite
 

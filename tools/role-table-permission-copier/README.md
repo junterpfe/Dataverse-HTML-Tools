@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The **Role Table Permission Copier** web resource helps admins manage table permissions in Dataverse security roles without fighting the standard role editor interface.
+The **Role Table Permission Copier** HTML web resource helps admins manage table permissions in Dataverse security roles without fighting the standard role editor interface.
 
 It is designed for scenarios like:
 

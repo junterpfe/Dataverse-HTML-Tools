@@ -1,6 +1,6 @@
 # Dataverse HTML Tools Suite
 
-`Dataverse HTML Tools Suite` is the combined installation option for all repository tools. It includes the `Admin Tools` model-driven app, existing HTML web resources, and dedicated User and Team forms.
+`Dataverse HTML Tools Suite` is the combined installation option for all repository tools. It includes the `Admin Tools` model-driven app, six HTML web resources, and dedicated User and Team forms.
 
 ## Included experience
 

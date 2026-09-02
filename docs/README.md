@@ -7,10 +7,11 @@ Individual tool packages remain available for partial deployments where the Suit
 The Suite includes six HTML web resources built to make Dataverse and Power Platform administration easier inside model-driven apps:
 
 1. **User Effective Security Roles** - User form helpers for viewing and managing roles and team memberships, plus a read-only record-access view for shares, Field Security Profiles, and hierarchy context.
-2. **Role Table Permission Copier** - an admin helper for cloning roles and copying table permission patterns across many tables.
-3. **Team Role and People Manager** - a Team form helper for managing team security roles and owner-team membership, with read-only Entra group membership handling.
-4. **Flow Dependency Viewer** - a solution-level helper for viewing cloud-flow dependencies, activation order, required environment variables, and missing environment-variable values.
-5. **Solution Service Inspector** - an inventory helper for reviewing solutions, apps, flows, connected services, SharePoint URLs, sharing signals, and non-authoritative migration signals.
+2. **User Record Access** - a companion User form helper for reviewing explicit record shares, Field Security Profiles, and hierarchy context.
+3. **Role Table Permission Copier** - an admin helper for cloning roles and copying table permission patterns across many tables.
+4. **Team Role and People Manager** - a Team form helper for managing team security roles and owner-team membership, with read-only Entra group membership handling.
+5. **Flow Dependency Viewer** - a solution-level helper for viewing cloud-flow dependencies, activation order, required environment variables, and missing environment-variable values.
+6. **Solution Service Inspector** - an inventory helper for reviewing solutions, apps, flows, connected services, SharePoint URLs, sharing signals, and non-authoritative migration signals.
 
 All tools are designed to run as **Dataverse HTML web resources** so they can use the signed-in admin's Dataverse context and `Xrm.WebApi`.
 
@@ -21,11 +22,12 @@ All tools are designed to run as **Dataverse HTML web resources** so they can us
 | Dataverse HTML Tools Suite | [Installer](DataverseHTMLToolsSuite.md) |
 | Dataverse HTML Tools Suite unmanaged solution | [ZIP](../packages/dataverse-html-tools-suite/DataverseHTMLToolsSuite.zip) |
 | Dataverse HTML Tools Suite managed solution | [ZIP](../packages/dataverse-html-tools-suite/DataverseHTMLToolsSuite_managed.zip) |
-| User Effective Security Roles | [HTML](../tools/user-effective-security-roles/src/UserEffectiveSecurityRoles.html) |
-| Role Table Permission Copier | [HTML](../tools/role-table-permission-copier/src/RoleTablePermissionCopier.html) |
-| Team Role and People Manager | [HTML](../tools/team-role-people-manager/src/TeamRolePeopleManager.html) |
+| User Effective Security Roles | [HTML web resource](../tools/user-effective-security-roles/src/UserEffectiveSecurityRoles.html) |
+| User Record Access | [HTML web resource](../tools/user-effective-security-roles/src/UserRecordAccess.html) |
+| Role Table Permission Copier | [HTML web resource](../tools/role-table-permission-copier/src/RoleTablePermissionCopier.html) |
+| Team Role and People Manager | [HTML web resource](../tools/team-role-people-manager/src/TeamRolePeopleManager.html) |
 | Flow Dependency Viewer | [HTML web resource](../tools/flow-dependency-viewer/solution/src/WebResources/fdv_/flowdependencyviewer.htm) |
-| Solution Service Inspector | [HTML](../tools/solution-service-inspector/src/SolutionServiceInspector.html) |
+| Solution Service Inspector | [HTML web resource](../tools/solution-service-inspector/src/SolutionServiceInspector.html) |
 | User Effective Security Roles unmanaged solution | [ZIP](../packages/user-effective-security-roles/UserEffectiveSecurityRolesSolution.zip) |
 | User Effective Security Roles managed solution | [ZIP](../packages/user-effective-security-roles/UserEffectiveSecurityRolesSolution_managed.zip) |
 | Role Table Permission Copier unmanaged solution | [ZIP](../packages/role-table-permission-copier/RoleTablePermissionCopierSolution.zip) |
@@ -51,7 +53,7 @@ Screenshots use sanitized sample data.
 
 ## Recommended deployment
 
-1. **Recommended:** import the managed or unmanaged [Dataverse HTML Tools Suite](DataverseHTMLToolsSuite.md). It installs the `Admin Tools` model-driven app and all included tools.
+1. **Recommended:** open the maker portal for the target cloud, then import the managed or unmanaged [Dataverse HTML Tools Suite](DataverseHTMLToolsSuite.md). It installs the `Admin Tools` model-driven app and all included tools.
 2. **Partial deployment:** import an individual tool solution ZIP from `packages`, publish customizations, then add the web resource to an existing admin model-driven app or form.
 3. **Manual deployment:** add a tool HTML file as a **Webpage (HTML)** web resource, publish customizations, then add it to an existing admin model-driven app or form.
 

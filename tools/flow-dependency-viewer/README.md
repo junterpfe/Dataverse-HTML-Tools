@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The **Flow Dependency Viewer** web resource helps administrators understand and safely manage Power Automate cloud flows that are shipped in Dataverse solutions.
+The **Flow Dependency Viewer** HTML web resource helps administrators understand and safely manage Power Automate cloud flows that are shipped in Dataverse solutions.
 
 It is designed for scenarios like:
 

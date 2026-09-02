@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The **User Effective Security Roles** web resource gives administrators a cleaner way to view and manage a user's Dataverse access directly from the User form.
+The **User Effective Security Roles** HTML web resource gives administrators a cleaner way to view and manage a user's Dataverse access directly from the User form.
 
 It combines:
 

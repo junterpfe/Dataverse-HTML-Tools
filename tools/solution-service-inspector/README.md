@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The **Solution Service Inspector** web resource helps administrators inventory Power Platform assets and identify metadata-based migration or rebuild signals.
+The **Solution Service Inspector** HTML web resource helps administrators inventory Power Platform assets and identify metadata-based migration or rebuild signals.
 
 It is designed for scenarios like:
 

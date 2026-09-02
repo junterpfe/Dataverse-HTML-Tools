@@ -14,11 +14,13 @@ Install an individual solution only when the target environment needs a specific
 
 | Tool | Source | Documentation |
 |---|---|---|
-| [User Effective Security Roles](tools/user-effective-security-roles/README.md) | [HTML](tools/user-effective-security-roles/src/UserEffectiveSecurityRoles.html) | [Docs](tools/user-effective-security-roles/README.md) |
-| [Role Table Permission Copier](tools/role-table-permission-copier/README.md) | [HTML](tools/role-table-permission-copier/src/RoleTablePermissionCopier.html) | [Docs](tools/role-table-permission-copier/README.md) |
-| [Team Role and People Manager](tools/team-role-people-manager/README.md) | [HTML](tools/team-role-people-manager/src/TeamRolePeopleManager.html) | [Docs](tools/team-role-people-manager/README.md) |
+| [Dataverse HTML Tools Suite](tools/dataverse-html-tools-suite/README.md) | [Installable solution](packages/dataverse-html-tools-suite) | [Suite docs](docs/DataverseHTMLToolsSuite.md) |
+| [User Effective Security Roles](tools/user-effective-security-roles/README.md) | [HTML web resource](tools/user-effective-security-roles/src/UserEffectiveSecurityRoles.html) | [Docs](tools/user-effective-security-roles/README.md) |
+| User Record Access | [HTML web resource](tools/user-effective-security-roles/src/UserRecordAccess.html) | [Docs](tools/user-effective-security-roles/README.md) |
+| [Role Table Permission Copier](tools/role-table-permission-copier/README.md) | [HTML web resource](tools/role-table-permission-copier/src/RoleTablePermissionCopier.html) | [Docs](tools/role-table-permission-copier/README.md) |
+| [Team Role and People Manager](tools/team-role-people-manager/README.md) | [HTML web resource](tools/team-role-people-manager/src/TeamRolePeopleManager.html) | [Docs](tools/team-role-people-manager/README.md) |
 | [Flow Dependency Viewer](tools/flow-dependency-viewer/README.md) | [HTML web resource](tools/flow-dependency-viewer/solution/src/WebResources/fdv_/flowdependencyviewer.htm) | [Docs](tools/flow-dependency-viewer/README.md) |
-| [Solution Service Inspector](tools/solution-service-inspector/README.md) | [HTML](tools/solution-service-inspector/src/SolutionServiceInspector.html) | [Docs](tools/solution-service-inspector/README.md) |
+| [Solution Service Inspector](tools/solution-service-inspector/README.md) | [HTML web resource](tools/solution-service-inspector/src/SolutionServiceInspector.html) | [Docs](tools/solution-service-inspector/README.md) |
 
 ## Screenshots
 

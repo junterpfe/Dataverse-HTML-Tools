@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The **Team Role and People Manager** web resource gives administrators a cleaner way to manage Dataverse team security roles and team membership from a Team form.
+The **Team Role and People Manager** HTML web resource gives administrators a cleaner way to manage Dataverse team security roles and team membership from a Team form.
 
 It is designed for scenarios like:
 
@@ -103,12 +103,12 @@ When the team is Entra-backed:
 
 This is intentional because group membership should be managed in Entra ID, not directly in Dataverse team membership.
 
-### Commercial, GCC, GCCH, and DoD links
+### Commercial, GCC, GCC High, and DoD links
 
 The tool builds the Entra group edit link based on the detected cloud.
 
 - Commercial and GCC use `https://entra.microsoft.com`
-- GCCH/DoD-style URLs use `https://entra.microsoft.us`
+- GCC High and DoD use `https://entra.microsoft.us`
 
 If your tenant uses a different portal URL pattern, update the `getEntraPortalBaseUrl` function in the HTML.
 
