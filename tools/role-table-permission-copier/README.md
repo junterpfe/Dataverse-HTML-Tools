@@ -14,6 +14,8 @@ It is designed for scenarios like:
 
 ## File
 
+For the complete supported experience, install the [Dataverse HTML Tools Suite](../dataverse-html-tools-suite/README.md). Use this individual package only when deploying Role Table Permission Copier without the Suite.
+
 Repository path:
 
 [src\RoleTablePermissionCopier.html](src/RoleTablePermissionCopier.html)
@@ -30,7 +32,7 @@ Package paths:
 
 ## Where to use it
 
-Add this HTML file as a Dataverse **Webpage (HTML) web resource**, then add it to an admin model-driven app as a standalone page/navigation item.
+Install the [Dataverse HTML Tools Suite](../dataverse-html-tools-suite/README.md) for the recommended complete app experience. Alternatively, import this individual package or add this HTML file as a Dataverse **Webpage (HTML) web resource**, then add it to an existing admin model-driven app as a standalone page/navigation item.
 
 The tool should run inside Dataverse so it can access:
 

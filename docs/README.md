@@ -1,6 +1,10 @@
-# Dataverse Security Tools
+# Dataverse HTML Tools
 
-This documentation covers five HTML web resources built to make Dataverse and Power Platform administration easier inside model-driven apps:
+The recommended installation is [Dataverse HTML Tools Suite](DataverseHTMLToolsSuite.md). It provides the `Admin Tools` model-driven app, dedicated User and Team forms, standalone pages, and all included web resources.
+
+Individual tool packages remain available for partial deployments where the Suite is not required.
+
+The Suite includes six HTML web resources built to make Dataverse and Power Platform administration easier inside model-driven apps:
 
 1. **User Effective Security Roles** - User form helpers for viewing and managing roles and team memberships, plus a read-only record-access view for shares, Field Security Profiles, and hierarchy context.
 2. **Role Table Permission Copier** - an admin helper for cloning roles and copying table permission patterns across many tables.
@@ -14,6 +18,9 @@ All tools are designed to run as **Dataverse HTML web resources** so they can us
 
 | Tool | Repository path |
 |---|---|
+| Dataverse HTML Tools Suite | [Installer](DataverseHTMLToolsSuite.md) |
+| Dataverse HTML Tools Suite unmanaged solution | [ZIP](../packages/dataverse-html-tools-suite/DataverseHTMLToolsSuite.zip) |
+| Dataverse HTML Tools Suite managed solution | [ZIP](../packages/dataverse-html-tools-suite/DataverseHTMLToolsSuite_managed.zip) |
 | User Effective Security Roles | [HTML](../tools/user-effective-security-roles/src/UserEffectiveSecurityRoles.html) |
 | Role Table Permission Copier | [HTML](../tools/role-table-permission-copier/src/RoleTablePermissionCopier.html) |
 | Team Role and People Manager | [HTML](../tools/team-role-people-manager/src/TeamRolePeopleManager.html) |
@@ -44,14 +51,9 @@ Screenshots use sanitized sample data.
 
 ## Recommended deployment
 
-1. Open **make.powerapps.com**.
-2. Select the target Dataverse environment.
-3. Open or create an admin/customization solution.
-4. Choose one deployment path:
-   - **Packaged install:** import the tool's managed or unmanaged solution ZIP from `packages`.
-   - **Manual install:** add the tool's HTML file as a **Webpage (HTML)** web resource.
-5. Publish customizations.
-6. Add the web resource to an admin model-driven app.
+1. **Recommended:** import the managed or unmanaged [Dataverse HTML Tools Suite](DataverseHTMLToolsSuite.md). It installs the `Admin Tools` model-driven app and all included tools.
+2. **Partial deployment:** import an individual tool solution ZIP from `packages`, publish customizations, then add the web resource to an existing admin model-driven app or form.
+3. **Manual deployment:** add a tool HTML file as a **Webpage (HTML)** web resource, publish customizations, then add it to an existing admin model-driven app or form.
 
 Recommended placement:
 

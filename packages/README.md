@@ -1,14 +1,20 @@
 # Packages
 
-This folder contains importable Dataverse solution packages for tools that need packaging.
+This folder contains importable Dataverse solution packages.
 
 Some tools may be available as source-only until their managed and unmanaged ZIPs are generated from the tool's `solution` folder.
 
-Current packages:
+## Recommended: Full Suite
+
+Install the **Dataverse HTML Tools Suite** to get the `Admin Tools` model-driven app, dedicated User and Team forms, standalone tool pages, and every included web resource.
 
 | Suite | Unmanaged package | Managed package |
 |---|---|---|
 | Dataverse HTML Tools Suite | [Unmanaged ZIP](dataverse-html-tools-suite/DataverseHTMLToolsSuite.zip) | [Managed ZIP](dataverse-html-tools-suite/DataverseHTMLToolsSuite_managed.zip) |
+
+## Individual Tool Packages
+
+Use an individual package only when the target environment needs a specific tool rather than the complete Suite. Individual packages do not add the `Admin Tools` app or its dedicated forms.
 
 | Tool | Unmanaged package | Managed package |
 |---|---|---|

@@ -15,6 +15,8 @@ It is designed for scenarios like:
 
 ## Files
 
+For the complete supported experience, install the [Dataverse HTML Tools Suite](../dataverse-html-tools-suite/README.md). Use this individual package only when deploying Solution Service Inspector without the Suite.
+
 Repository paths:
 
 [src\SolutionServiceInspector.html](src/SolutionServiceInspector.html)
@@ -31,8 +33,9 @@ The packaged solution contains the HTML web resource only.
 
 Use one of these deployment paths:
 
-1. **Packaged install:** build/import the managed or unmanaged solution ZIP, then add the imported `dht_\SolutionServiceInspector.html` web resource to an admin model-driven app as a standalone page/navigation item.
-2. **Manual install:** add `src\SolutionServiceInspector.html` as a Dataverse **Webpage (HTML)** web resource, publish customizations, then add it to an admin model-driven app.
+1. **Suite install:** import the [Dataverse HTML Tools Suite](../dataverse-html-tools-suite/README.md). This is the recommended option.
+2. **Individual package:** build/import this managed or unmanaged solution ZIP, then add the imported `dht_\SolutionServiceInspector.html` web resource to an admin model-driven app as a standalone page/navigation item.
+3. **Manual install:** add `src\SolutionServiceInspector.html` as a Dataverse **Webpage (HTML)** web resource, publish customizations, then add it to an admin model-driven app.
 
 The tool runs in the signed-in user's Dataverse context. The no-app-registration version is **same-environment only**: to inspect a different environment, open or deploy the web resource in that target environment.
 

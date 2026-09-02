@@ -15,6 +15,8 @@ It combines:
 
 ## File
 
+For the complete supported experience, install the [Dataverse HTML Tools Suite](../dataverse-html-tools-suite/README.md). Use this individual package only when deploying User Effective Security Roles without the Suite.
+
 Repository path:
 
 [src\UserEffectiveSecurityRoles.html](src/UserEffectiveSecurityRoles.html)
@@ -35,7 +37,7 @@ Package paths:
 
 ## Where to use it
 
-Add this HTML file as a Dataverse **Webpage (HTML) web resource**, then place it on the **User (`systemuser`) form** in a model-driven app.
+Install the [Dataverse HTML Tools Suite](../dataverse-html-tools-suite/README.md) for the recommended complete app experience. Alternatively, import this individual package or add this HTML file as a Dataverse **Webpage (HTML) web resource**, then place it on a **User (`systemuser`) form** in an existing model-driven app.
 
 When adding the web resource to the form, enable:
 

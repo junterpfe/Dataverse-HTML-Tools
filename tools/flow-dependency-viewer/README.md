@@ -16,6 +16,8 @@ It is designed for scenarios like:
 
 ## Files
 
+For the complete supported experience, install the [Dataverse HTML Tools Suite](../dataverse-html-tools-suite/README.md). Use this individual package only when deploying Flow Dependency Viewer without the Suite.
+
 Repository paths:
 
 [solution\src\WebResources\fdv_\flowdependencyviewer.htm](solution/src/WebResources/fdv_/flowdependencyviewer.htm)
@@ -38,8 +40,9 @@ The packaged solution contains the HTML web resource only.
 
 Use one of these deployment paths:
 
-1. **Packaged install:** import the managed or unmanaged solution ZIP, then add the imported `fdv_\flowdependencyviewer.htm` web resource to an admin model-driven app as a standalone page/navigation item.
-2. **Manual install:** add `solution\src\WebResources\fdv_\flowdependencyviewer.htm` as a Dataverse **Webpage (HTML)** web resource, publish customizations, then add it to an admin model-driven app.
+1. **Suite install:** import the [Dataverse HTML Tools Suite](../dataverse-html-tools-suite/README.md). This is the recommended option.
+2. **Individual package:** import this managed or unmanaged solution ZIP, then add the imported `fdv_\flowdependencyviewer.htm` web resource to an admin model-driven app as a standalone page/navigation item.
+3. **Manual install:** add `solution\src\WebResources\fdv_\flowdependencyviewer.htm` as a Dataverse **Webpage (HTML)** web resource, publish customizations, then add it to an admin model-driven app.
 
 The page can load a solution by unique name, friendly name, or solution ID. You can also pass a default value through the web resource URL:
 

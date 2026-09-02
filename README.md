@@ -4,7 +4,13 @@ Lightweight Dataverse and Power Platform admin tools built as HTML web resources
 
 These tools run in the signed-in user's Dataverse context through `Xrm.WebApi`. They do not require a separate service, plug-in, desktop client, or app registration for the admin UI.
 
-## Tools
+## Install
+
+Install [Dataverse HTML Tools Suite](tools/dataverse-html-tools-suite/README.md) for the complete supported experience. It includes the `Admin Tools` model-driven app, dedicated User and Team forms, all web resources, and standalone tool pages. Use the [managed or unmanaged Suite ZIP](packages/dataverse-html-tools-suite) as the primary installation option.
+
+Install an individual solution only when the target environment needs a specific tool and not the full Suite. Individual packages require you to add their web resource to an existing model-driven app or form.
+
+## Included Tools
 
 | Tool | Source | Documentation |
 |---|---|---|
@@ -26,7 +32,7 @@ Screenshots use sanitized sample data.
 |---|---|
 | ![Team Role and People Manager screenshot](docs/assets/screenshots/team-role-people-manager.png) | ![Flow Dependency Viewer screenshot](docs/assets/screenshots/flow-dependency-viewer.png) |
 
-## Packages
+## Individual Packages
 
 | Tool | Unmanaged package | Managed package |
 |---|---|---|
@@ -35,10 +41,6 @@ Screenshots use sanitized sample data.
 | Team Role and People Manager | [Unmanaged ZIP](packages/team-role-people-manager/TeamRolePeopleManagerSolution.zip) | [Managed ZIP](packages/team-role-people-manager/TeamRolePeopleManagerSolution_managed.zip) |
 | Flow Dependency Viewer | [Unmanaged ZIP](packages/flow-dependency-viewer/FlowDependencyViewerSolution.zip) | [Managed ZIP](packages/flow-dependency-viewer/FlowDependencyViewerSolution_managed.zip) |
 | Solution Service Inspector | [Unmanaged ZIP](packages/solution-service-inspector/SolutionServiceInspectorSolution.zip) | [Managed ZIP](packages/solution-service-inspector/SolutionServiceInspectorSolution_managed.zip) |
-
-## Suite Install
-
-Install the complete experience from [Dataverse HTML Tools Suite](tools/dataverse-html-tools-suite/README.md). The managed and unmanaged archives are in [packages/dataverse-html-tools-suite](packages/dataverse-html-tools-suite), and the installer details are in [docs/DataverseHTMLToolsSuite.md](docs/DataverseHTMLToolsSuite.md).
 
 ## Repository layout
 ```text
@@ -56,8 +58,9 @@ Dataverse-HTML-Tools\
 
 Use one of these deployment paths:
 
-1. **Packaged install:** import the tool's managed or unmanaged ZIP from [`packages`](packages), publish customizations if prompted, then add the imported web resource to an admin model-driven app.
-2. **Manual install:** add the tool's HTML file as a Dataverse **Webpage (HTML)** web resource, publish customizations, then add that web resource to an admin model-driven app.
+1. **Suite install:** import the Dataverse HTML Tools Suite managed or unmanaged ZIP from [`packages/dataverse-html-tools-suite`](packages/dataverse-html-tools-suite). This is the recommended option.
+2. **Individual package:** import a tool's managed or unmanaged ZIP from [`packages`](packages), publish customizations if prompted, then add its imported web resource to an admin model-driven app.
+3. **Manual install:** add the tool's HTML file as a Dataverse **Webpage (HTML)** web resource, publish customizations, then add that web resource to an admin model-driven app.
 
 Use `themeOption=darkmode` when a model-driven app URL should force dark mode. The pages also handle that flag when it is encoded in the web resource `data` parameter. Dataverse/Power Platform HTML tools should default to light mode unless that explicit dark-mode flag is present.
 

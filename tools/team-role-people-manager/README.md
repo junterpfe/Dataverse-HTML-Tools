@@ -14,6 +14,8 @@ It is designed for scenarios like:
 
 ## File
 
+For the complete supported experience, install the [Dataverse HTML Tools Suite](../dataverse-html-tools-suite/README.md). Use this individual package only when deploying Team Role and People Manager without the Suite.
+
 Repository path:
 
 [src\TeamRolePeopleManager.html](src/TeamRolePeopleManager.html)
@@ -30,7 +32,7 @@ Package paths:
 
 ## Where to use it
 
-Add this HTML file as a Dataverse **Webpage (HTML) web resource**, then place it on the **Team (`team`) form** in a model-driven app.
+Install the [Dataverse HTML Tools Suite](../dataverse-html-tools-suite/README.md) for the recommended complete app experience. Alternatively, import this individual package or add this HTML file as a Dataverse **Webpage (HTML) web resource**, then place it on a **Team (`team`) form** in an existing model-driven app.
 
 When adding the web resource to the form, enable:
 
