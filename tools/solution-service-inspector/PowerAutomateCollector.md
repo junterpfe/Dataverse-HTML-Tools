@@ -2,7 +2,9 @@
 
 Use this collector when the Maker/Admin app list shows apps that the same-environment Dataverse inventory does not return. This is common in Default environments with many personal productivity canvas apps.
 
-The flow produces a JSON file that Solution Service Inspector can import with **Inspect = Power Automate collector JSON**.
+The packaged Solution Service Inspector solution includes a cloud flow named **Solution Service Inspector - Admin Inventory Export**. The flow produces a JSON file that Solution Service Inspector can import with **Inspect = Power Automate collector JSON**.
+
+Use this file if you need to understand or recreate the flow manually.
 
 ## Connector actions
 
@@ -17,8 +19,25 @@ Use these admin connector actions:
 
 ## Flow outline
 
+1. Import the Solution Service Inspector solution package.
+2. During import, create/select connections for **Power Apps for Admins**, **Power Automate Management**, and **SharePoint**.
+3. After import, open the flow named **Solution Service Inspector - Admin Inventory Export**.
+4. Turn the flow on.
+5. Run the flow manually.
+6. Provide:
+   - `EnvironmentName`: the target environment name/ID.
+   - `OutputSiteUrl`: the SharePoint site where the JSON file should be created.
+   - `OutputFolderPath`: the folder path, for example `/Shared Documents`.
+   - `IncludeFlowDefinitions`: optional; use only when you need richer flow dependency details because it calls **Get Flow as Admin** once per flow.
+7. Download the generated `power-platform-admin-inventory-*.json` file.
+8. Load it in Solution Service Inspector with **Inspect = Power Automate collector JSON**.
+
+## Manual build outline
+
+If you need to recreate the packaged flow manually:
+
 1. Create an instant cloud flow.
-2. Add a manual trigger text input named `EnvironmentName`.
+2. Add manual trigger inputs named `EnvironmentName`, `OutputSiteUrl`, `OutputFolderPath`, and `IncludeFlowDefinitions`.
 3. Initialize a string variable named `EnvironmentName` from the trigger input.
 4. Initialize an array variable named `FlowDetails` to `[]`.
 5. Add **Get Apps as Admin**.

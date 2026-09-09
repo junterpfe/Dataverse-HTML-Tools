@@ -1,0 +1,249 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_powerappsforadmins": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "dht_sharedpowerappsforadmins_ssi"
+        },
+        "api": {
+          "name": "shared_powerappsforadmins"
+        }
+      },
+      "shared_flowmanagement": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "dht_sharedflowmanagement_ssi"
+        },
+        "api": {
+          "name": "shared_flowmanagement"
+        }
+      },
+      "shared_sharepointonline": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "dht_sharedsharepointonline_ssi"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {
+            "operationMetadataId": "e2e2f5f2-45b9-426f-a1bb-59e348d9c42e"
+          },
+          "type": "Request",
+          "kind": "Button",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "EnvironmentName": {
+                  "title": "Environment name or ID",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Example: Default-00000000-0000-0000-0000-000000000000",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "OutputSiteUrl": {
+                  "title": "Output SharePoint site URL",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Site where the JSON file should be created.",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "OutputFolderPath": {
+                  "title": "Output folder path",
+                  "type": "string",
+                  "x-ms-dynamically-added": true,
+                  "description": "Folder path in the selected site, for example /Shared Documents.",
+                  "x-ms-content-hint": "TEXT"
+                },
+                "IncludeFlowDefinitions": {
+                  "title": "Include flow definitions",
+                  "type": "boolean",
+                  "x-ms-dynamically-added": true,
+                  "description": "Optional. This can be slow in large environments because it calls Get Flow as Admin for each flow."
+                }
+              },
+              "required": [
+                "EnvironmentName",
+                "OutputSiteUrl"
+              ]
+            }
+          }
+        }
+      },
+      "actions": {
+        "Initialize_FlowDetails": {
+          "runAfter": {},
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "FlowDetails",
+                "type": "array",
+                "value": []
+              }
+            ]
+          }
+        },
+        "Get_apps_as_Admin": {
+          "runAfter": {
+            "Initialize_FlowDetails": [
+              "Succeeded"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_powerappsforadmins",
+              "operationId": "Get-AdminApps",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_powerappsforadmins"
+            },
+            "parameters": {
+              "environment": "@triggerBody()?['EnvironmentName']",
+              "$top": 5000
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "List_flows_as_Admin_V2": {
+          "runAfter": {
+            "Get_apps_as_Admin": [
+              "Succeeded"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_flowmanagement",
+              "operationId": "ListFlowsInEnvironment_V2",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_flowmanagement"
+            },
+            "parameters": {
+              "environmentName": "@triggerBody()?['EnvironmentName']",
+              "$top": 5000,
+              "expandSuspensionInfo": true,
+              "includeSoftDeletedFlows": false
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Condition_Include_Flow_Definitions": {
+          "runAfter": {
+            "List_flows_as_Admin_V2": [
+              "Succeeded"
+            ]
+          },
+          "type": "If",
+          "expression": {
+            "equals": [
+              "@triggerBody()?['IncludeFlowDefinitions']",
+              true
+            ]
+          },
+          "actions": {
+            "Apply_to_each_flow": {
+              "foreach": "@outputs('List_flows_as_Admin_V2')?['body/value']",
+              "actions": {
+                "Get_flow_as_Admin": {
+                  "runAfter": {},
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_flowmanagement",
+                      "operationId": "AdminGetFlow",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_flowmanagement"
+                    },
+                    "parameters": {
+                      "environmentName": "@triggerBody()?['EnvironmentName']",
+                      "flowName": "@items('Apply_to_each_flow')?['name']",
+                      "includeFlowDefinition": true
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                },
+                "Append_to_FlowDetails": {
+                  "runAfter": {
+                    "Get_flow_as_Admin": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "AppendToArrayVariable",
+                  "inputs": {
+                    "name": "FlowDetails",
+                    "value": "@body('Get_flow_as_Admin')"
+                  }
+                }
+              },
+              "type": "Foreach",
+              "runtimeConfiguration": {
+                "concurrency": {
+                  "repetitions": 1
+                }
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          }
+        },
+        "Compose_Solution_Service_Inspector_JSON": {
+          "runAfter": {
+            "Condition_Include_Flow_Definitions": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": {
+            "ExportedAt": "@utcNow()",
+            "EnvironmentName": "@triggerBody()?['EnvironmentName']",
+            "PowerApps": "@body('Get_apps_as_Admin')?['value']",
+            "Flows": "@if(equals(triggerBody()?['IncludeFlowDefinitions'], true), variables('FlowDetails'), body('List_flows_as_Admin_V2')?['value'])"
+          }
+        },
+        "Create_inventory_file": {
+          "runAfter": {
+            "Compose_Solution_Service_Inspector_JSON": [
+              "Succeeded"
+            ]
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "CreateFile",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "@triggerBody()?['OutputSiteUrl']",
+              "folderPath": "@coalesce(triggerBody()?['OutputFolderPath'], '/Shared Documents')",
+              "name": "@concat('power-platform-admin-inventory-', formatDateTime(utcNow(), 'yyyyMMdd-HHmmss'), '.json')",
+              "body": "@string(outputs('Compose_Solution_Service_Inspector_JSON'))"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

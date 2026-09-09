@@ -6,7 +6,7 @@
       <LocalizedName description="Dataverse HTML Tools Suite" languagecode="1033" />
     </LocalizedNames>
     <Descriptions />
-    <Version>1.0.14.0</Version>
+    <Version>1.0.15.0</Version>
     <Managed>2</Managed>
     <Publisher>
       <UniqueName>DataverseHTMLTools</UniqueName>
@@ -34,6 +34,7 @@
       <RootComponent type="62" schemaName="admin_tools_0b5e60bd" behavior="0" />
       <RootComponent type="80" schemaName="admin_tools_0b5e60bd" behavior="0" />
       <RootComponent type="61" schemaName="dht_/BusinessUnitConfiguration.html" behavior="0" />
+      <RootComponent type="29" id="{d0f5c07b-6f80-4bc6-9f8d-7a0cbf02ad44}" behavior="0" />
     </RootComponents>
     <MissingDependencies>
       <MissingDependency>

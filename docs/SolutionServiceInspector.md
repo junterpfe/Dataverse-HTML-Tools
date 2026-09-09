@@ -24,7 +24,7 @@ Use **Environment inventory** for broad app/flow discovery. It reads Dataverse-v
 
 Do not use the Default Solution as a full-environment inventory source. It can contain tens of thousands of components, which makes browser-based enumeration slow, partial, or throttled.
 
-If Power Platform Admin Center shows more apps than this page returns, those additional assets require Power Platform admin connector access or an app-registration inventory process. This is common in Default environments with many personal productivity apps. Use **Power Automate collector JSON** for no-PowerShell Admin Center coverage.
+If Power Platform Admin Center shows more apps than this page returns, those additional assets require Power Platform admin connector access or an app-registration inventory process. This is common in Default environments with many personal productivity apps. The packaged solution includes a collector flow named **Solution Service Inspector - Admin Inventory Export**; use its output with **Power Automate collector JSON** for no-PowerShell Admin Center coverage.
 
 ## Component details
 

@@ -31,7 +31,10 @@ Repository paths:
 
 [Managed ZIP](../../packages/solution-service-inspector/SolutionServiceInspectorSolution_managed.zip)
 
-The packaged solution contains the HTML web resource only.
+The packaged solution contains:
+
+- `dht_/SolutionServiceInspector.html`
+- Cloud flow: **Solution Service Inspector - Admin Inventory Export**
 
 ## Where to use it
 
@@ -62,9 +65,9 @@ If Power Platform Admin Center shows more apps than Environment inventory return
 
 ### Power Automate collector JSON
 
-Use this mode when the Maker/Admin app list has apps that do not appear in the Dataverse-visible inventory. Click **Copy flow recipe**, build the collector flow with Power Apps for Admins and Power Automate Management admin connector actions, then load the generated `power-platform-admin-inventory.json` file.
+Use this mode when the Maker/Admin app list has apps that do not appear in the Dataverse-visible inventory. The packaged solution includes a collector flow named **Solution Service Inspector - Admin Inventory Export**. Run that flow, then load the generated `power-platform-admin-inventory.json` file.
 
-See [Power Automate Collector Flow](PowerAutomateCollector.md) for the no-PowerShell flow design.
+See [Power Automate Collector Flow](PowerAutomateCollector.md) for setup and run guidance.
 
 The imported export can show all apps/flows returned by the admin connectors, plus any service/URL metadata included in the exported objects. It does not prove solution package membership unless that membership is present in the export.
 
@@ -141,6 +144,12 @@ The current user needs Dataverse privileges to read:
 - Connectors
 - Environment variable definitions and values
 - Principal object access rows, if direct-share counts should be shown
+
+The collector flow additionally needs connection references for:
+
+- Power Apps for Admins
+- Power Automate Management
+- SharePoint, for writing the JSON output file
 
 The tool does not bypass Dataverse, Power Platform, or tenant security.
 
