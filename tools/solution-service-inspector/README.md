@@ -8,6 +8,7 @@ It is designed for scenarios like:
 
 - Listing solutions in the current Dataverse environment
 - Inspecting a selected solution's apps, flows, connection references, connectors, and environment variables
+- Running a bulk environment inventory without enumerating the Default Solution
 - Inspecting canvas apps, model-driven apps, and cloud flows that are not in a custom solution
 - Extracting connected services and SharePoint URLs from readable Dataverse metadata
 - Showing owner, status, modified date, direct-share counts, and heuristic migration signals
@@ -48,13 +49,17 @@ The **Inspect** selector supports:
 | Mode | What it scans |
 |---|---|
 | Solution | Starts from `solutioncomponents`, then reads referenced app, flow, connector, connection reference, and environment variable records |
+| Environment inventory | Reads `canvasapps`, `appmodules`, and cloud-flow `workflows` directly, then checks visible non-default solution membership for those asset types |
 | App or cloud flow | Lists environment-level canvas apps, model-driven apps, and cloud flows directly so assets outside a custom solution can be inspected |
+
+Use **Environment inventory** instead of selecting the Default Solution. The Default Solution can contain tens of thousands of components, which makes browser-based full-component enumeration slow, partial, or throttled. Environment inventory avoids that path and scans the asset tables directly.
 
 ### Inventory table
 
 The inventory view shows:
 
 - Asset name and type
+- Visible custom solutions that include the asset
 - Owner when readable from Dataverse lookup annotations
 - Status/lifecycle value when exposed by Dataverse
 - Last modified date
@@ -77,6 +82,7 @@ Power Platform launch URLs, Dataverse self-links, auth endpoints, and platform C
 The **Migration signals** tab is intentionally non-authoritative. It highlights heuristic signals from readable metadata, including:
 
 - Standalone assets not currently inspected through a custom solution
+- Environment assets not found in visible non-default solutions
 - SharePoint URL dependencies
 - Likely hard-coded URLs
 - Non-platform external URL dependencies
@@ -105,6 +111,7 @@ Dataverse `themeOption=darkmode` signals are detected in the web resource URL, e
 The current user needs Dataverse privileges to read:
 
 - Solutions and solution components
+- Visible non-default solution components for package membership checks
 - Cloud flows from the `workflow` table
 - Canvas apps from the `canvasapp` table
 - Model-driven apps from the `appmodule` table
@@ -118,6 +125,7 @@ The tool does not bypass Dataverse, Power Platform, or tenant security.
 ## Limitations
 
 - The no-app-registration version is same-environment only.
+- The Default Solution is intentionally not used for environment-wide inventory; use **Environment inventory** for apps/flows outside custom solutions.
 - Migration signals are heuristic and based only on metadata readable by the current user.
 - Direct share counts are best-effort from Dataverse `PrincipalObjectAccess`; group membership, security role access, and some canvas app run-only sharing may require Power Platform Admin APIs or PowerShell.
 - Runtime usage, flow run history, licensing detail, DLP policy impact, and business criticality are not fully determined by this page.
@@ -128,6 +136,7 @@ The tool does not bypass Dataverse, Power Platform, or tenant security.
 | Symptom | Likely cause |
 |---|---|
 | Cross-environment URL returns 401 | Browser session credentials are scoped to the environment hosting the web resource |
+| Default Solution inventory is incomplete | Use **Environment inventory**; it directly scans app/flow tables instead of enumerating all Default Solution components |
 | Share counts show Unknown | Current user lacks access to principal object access data, or the table is unavailable in that context |
 | No apps or flows are listed | Current user lacks read access, or the environment stores the target asset type in APIs not exposed to this web resource |
 | Platform URLs appear as dependencies | Confirm the page shows the latest build and re-publish the web resource |
