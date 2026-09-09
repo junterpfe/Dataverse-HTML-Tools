@@ -6,7 +6,7 @@ Use it when you need a lightweight, same-environment view of:
 
 - Apps and flows in a selected solution
 - Environment-wide apps and flows without enumerating the Default Solution
-- Imported Power Platform admin inventory for apps not visible in Dataverse tables
+- Imported Power Automate collector inventory for apps not visible in Dataverse tables
 - Apps and flows that are not in visible custom solutions
 - Connected services and SharePoint URLs
 - Owner/status/modified metadata
@@ -24,7 +24,7 @@ Use **Environment inventory** for broad app/flow discovery. It reads Dataverse-v
 
 Do not use the Default Solution as a full-environment inventory source. It can contain tens of thousands of components, which makes browser-based enumeration slow, partial, or throttled.
 
-If Power Platform Admin Center shows more apps than this page returns, those additional assets require Power Platform admin APIs or PowerShell with appropriate admin permissions. This is common in Default environments with many personal productivity apps. Use **Admin export JSON** to import `Get-AdminPowerApp` / `Get-AdminFlow` output for full Admin Center coverage.
+If Power Platform Admin Center shows more apps than this page returns, those additional assets require Power Platform admin connector access or an app-registration inventory process. This is common in Default environments with many personal productivity apps. Use **Power Automate collector JSON** for no-PowerShell Admin Center coverage.
 
 ## Component details
 
