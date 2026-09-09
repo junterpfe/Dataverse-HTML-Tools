@@ -10,6 +10,7 @@ It is designed for scenarios like:
 - Inspecting a selected solution's apps, flows, connection references, connectors, and environment variables
 - Running a bulk environment inventory without enumerating the Default Solution
 - Inspecting canvas apps, model-driven apps, and cloud flows that are not in a custom solution
+- Searching loaded solution/app/flow options before selecting an item
 - Extracting connected services and SharePoint URLs from readable Dataverse metadata
 - Showing owner, status, modified date, direct-share counts, and heuristic migration signals
 - Opening a per-component details view from inventory rows, component rows, and component badges
@@ -68,6 +69,12 @@ The inventory view shows:
 - Heuristic risk signals
 
 Asset names are clickable. Selecting an asset opens a details panel with package membership, metadata, share counts, connected services, SharePoint URLs, non-platform dependency URLs, risk signals, and the source fields used by the scanner.
+
+The details panel also includes asset links. Where enough context is available, these open the app or flow in the maker/player experience; otherwise a Dataverse record link is shown as a fallback.
+
+### Searchable selection
+
+After loading solutions or apps/flows, use the filter box above the selector to narrow the dropdown. The selector displays at most the first 500 matches to keep large environments responsive, so continue typing when thousands of assets match.
 
 ### Service and URL detection
 

@@ -11,6 +11,8 @@ Use it when you need a lightweight, same-environment view of:
 - Owner/status/modified metadata
 - Best-effort direct share counts
 - Clickable per-component details
+- Asset links in the details panel
+- Searchable loaded solution/app/flow selection
 - Non-authoritative migration signals for migration or rebuild planning
 
 See the tool documentation: [tools/solution-service-inspector/README.md](../tools/solution-service-inspector/README.md).
@@ -24,6 +26,8 @@ Do not use the Default Solution as a full-environment inventory source. It can c
 ## Component details
 
 Inventory rows, component rows, and component badges are clickable. The details panel shows the selected asset's metadata, visible custom solution membership, direct-share counts, connected services, detected URLs, risk signals, and scanned source fields.
+
+The panel also includes asset links. When the page can infer enough environment context, links open the app or flow in the relevant maker/player experience; otherwise the panel shows a Dataverse record link.
 
 ## Display theme
 

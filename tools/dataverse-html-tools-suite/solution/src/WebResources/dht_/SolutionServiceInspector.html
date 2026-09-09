@@ -230,6 +230,12 @@
       padding: 8px 10px;
     }
 
+    .field input:disabled,
+    .field select:disabled {
+      cursor: not-allowed;
+      opacity: 0.72;
+    }
+
     .field input:focus,
     .field select:focus,
     .search-box:focus,
@@ -759,9 +765,11 @@
         </div>
         <div class="field">
           <label id="targetSelectLabel" for="solutionSelect">Solution</label>
+          <input id="selectionFilter" type="search" placeholder="Filter loaded options">
           <select id="solutionSelect" disabled>
             <option value="">Load solutions first</option>
           </select>
+          <small id="selectionHint" class="field-hint"></small>
         </div>
         <button id="loadSolutionsButton" class="button" type="button">Load solutions</button>
         <button id="analyzeButton" class="button primary" type="button" disabled>Analyze solution</button>
@@ -987,7 +995,8 @@
   </div>
 
   <script>
-    const APP_VERSION = "2026.09.09.1232";
+    const APP_VERSION = "2026.09.09.1301";
+    const MAX_SELECT_OPTIONS = 500;
 
     const COMPONENT_TYPES = new Map([
       [1, "Table"],
@@ -1063,6 +1072,7 @@
       environmentTargets: [],
       solutionsLoaded: false,
       environmentTargetsLoaded: false,
+      selectionFilterText: "",
       selectedSolution: null,
       lastResult: null,
       selectedComponentId: "",
@@ -1075,6 +1085,8 @@
       environmentHint: document.getElementById("environmentHint"),
       inspectionMode: document.getElementById("inspectionMode"),
       targetSelectLabel: document.getElementById("targetSelectLabel"),
+      selectionFilter: document.getElementById("selectionFilter"),
+      selectionHint: document.getElementById("selectionHint"),
       solutionSelect: document.getElementById("solutionSelect"),
       loadSolutionsButton: document.getElementById("loadSolutionsButton"),
       analyzeButton: document.getElementById("analyzeButton"),
@@ -1130,6 +1142,10 @@
       elements.loadSolutionsButton.addEventListener("click", () => runSafely(loadCurrentList));
       elements.analyzeButton.addEventListener("click", () => runSafely(analyzeCurrentSelection));
       elements.solutionSelect.addEventListener("change", updateAnalyzeState);
+      elements.selectionFilter.addEventListener("input", () => {
+        state.selectionFilterText = elements.selectionFilter.value.trim().toLowerCase();
+        renderSelectionOptions();
+      });
       elements.environmentUrl.addEventListener("input", updateEnvironmentHint);
       elements.environmentUrl.addEventListener("change", resetEnvironmentSelection);
       elements.resultFilter.addEventListener("input", renderResults);
@@ -1213,11 +1229,13 @@
       state.environmentTargets = [];
       state.solutionsLoaded = false;
       state.environmentTargetsLoaded = false;
+      state.selectionFilterText = "";
       state.selectedSolution = null;
       state.lastResult = null;
       state.selectedComponentId = "";
       closeComponentDetails();
       elements.results.classList.add("hidden");
+      elements.selectionFilter.value = "";
 
       const mode = getInspectionMode();
       const targetMode = mode === "target";
@@ -1227,6 +1245,7 @@
       elements.analyzeButton.textContent = environmentMode ? "Analyze inventory" : targetMode ? "Analyze target" : "Analyze solution";
       elements.visibleOnlyToggle.disabled = targetMode || environmentMode;
       elements.includeManagedToggle.disabled = targetMode || environmentMode;
+      updateSelectionFilterState();
       renderSelectionOptions();
       updateAnalyzeState();
       setStatus(environmentMode
@@ -1919,6 +1938,7 @@
         version: record.appversion || "",
         primaryEntity: record.primaryentity || "",
         customSolutions: Array.isArray(record._inspectorSolutionNames) ? record._inspectorSolutionNames : [],
+        assetLinks: buildAssetLinks(record, type),
         type
       };
     }
@@ -1934,6 +1954,146 @@
     function valueLabel(value) {
       if (value === undefined || value === null || value === "") return "";
       return String(value);
+    }
+
+    function buildAssetLinks(record, type) {
+      const links = [];
+      const id = getRecordId(record, type);
+      const clientUrl = tryGetClientUrl();
+      const environmentName = getEnvironmentNameFromContext();
+
+      if (/Canvas app/i.test(type)) {
+        if (record.appopenuri) {
+          links.push({ label: "Open canvas app", url: normalizeUrl(record.appopenuri) });
+        }
+        if (environmentName && id && clientUrl) {
+          links.push({
+            label: "Open canvas app in maker",
+            url: `${getMakerBaseUrl("powerapps", clientUrl)}/environments/${encodeURIComponent(environmentName)}/apps/${encodeURIComponent(id)}/details`
+          });
+        }
+      }
+
+      if (/Model-driven app/i.test(type) && id && clientUrl) {
+        links.push({
+          label: "Open model-driven app",
+          url: `${clientUrl}/main.aspx?appid=${encodeURIComponent(id)}`
+        });
+      }
+
+      if (/Workflow|cloud flow/i.test(type) && environmentName && id && clientUrl) {
+        links.push({
+          label: "Open cloud flow in maker",
+          url: `${getMakerBaseUrl("flow", clientUrl)}/environments/${encodeURIComponent(environmentName)}/flows/${encodeURIComponent(id)}/details`
+        });
+      }
+
+      const tableName = getAssetTableName(type);
+      if (tableName && id && clientUrl) {
+        links.push({
+          label: "Open Dataverse record",
+          url: `${clientUrl}/main.aspx?pagetype=entityrecord&etn=${encodeURIComponent(tableName)}&id=${encodeURIComponent(id)}`
+        });
+      }
+
+      return uniqueLinks(links);
+    }
+
+    function getRecordId(record, type) {
+      if (/Canvas app/i.test(type)) return normalizeGuid(record.canvasappid);
+      if (/Model-driven app/i.test(type)) return normalizeGuid(record.appmoduleid);
+      if (/Workflow|cloud flow/i.test(type)) return normalizeGuid(record.workflowid);
+      if (/Connection reference/i.test(type)) return normalizeGuid(record.connectionreferenceid);
+      if (/Custom connector/i.test(type)) return normalizeGuid(record.connectorid);
+      if (/Environment variable definition/i.test(type)) return normalizeGuid(record.environmentvariabledefinitionid);
+      if (/Environment variable value/i.test(type)) return normalizeGuid(record.environmentvariablevalueid);
+      return "";
+    }
+
+    function getAssetTableName(type) {
+      if (/Canvas app/i.test(type)) return "canvasapp";
+      if (/Model-driven app/i.test(type)) return "appmodule";
+      if (/Workflow|cloud flow/i.test(type)) return "workflow";
+      if (/Connection reference/i.test(type)) return "connectionreference";
+      if (/Custom connector/i.test(type)) return "connector";
+      if (/Environment variable definition/i.test(type)) return "environmentvariabledefinition";
+      if (/Environment variable value/i.test(type)) return "environmentvariablevalue";
+      return "";
+    }
+
+    function getEnvironmentNameFromContext() {
+      for (const url of getContextUrlCandidates()) {
+        const envName = getEnvironmentNameFromUrl(url);
+        if (envName) return envName;
+      }
+      return "";
+    }
+
+    function getEnvironmentNameFromUrl(url) {
+      try {
+        const parsed = new URL(url);
+        const params = parsed.searchParams;
+        const queryValue = params.get("environmentName")
+          || params.get("environmentId")
+          || params.get("environment")
+          || params.get("env");
+        if (queryValue) return queryValue;
+
+        const pathMatch = parsed.pathname.match(/\/environments\/([^/?#]+)/i);
+        if (pathMatch) return decodeURIComponent(pathMatch[1]);
+      } catch (_error) {
+        return "";
+      }
+      return "";
+    }
+
+    function getContextUrlCandidates() {
+      const urls = [window.location.href, document.referrer];
+      try {
+        urls.push(window.parent.location.href);
+      } catch (_error) {
+        // Parent can be cross-origin in some host shells.
+      }
+      try {
+        urls.push(window.top.location.href);
+      } catch (_error) {
+        // Top can be cross-origin in some host shells.
+      }
+      return urls.filter(Boolean);
+    }
+
+    function tryGetClientUrl() {
+      try {
+        return getClientUrl();
+      } catch (_error) {
+        return "";
+      }
+    }
+
+    function getMakerBaseUrl(kind, clientUrl) {
+      const host = getUrlHost(clientUrl || getClientUrl());
+      if (/(?:^|\.)appsplatform\.us$/i.test(host)) {
+        return kind === "flow" ? "https://flow.appsplatform.us" : "https://make.apps.appsplatform.us";
+      }
+      if (/(?:^|\.)microsoftdynamics\.us$/i.test(host)) {
+        return kind === "flow" ? "https://high.flow.microsoft.us" : "https://make.high.powerapps.us";
+      }
+      if (/(?:^|\.)crm9\.dynamics\.com$/i.test(host)) {
+        return kind === "flow" ? "https://gov.flow.microsoft.us" : "https://make.gov.powerapps.us";
+      }
+      if (/(?:^|\.)dynamics\.cn$/i.test(host)) {
+        return kind === "flow" ? "https://make.powerautomate.cn" : "https://make.powerapps.cn";
+      }
+      return kind === "flow" ? "https://make.powerautomate.com" : "https://make.powerapps.com";
+    }
+
+    function uniqueLinks(links) {
+      const seen = new Set();
+      return links.filter((link) => {
+        if (!link || !link.url || seen.has(link.url)) return false;
+        seen.add(link.url);
+        return true;
+      });
     }
 
     function addComponentTypeWarnings(components, inspectableRecords, warnings) {
@@ -2556,11 +2716,13 @@
       state.environmentTargets = [];
       state.solutionsLoaded = false;
       state.environmentTargetsLoaded = false;
+      state.selectionFilterText = "";
       state.selectedSolution = null;
       state.lastResult = null;
       state.selectedComponentId = "";
       closeComponentDetails();
       elements.results.classList.add("hidden");
+      elements.selectionFilter.value = "";
       renderSelectionOptions();
       updateEnvironmentHint();
     }
@@ -2583,15 +2745,31 @@
         appendOption(elements.solutionSelect, "", state.solutionsLoaded ? "No solutions found" : "Load solutions first");
         elements.solutionSelect.disabled = true;
         elements.analyzeButton.disabled = true;
+        updateSelectionHint(0, 0, state.solutionsLoaded);
         return;
       }
 
+      const filtered = filterSelectableItems(state.solutions, (solution) => [
+        displaySolutionName(solution),
+        solution.uniquename,
+        solution.version,
+        solution.ismanaged ? "managed" : "unmanaged"
+      ].filter(Boolean).join(" "));
+      const visible = filtered.slice(0, MAX_SELECT_OPTIONS);
+
       appendOption(elements.solutionSelect, "", "Select a solution");
-      for (const solution of state.solutions) {
+      if (!visible.length) {
+        appendOption(elements.solutionSelect, "", "No matching solutions", true);
+      }
+      if (filtered.length > visible.length) {
+        appendOption(elements.solutionSelect, "", `Showing first ${visible.length} of ${filtered.length} matches - keep typing to narrow`, true);
+      }
+      for (const solution of visible) {
         const label = `${displaySolutionName(solution)} (${solution.uniquename})${solution.ismanaged ? " - managed" : ""}`;
         appendOption(elements.solutionSelect, normalizeGuid(solution.solutionid), label);
       }
-      elements.solutionSelect.disabled = false;
+      elements.solutionSelect.disabled = !visible.length;
+      updateSelectionHint(filtered.length, state.solutions.length, state.solutionsLoaded);
       updateAnalyzeState();
     }
 
@@ -2601,11 +2779,13 @@
         appendOption(elements.solutionSelect, "", state.environmentTargetsLoaded ? "No apps or cloud flows found" : "Load environment first");
         elements.solutionSelect.disabled = true;
         elements.analyzeButton.disabled = true;
+        updateSelectionHint(0, 0, state.environmentTargetsLoaded);
         return;
       }
 
       appendOption(elements.solutionSelect, "environment:all", `All loaded apps and cloud flows (${state.environmentTargets.length})`);
       elements.solutionSelect.disabled = true;
+      updateSelectionHint(state.environmentTargets.length, state.environmentTargets.length, state.environmentTargetsLoaded);
       updateAnalyzeState();
     }
 
@@ -2615,14 +2795,30 @@
         appendOption(elements.solutionSelect, "", state.environmentTargetsLoaded ? "No apps or cloud flows found" : "Load apps/flows first");
         elements.solutionSelect.disabled = true;
         elements.analyzeButton.disabled = true;
+        updateSelectionHint(0, 0, state.environmentTargetsLoaded);
         return;
       }
 
+      const filtered = filterSelectableItems(state.environmentTargets, (target) => [
+        target.name,
+        target.kind,
+        getTargetKindLabel(target.kind),
+        target.id
+      ].filter(Boolean).join(" "));
+      const visible = filtered.slice(0, MAX_SELECT_OPTIONS);
+
       appendOption(elements.solutionSelect, "", "Select an app or cloud flow");
-      for (const target of state.environmentTargets) {
+      if (!visible.length) {
+        appendOption(elements.solutionSelect, "", "No matching apps or cloud flows", true);
+      }
+      if (filtered.length > visible.length) {
+        appendOption(elements.solutionSelect, "", `Showing first ${visible.length} of ${filtered.length} matches - keep typing to narrow`, true);
+      }
+      for (const target of visible) {
         appendOption(elements.solutionSelect, target.value, target.label);
       }
-      elements.solutionSelect.disabled = false;
+      elements.solutionSelect.disabled = !visible.length;
+      updateSelectionHint(filtered.length, state.environmentTargets.length, state.environmentTargetsLoaded);
       updateAnalyzeState();
     }
 
@@ -2899,6 +3095,7 @@
       appendDetailField(summary, "Direct shares", formatShareSummary(row.sharing));
       elements.componentDetailBody.appendChild(summary);
 
+      appendDetailNamedLinkSection("Asset links", row.metadata.assetLinks, "No direct asset link could be generated");
       appendDetailBadgeSection("Custom solution membership", row.metadata.customSolutions, "accent", "None found in visible non-default solutions");
       appendDetailBadgeSection("Risk signals", row.risks.map(formatRisk), row.risks.length ? severityToBadgeVariant(highestSeverity(row.risks)) : "", "None detected");
       appendDetailBadgeSection("Connected services", row.services.map(formatService), "accent", "No services detected");
@@ -2952,6 +3149,28 @@
           link.rel = "noopener noreferrer";
           link.className = "mono";
           link.textContent = url;
+          list.appendChild(link);
+        }
+        section.appendChild(list);
+      }
+      elements.componentDetailBody.appendChild(section);
+    }
+
+    function appendDetailNamedLinkSection(title, links, emptyText) {
+      const section = createDetailSection(title);
+      const cleanLinks = (links || []).filter((link) => link && link.url);
+      if (!cleanLinks.length) {
+        appendMutedText(section, emptyText);
+      } else {
+        const list = document.createElement("div");
+        list.className = "detail-link-list";
+        for (const linkInfo of cleanLinks) {
+          const link = document.createElement("a");
+          link.href = linkInfo.url;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = linkInfo.label || linkInfo.url;
+          link.title = linkInfo.url;
           list.appendChild(link);
         }
         section.appendChild(list);
@@ -3150,11 +3369,52 @@
       body.appendChild(row);
     }
 
-    function appendOption(select, value, label) {
+    function appendOption(select, value, label, disabled) {
       const option = document.createElement("option");
       option.value = value;
       option.textContent = label;
+      option.disabled = Boolean(disabled);
       select.appendChild(option);
+    }
+
+    function filterSelectableItems(items, getSearchText) {
+      const filter = state.selectionFilterText;
+      if (!filter) return items;
+      const words = filter.split(/\s+/).filter(Boolean);
+      return items.filter((item) => {
+        const text = String(getSearchText(item) || "").toLowerCase();
+        return words.every((word) => text.includes(word));
+      });
+    }
+
+    function updateSelectionFilterState() {
+      const environmentMode = getInspectionMode() === "environment";
+      elements.selectionFilter.disabled = environmentMode;
+      elements.selectionFilter.placeholder = environmentMode
+        ? "Environment inventory scans all loaded assets"
+        : getInspectionMode() === "target"
+        ? "Search loaded apps and cloud flows"
+        : "Search loaded solutions";
+    }
+
+    function updateSelectionHint(matchCount, totalCount, loaded) {
+      updateSelectionFilterState();
+      if (getInspectionMode() === "environment") {
+        elements.selectionHint.textContent = loaded
+          ? `Environment inventory will scan all ${totalCount} loaded apps and cloud flows.`
+          : "Load environment first; this mode scans all loaded apps and cloud flows.";
+        return;
+      }
+
+      if (!loaded) {
+        elements.selectionHint.textContent = getInspectionMode() === "target"
+          ? "Load apps/flows first, then type to filter the dropdown."
+          : "Load solutions first, then type to filter the dropdown.";
+        return;
+      }
+
+      const capped = matchCount > MAX_SELECT_OPTIONS ? ` Showing first ${MAX_SELECT_OPTIONS}.` : "";
+      elements.selectionHint.textContent = `${matchCount} of ${totalCount} loaded option${totalCount === 1 ? "" : "s"} match.${capped}`;
     }
 
     function formatDate(value) {
@@ -3232,10 +3492,11 @@
     function exportCsv() {
       if (!state.lastResult) return;
       const rows = [
-        ["Component", "Type", "Custom Solutions", "Owner", "Status", "Modified", "Shared Users", "Shared Teams", "Shared Other", "Total Shares", "Risk Signals", "Services", "SharePoint URLs", "Sources"],
+        ["Component", "Type", "Asset Links", "Custom Solutions", "Owner", "Status", "Modified", "Shared Users", "Shared Teams", "Shared Other", "Total Shares", "Risk Signals", "Services", "SharePoint URLs", "Sources"],
         ...state.lastResult.components.map((row) => [
           row.component,
           row.type,
+          row.metadata.assetLinks.map((link) => `${link.label}: ${link.url}`).join("; "),
           row.metadata.customSolutions.join("; "),
           row.metadata.owner,
           row.metadata.status,
