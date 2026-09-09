@@ -189,9 +189,9 @@
 
     .toolbar {
       display: grid;
-      grid-template-columns: 1.3fr 0.8fr 2fr auto auto;
-      gap: 12px;
-      align-items: end;
+      grid-template-columns: minmax(280px, 1fr) minmax(220px, 0.7fr) minmax(460px, 1.45fr) auto;
+      gap: 16px;
+      align-items: start;
     }
 
     .admin-import-controls {
@@ -211,6 +211,7 @@
     }
 
     .field label,
+    .control-label,
     .toggle label {
       color: var(--cp-text-muted);
       font-size: 12px;
@@ -218,9 +219,18 @@
       letter-spacing: 0.02em;
     }
 
+    .field label,
+    .control-label {
+      align-items: center;
+      display: flex;
+      min-height: 18px;
+    }
+
     .field-hint {
       color: var(--cp-text-muted);
       font-size: 12px;
+      line-height: 1.35;
+      min-height: 32px;
     }
 
     .field-hint.warning {
@@ -244,6 +254,29 @@
     .field select:disabled {
       cursor: not-allowed;
       opacity: 0.72;
+    }
+
+    .selection-pair {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: minmax(180px, 0.9fr) minmax(220px, 1.1fr);
+    }
+
+    .action-field {
+      display: grid;
+      gap: 6px;
+      justify-content: end;
+      min-width: max-content;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .action-buttons .button {
+      min-width: 140px;
     }
 
     .field input:focus,
@@ -703,6 +736,7 @@
       .hero,
       .toolbar,
       .admin-import-controls,
+      .selection-pair,
       .search-row,
       .details-grid {
         grid-template-columns: 1fr;
@@ -718,6 +752,15 @@
 
       .secondary-actions {
         justify-content: flex-start;
+      }
+
+      .action-field,
+      .action-buttons {
+        justify-content: stretch;
+      }
+
+      .action-buttons {
+        flex-direction: column;
       }
     }
 
@@ -754,8 +797,8 @@
     <section class="notice" id="environmentNotice">
       <p>
         Use this as an HTML web resource inside a model-driven app or open it from the Dataverse
-      environment origin. It supports Commercial, GCC, GCC High, and DoD environment hostnames,
-      and only reads metadata/content that your account can access.
+        environment origin. It supports Commercial, GCC, GCC High, and DoD environment hostnames,
+        and only reads metadata/content that your account can access.
       </p>
     </section>
 
@@ -774,17 +817,26 @@
             <option value="adminExport">Admin export JSON</option>
             <option value="target">App or cloud flow</option>
           </select>
+          <small class="field-hint">Choose the inventory source.</small>
         </div>
         <div class="field">
           <label id="targetSelectLabel" for="solutionSelect">Solution</label>
-          <input id="selectionFilter" type="search" placeholder="Filter loaded options">
-          <select id="solutionSelect" disabled>
-            <option value="">Load solutions first</option>
-          </select>
+          <div class="selection-pair">
+            <input id="selectionFilter" type="search" placeholder="Filter loaded options">
+            <select id="solutionSelect" disabled>
+              <option value="">Load solutions first</option>
+            </select>
+          </div>
           <small id="selectionHint" class="field-hint"></small>
         </div>
-        <button id="loadSolutionsButton" class="button" type="button">Load solutions</button>
-        <button id="analyzeButton" class="button primary" type="button" disabled>Analyze solution</button>
+        <div class="action-field">
+          <span class="control-label">Actions</span>
+          <div class="action-buttons">
+            <button id="loadSolutionsButton" class="button" type="button">Load solutions</button>
+            <button id="analyzeButton" class="button primary" type="button" disabled>Analyze solution</button>
+          </div>
+          <small class="field-hint">Load first, then analyze.</small>
+        </div>
       </div>
       <div id="adminImportControls" class="admin-import-controls hidden">
         <div class="field">
@@ -1015,7 +1067,7 @@
   </div>
 
   <script>
-    const APP_VERSION = "2026.09.09.1349";
+    const APP_VERSION = "2026.09.09.1404";
     const MAX_SELECT_OPTIONS = 500;
     const FETCHXML_PAGE_SIZE = 5000;
     const MAX_FETCHXML_PAGES = 200;
