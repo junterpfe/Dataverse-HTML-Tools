@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Business Unit Configuration</title>
+  <script>
+    (() => {
+      const theme = hasDarkModeFlag() ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", theme);
+
+      function hasDarkModeFlag() {
+        return getUrlCandidates().some(urlHasDarkModeFlag);
+      }
+
+      function getUrlCandidates() {
+        const urls = [window.location.href, document.referrer];
+
+        try {
+          urls.push(window.parent.location.href);
+        } catch (error) {
+          // Parent can be cross-origin in some host shells.
+        }
+
+        try {
+          urls.push(window.top.location.href);
+        } catch (error) {
+          // Top can be cross-origin in some host shells.
+        }
+
+        return urls.filter(Boolean);
+      }
+
+      function urlHasDarkModeFlag(url) {
+        const text = normalizeUrlText(url);
+        return text.includes("themeoption=darkmode") || text.includes("themeoption%3ddarkmode");
+      }
+
+      function normalizeUrlText(value) {
+        let text = String(value || "").toLowerCase();
+
+        for (let index = 0; index < 3; index += 1) {
+          try {
+            const decoded = decodeURIComponent(text);
+            if (decoded === text) {
+              break;
+            }
+            text = decoded;
+          } catch (error) {
+            break;
+          }
+        }
+
+        return text;
+      }
+    })();
+  </script>
+  <style>
+    :root { color-scheme: light; --bg:#f7f4ef; --surface:#fff; --soft:#f5f5f5; --head:#eef2f6; --text:#242424; --muted:#5c5c5c; --border:#dedede; --accent:#b11f4b; --accent-fg:#fff; --highlight:rgba(177,31,75,.10); --danger:#b42318; --success:#16a34a; }
+    html[data-theme="dark"] { color-scheme: dark; --bg:#3d3b3a; --surface:#292929; --soft:#2e2e2e; --head:#343231; --text:#dedede; --muted:#b0b0b0; --border:#474747; --accent:#fd8ea1; --accent-fg:#1a1a1a; --highlight:rgba(253,142,161,.14); --danger:#f87171; --success:#4ade80; }
+    * { box-sizing:border-box; } body { margin:0; padding:24px; background:var(--bg); color:var(--text); font:14px Segoe UI, sans-serif; }
+    main { max-width:1400px; margin:auto; } h1 { margin:0 0 6px; font-size:24px; } h2 { margin:0; font-size:17px; }
+    .muted { color:var(--muted); } .panel { margin-top:18px; padding:18px; background:var(--surface); border:1px solid var(--border); border-radius:6px; }
+    .toolbar,.filters,.actions,.options { display:flex; flex-wrap:wrap; gap:10px; align-items:end; } .filters > label { min-width:170px; flex:1; }
+    label { display:flex; flex-direction:column; gap:5px; color:var(--muted); font-weight:600; font-size:12px; } input,select { min-height:34px; padding:7px 9px; border:1px solid var(--border); border-radius:4px; background:var(--surface); color:var(--text); font:inherit; }
+    button { min-height:34px; padding:7px 13px; border:1px solid var(--accent); border-radius:4px; background:var(--accent); color:var(--accent-fg); font:600 13px Segoe UI,sans-serif; cursor:pointer; } button.secondary { background:transparent; color:var(--accent); } button:disabled { opacity:.5; cursor:not-allowed; }
+    .options { margin-top:14px; align-items:center; } .check { flex-direction:row; align-items:center; font-size:13px; } .check input { min-height:auto; accent-color:var(--accent); }
+    .message { min-height:22px; margin-top:12px; color:var(--muted); } .message.error { color:var(--danger); } .message.success { color:var(--success); }
+    .table-wrap { overflow:auto; margin-top:14px; border:1px solid var(--border); } table { width:100%; border-collapse:collapse; min-width:900px; background:var(--surface); } th,td { padding:9px 10px; border-bottom:1px solid var(--border); text-align:left; vertical-align:middle; } th { background:var(--head); color:var(--muted); font-size:12px; } tr.selected { background:var(--highlight); }
+    .count { margin-left:auto; color:var(--muted); font-size:12px; } .results { white-space:pre-wrap; font-family:Consolas,monospace; font-size:12px; }
+    details.columns { margin-top:12px; } details.columns summary { cursor:pointer; color:var(--accent); font-weight:600; font-size:13px; } .column-list { display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:10px; } .column-list label { flex-direction:row; align-items:center; gap:6px; font-weight:500; font-size:13px; color:var(--text); }
+    th button.sort { padding:0; border:0; background:none; color:var(--muted); font:inherit; font-weight:600; text-transform:none; }
+    @media (max-width:700px) { body { padding:12px; } .panel { padding:12px; } .count { width:100%; margin-left:0; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Business Unit Configuration</h1>
+  <div class="muted">Filter users, preview a business unit move, and apply it as a confirmed batch operation.</div>
+  <section class="panel" aria-label="User filters">
+    <div class="filters">
+      <label>Search<input id="search" type="search" placeholder="Name, email, manager, employee ID, title, location"></label>
+      <label>Business unit<select id="businessUnit"><option value="">All business units</option></select></label>
+      <label>Status<select id="status"><option value="">All users</option><option value="0">Enabled</option><option value="1">Disabled</option></select></label>
+      <button id="refresh" type="button">Refresh users</button>
+    </div>
+    <details class="columns"><summary>Columns</summary><div id="columnPicker" class="column-list"></div></details>
+    <div class="table-wrap"><table><thead><tr id="headRow"></tr></thead><tbody id="users"><tr><td>Loading users...</td></tr></tbody></table></div>
+    <div class="toolbar"><span id="count" class="count"></span></div>
+  </section>
+  <section class="panel" aria-label="Business unit move">
+    <h2>Move selected users</h2>
+    <div class="filters" style="margin-top:12px">
+      <label>Destination business unit<select id="destination"><option value="">Select a business unit</option></select></label>
+      <label>Reassign records to<select id="reassign"><option value="">Select a user or team</option></select></label>
+      <label>Clone permissions from<select id="permissionSource"><option value="">No permission clone</option></select></label>
+    </div>
+    <div class="options">
+      <label class="check"><input id="cloneRoles" type="checkbox" checked> Direct roles</label>
+      <label class="check"><input id="cloneTeams" type="checkbox" checked> Owner-team memberships</label>
+      <label class="check"><input id="cloneAccess" type="checkbox"> Access-team memberships</label>
+      <label class="check"><input id="moveRecords" type="checkbox" checked> Move records owned by each user</label>
+    </div>
+    <div class="actions" style="margin-top:14px"><button id="preview" class="secondary" type="button">Preview move</button><button id="move" type="button" disabled>Move selected users</button></div>
+    <div id="message" class="message" role="status"></div>
+    <div id="results" class="results"></div>
+  </section>
+  <section class="panel" aria-label="Create business unit">
+    <h2>Create business unit</h2>
+    <div class="muted" style="margin-top:6px">A new business unit must have a parent. Creating one does not move any users.</div>
+    <div class="filters" style="margin-top:12px">
+      <label>Name<input id="newUnitName" type="text" maxlength="160" placeholder="Business unit name"></label>
+      <label>Parent business unit<select id="newUnitParent"><option value="">Select a parent business unit</option></select></label>
+      <label>Description<input id="newUnitDescription" type="text" maxlength="2000" placeholder="Optional"></label>
+    </div>
+    <div class="actions" style="margin-top:14px"><button id="createUnit" type="button">Create business unit</button></div>
+    <div id="createMessage" class="message" role="status"></div>
+  </section>
+</main>
+<script>
+(function () {
+  "use strict";
+  const COLUMNS = [
+    { key: "fullname", label: "Name", locked: true, value: u => u.fullname || "" },
+    { key: "businessunit", label: "Business unit", value: u => u.businessunitid?.name || "(No business unit)" },
+    { key: "manager", label: "Manager", value: u => u.parentsystemuserid?.fullname || "" },
+    { key: "jobtitle", label: "Job title", value: u => u.jobtitle || "" },
+    { key: "title", label: "Title", optional: true, value: u => u.title || "" },
+    { key: "employeeid", label: "Employee ID", optional: true, value: u => u.employeeid || "" },
+    { key: "location", label: "Location", value: u => [u.address1_city, u.address1_stateorprovince, u.address1_country].filter(Boolean).join(", ") },
+    { key: "street", label: "Street", optional: true, value: u => u.address1_line1 || "" },
+    { key: "postalcode", label: "Postal code", optional: true, value: u => u.address1_postalcode || "" },
+    { key: "email", label: "Email", optional: true, value: u => u.internalemailaddress || "" },
+    { key: "domainname", label: "Domain", value: u => u.domainname || "" },
+    { key: "status", label: "Status", value: u => u.isdisabled ? "Disabled" : "Enabled" }
+  ];
+  const COLUMN_STORAGE_KEY = "dht.businessUnitConfiguration.columns";
+  const SAME_USER_REASSIGN = "__same_user__";
+  const state = { users: [], businessUnits: [], selected: new Set(), columns: loadColumnPreference(), sort: { column: "fullname", direction: "asc" }, loading: false, xrm: null };
+  document.addEventListener("DOMContentLoaded", init);
+  function init() {
+    ["search", "businessUnit", "status"].forEach(id => document.getElementById(id).addEventListener("input", renderUsers));
+    document.getElementById("refresh").addEventListener("click", load);
+    renderColumnPicker(); renderHead();
+    document.getElementById("preview").addEventListener("click", previewMove);
+    document.getElementById("move").addEventListener("click", moveUsers);
+    document.getElementById("createUnit").addEventListener("click", createBusinessUnit);
+    ["destination", "reassign", "permissionSource", "cloneRoles", "cloneTeams", "cloneAccess", "moveRecords"].forEach(id => document.getElementById(id).addEventListener("change", updateActions));
+    load();
+  }
+  async function load() {
+    setMessage("Loading users and business units...", ""); state.xrm = getXrm();
+    try {
+      if (!state.xrm || !state.xrm.WebApi) throw new Error("Open this page inside a model-driven app.");
+      const [users, units, principals] = await Promise.all([retrieveAll("systemuser", "?$select=systemuserid,fullname,internalemailaddress,domainname,jobtitle,title,employeeid,address1_line1,address1_city,address1_stateorprovince,address1_postalcode,address1_country,isdisabled,_businessunitid_value&$filter=not%20startswith(fullname,%27%23%27)&$expand=businessunitid($select=name),parentsystemuserid($select=fullname)&$orderby=fullname asc"), retrieveAll("businessunit", "?$select=businessunitid,name,_parentbusinessunitid_value&$orderby=name asc"), Promise.all([retrieveAll("systemuser", "?$select=systemuserid,fullname&$filter=isdisabled eq false and not startswith(fullname,%27%23%27)&$orderby=fullname asc"), retrieveAll("team", "?$select=teamid,name&$filter=teamtype eq 0&$orderby=name asc")])]);
+      state.users = users.filter(u => !isServiceAccount(u)); state.businessUnits = units; state.selected.clear();
+      fillSelect("businessUnit", units, "businessunitid", "name", "All business units"); fillSelect("destination", units, "businessunitid", "name", "Select a business unit"); fillSelect("newUnitParent", units, "businessunitid", "name", "Select a parent business unit");
+      const root = units.find(unit => !unit._parentbusinessunitid_value); if (root) document.getElementById("newUnitParent").value = root.businessunitid;
+      fillPrincipals(principals[0].filter(u => !isServiceAccount(u)), principals[1]); fillSelect("permissionSource", users.filter(u => !u.isdisabled && !isServiceAccount(u)), "systemuserid", "fullname", "No permission clone"); renderUsers(); setMessage("", "");
+    } catch (error) { setMessage(getError(error), "error"); }
+  }
+  async function retrieveAll(entity, query) { const rows=[]; let next=query; while(next){ const result=await state.xrm.WebApi.retrieveMultipleRecords(entity,next); rows.push(...result.entities); next=result.nextLink ? result.nextLink.slice(result.nextLink.indexOf("?")) : ""; } return rows; }
+  function fillSelect(id, rows, value, text, first) { const select=document.getElementById(id); while(select.options.length>1) select.remove(1); rows.forEach(row => { const option=new Option(row[text] || "(Unnamed)", row[value]); select.add(option); }); select.options[0].textContent=first; }
+  function fillPrincipals(users, teams) { const select=document.getElementById("reassign"); while(select.options.length>1) select.remove(1); select.add(new Option("Same as each selected user", SAME_USER_REASSIGN)); const userGroup=new Option("Users", ""); userGroup.disabled=true; select.add(userGroup); users.forEach(u=>select.add(new Option("User: "+u.fullname,u.systemuserid))); const teamGroup=new Option("Owner teams", ""); teamGroup.disabled=true; select.add(teamGroup); teams.forEach(t=>select.add(new Option("Team: "+t.name,t.teamid))); }
+  function isServiceAccount(user) { return String(user.fullname || "").trim().startsWith("#"); }
+  function loadColumnPreference() { const fallback=COLUMNS.filter(c=>!c.optional).map(c=>c.key); try { const saved=JSON.parse(window.localStorage.getItem(COLUMN_STORAGE_KEY)); if(Array.isArray(saved)&&saved.length) return new Set(saved.filter(key=>COLUMNS.some(c=>c.key===key))); } catch (error) { /* storage may be blocked in the app frame */ } return new Set(fallback); }
+  function saveColumnPreference() { try { window.localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(Array.from(state.columns))); } catch (error) { /* storage may be blocked in the app frame */ } }
+  function visibleColumns() { return COLUMNS.filter(c=>c.locked||state.columns.has(c.key)); }
+  function renderColumnPicker() { const host=document.getElementById("columnPicker"); host.textContent=""; COLUMNS.forEach(column=>{const label=document.createElement("label"),input=document.createElement("input");input.type="checkbox";input.checked=column.locked||state.columns.has(column.key);input.disabled=!!column.locked;input.addEventListener("change",()=>{input.checked?state.columns.add(column.key):state.columns.delete(column.key);saveColumnPreference();renderHead();renderUsers();});label.append(input,document.createTextNode(column.label));host.append(label);}); }
+  function renderHead() { const head=document.getElementById("headRow"); head.textContent=""; const selectCell=document.createElement("th"),selectAll=document.createElement("input");selectAll.type="checkbox";selectAll.id="selectAll";selectAll.setAttribute("aria-label","Select all visible users");selectAll.addEventListener("change",selectVisible);selectCell.append(selectAll);head.append(selectCell); visibleColumns().forEach(column=>{const th=document.createElement("th"),button=document.createElement("button");button.type="button";button.className="secondary sort";button.textContent=column.label+(state.sort.column===column.key?(state.sort.direction==="asc"?" \u2191":" \u2193"):"");button.addEventListener("click",()=>sortBy(column.key));th.append(button);head.append(th);}); }
+  function visibleUsers() { const query=document.getElementById("search").value.trim().toLowerCase(), unit=document.getElementById("businessUnit").value, status=document.getElementById("status").value, sortColumn=COLUMNS.find(c=>c.key===state.sort.column)||COLUMNS[0]; return state.users.filter(u => (!unit || u._businessunitid_value===unit) && (status==="" || String(u.isdisabled ? 1:0)===status) && (!query || COLUMNS.map(c=>c.value(u)).concat(u.internalemailaddress||"",u.domainname||"").join(" ").toLowerCase().includes(query))).sort((a,b)=>String(sortColumn.value(a)).toLowerCase().localeCompare(String(sortColumn.value(b)).toLowerCase())*(state.sort.direction==="asc"?1:-1)); }
+  function renderUsers() { const body=document.getElementById("users"); body.textContent=""; const rows=visibleUsers(),columns=visibleColumns(); rows.forEach(u=>{const tr=document.createElement("tr"); if(state.selected.has(u.systemuserid))tr.className="selected"; const check=document.createElement("input");check.type="checkbox";check.checked=state.selected.has(u.systemuserid);check.setAttribute("aria-label","Select "+u.fullname);check.addEventListener("change",()=>{check.checked?state.selected.add(u.systemuserid):state.selected.delete(u.systemuserid);renderUsers();}); const cell=document.createElement("td");cell.append(check);tr.append(cell); columns.forEach(column=>{const td=document.createElement("td");td.textContent=column.value(u);tr.append(td);});body.append(tr);}); if(!rows.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=columns.length+1;td.textContent="No users match the current filters.";tr.append(td);body.append(tr);} document.getElementById("count").textContent=rows.length+" visible, "+state.selected.size+" selected"; document.getElementById("selectAll").checked=rows.length>0&&rows.every(u=>state.selected.has(u.systemuserid)); updateActions(); }
+  function selectVisible(event) { visibleUsers().forEach(u=>event.target.checked?state.selected.add(u.systemuserid):state.selected.delete(u.systemuserid));renderUsers(); }
+  function sortBy(column) { state.sort.direction=state.sort.column===column&&state.sort.direction==="asc"?"desc":"asc";state.sort.column=column;renderHead();renderUsers(); }
+  function getReassignText(user){const select=document.getElementById("reassign");return select.value===SAME_USER_REASSIGN?"same selected user ("+user.fullname+")":select.selectedOptions[0]?.textContent;}
+  function previewMove() { const destination=document.getElementById("destination").selectedOptions[0]?.textContent; if(!state.selected.size||!destination||!document.getElementById("destination").value||!document.getElementById("reassign").value){setMessage("Select users, a destination business unit, and a record reassignment option.","error");return;} setMessage("Preview only. No changes have been made.","");document.getElementById("results").textContent=Array.from(state.selected).map(id=>{const u=state.users.find(x=>x.systemuserid===id);return u.fullname+" | "+(u.businessunitid?.name||"(none)")+" -> "+destination+" | records -> "+getReassignText(u);}).join("\n");document.getElementById("move").disabled=false; }
+  async function moveUsers() { if(!state.selected.size) return; const destination=document.getElementById("destination").value,reassign=document.getElementById("reassign").value; const reassignText=reassign===SAME_USER_REASSIGN?"Record ownership will stay with each selected user.":"Record ownership will be reassigned first."; const confirmed=window.confirm("Move "+state.selected.size+" user(s) to the selected business unit? "+reassignText+" This cannot be rolled back automatically.");if(!confirmed)return;setLoading(true);const results=[];try{for(const id of state.selected){const user=state.users.find(u=>u.systemuserid===id);try{await setBusinessUnit(id,destination,reassign);if(document.getElementById("permissionSource").value)await clonePermissions(document.getElementById("permissionSource").value,id,destination);results.push("OK: "+user.fullname);}catch(error){results.push("FAILED: "+user.fullname+" - "+getError(error));}}setMessage("Batch completed. Review the per-user results below.","success");document.getElementById("results").textContent=results.join("\n");await load();}catch(error){setMessage(getError(error),"error");}finally{setLoading(false);} }
+  async function setBusinessUnit(userId,businessUnitId,reassignId){const reassignSelect=document.getElementById("reassign"),sameUser=reassignId===SAME_USER_REASSIGN,entityName=!sameUser&&reassignSelect.selectedOptions[0].textContent.startsWith("Team:")?"team":"systemuser";const request={entity:{entityType:"systemuser",id:userId},BusinessUnit:{entityType:"businessunit",id:businessUnitId},ReassignPrincipal:{entityType:entityName,id:sameUser?userId:reassignId},DoNotMoveAllRecords:!document.getElementById("moveRecords").checked,getMetadata:()=>({boundParameter:"entity",parameterTypes:{entity:{typeName:"mscrm.systemuser",structuralProperty:5},BusinessUnit:{typeName:"mscrm.businessunit",structuralProperty:5},ReassignPrincipal:{typeName:"mscrm.crmbaseentity",structuralProperty:5},DoNotMoveAllRecords:{typeName:"Edm.Boolean",structuralProperty:1}},operationType:0,operationName:"SetBusinessSystemUser"})};const response=await state.xrm.WebApi.online.execute(request);if(response&&!response.ok)throw new Error("SetBusinessSystemUser returned HTTP "+response.status+".");}
+  async function clonePermissions(sourceId,targetId,destinationId){const [roles,teams,targetRoles]=await Promise.all([retrieveAll("role",getSourceRolesFetchXml(sourceId)),retrieveAll("team",getSourceTeamsFetchXml(sourceId)),retrieveAll("role","?$select=roleid,name&$filter=_businessunitid_value eq "+destinationId)]);if(document.getElementById("cloneRoles").checked){for(const sourceRole of roles){const targetRole=targetRoles.find(role=>String(role.name).toLowerCase()===String(sourceRole.name).toLowerCase());if(!targetRole)continue;await associate(targetId,"systemuserroles_association","role",targetRole.roleid);}}if(document.getElementById("cloneTeams").checked){for(const team of teams){await associate(targetId,"teammembership_association","team",team.teamid);}} }
+  function getSourceRolesFetchXml(userId){return "<fetch><entity name=\"role\"><attribute name=\"roleid\"/><attribute name=\"name\"/><link-entity name=\"systemuserroles\" from=\"roleid\" to=\"roleid\" intersect=\"true\"><filter><condition attribute=\"systemuserid\" operator=\"eq\" value=\""+userId+"\"/></filter></link-entity></entity></fetch>";}
+  function getSourceTeamsFetchXml(userId){return "<fetch><entity name=\"team\"><attribute name=\"teamid\"/><attribute name=\"name\"/><attribute name=\"teamtype\"/><attribute name=\"isdefault\"/><filter><condition attribute=\"teamtype\" operator=\"eq\" value=\"0\"/><condition attribute=\"isdefault\" operator=\"eq\" value=\"0\"/></filter><link-entity name=\"teammembership\" from=\"teamid\" to=\"teamid\" intersect=\"true\"><filter><condition attribute=\"systemuserid\" operator=\"eq\" value=\""+userId+"\"/></filter></link-entity></entity></fetch>";}
+  async function associate(targetId,relationship,entityName,relatedId){const request={target:{entityType:"systemuser",id:targetId},relatedEntities:[{entityType:entityName,id:relatedId}],relationship,getMetadata:()=>({boundParameter:null,parameterTypes:{target:{typeName:"mscrm.crmbaseentity",structuralProperty:5},relatedEntities:{typeName:"Collection(mscrm.crmbaseentity)",structuralProperty:4},relationship:{typeName:"Edm.String",structuralProperty:1}},operationType:2,operationName:"Associate"})};await state.xrm.WebApi.online.execute(request);}
+  function updateActions(){document.getElementById("move").disabled=!state.selected.size||!document.getElementById("destination").value||!document.getElementById("reassign").value;}
+  async function createBusinessUnit(){const name=document.getElementById("newUnitName").value.trim(),parent=document.getElementById("newUnitParent").value,description=document.getElementById("newUnitDescription").value.trim();if(!name||!parent){setMessage("Enter a name and select a parent business unit.","error","createMessage");return;}if(state.businessUnits.some(unit=>String(unit.name).toLowerCase()===name.toLowerCase())){setMessage("A business unit with that name already exists.","error","createMessage");return;}setLoading(true);try{const record={name,"parentbusinessunitid@odata.bind":"/businessunits("+parent+")"};if(description)record.description=description;const created=await state.xrm.WebApi.createRecord("businessunit",record);document.getElementById("newUnitName").value="";document.getElementById("newUnitDescription").value="";await load();document.getElementById("destination").value=created.id.replace(/[{}]/g,"");updateActions();setMessage("Created "+name+" and selected it as the destination business unit.","success","createMessage");}catch(error){setMessage(getError(error),"error","createMessage");}finally{setLoading(false);}}
+  function setLoading(value){state.loading=value;document.querySelectorAll("button,select,input").forEach(e=>{if(!e.closest("#columnPicker"))e.disabled=value;});if(!value)updateActions();}
+  function setMessage(text,kind,id){const el=document.getElementById(id||"message");el.textContent=text;el.className="message "+kind;}
+  function getXrm(){return window.Xrm||window.parent?.Xrm||window.top?.Xrm;}
+  function getError(error){return error?.message||String(error);}
+})();
+</script>
+</body>
+</html>

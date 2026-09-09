@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ImportExportXml version="9.2" SolutionPackageVersion="9.2" languagecode="1033" generatedBy="CrmLive" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <SolutionManifest>
+    <UniqueName>DataverseHtmlToolsBusinessUnitConfiguration</UniqueName>
+    <LocalizedNames><LocalizedName description="Business Unit Configuration" languagecode="1033" /></LocalizedNames>
+    <Descriptions><Description description="Filter users and batch move them between business units with optional permission cloning." languagecode="1033" /></Descriptions>
+    <Version>1.0.7.0</Version>
+    <Managed>2</Managed>
+    <Publisher>
+      <UniqueName>DataverseHTMLTools</UniqueName>
+      <LocalizedNames><LocalizedName description="Dataverse HTML Tools" languagecode="1033" /></LocalizedNames>
+      <Descriptions><Description description="Dataverse HTML Tools" languagecode="1033" /></Descriptions>
+      <EMailAddress>junterse@hotmail.com</EMailAddress>
+      <SupportingWebsiteUrl xsi:nil="true"></SupportingWebsiteUrl>
+      <CustomizationPrefix>dht</CustomizationPrefix>
+      <CustomizationOptionValuePrefix>45369</CustomizationOptionValuePrefix>
+      <Addresses />
+    </Publisher>
+    <RootComponents><RootComponent type="61" schemaName="dht_/BusinessUnitConfiguration.html" behavior="0" /></RootComponents>
+    <MissingDependencies />
+  </SolutionManifest>
+</ImportExportXml>
+

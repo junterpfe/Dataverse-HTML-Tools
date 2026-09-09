@@ -4,7 +4,7 @@ The recommended installation is [Dataverse HTML Tools Suite](DataverseHTMLToolsS
 
 Individual tool packages remain available for partial deployments where the Suite is not required.
 
-The Suite includes six HTML web resources built to make Dataverse and Power Platform administration easier inside model-driven apps:
+The Suite includes seven HTML web resources built to make Dataverse and Power Platform administration easier inside model-driven apps:
 
 1. **User Effective Security Roles** - User form helpers for viewing and managing roles and team memberships, plus a read-only record-access view for shares, Field Security Profiles, and hierarchy context.
 2. **User Record Access** - a companion User form helper for reviewing explicit record shares, Field Security Profiles, and hierarchy context.
@@ -12,6 +12,7 @@ The Suite includes six HTML web resources built to make Dataverse and Power Plat
 4. **Team Role and People Manager** - a Team form helper for managing team security roles and owner-team membership, with read-only Entra group membership handling.
 5. **Flow Dependency Viewer** - a solution-level helper for viewing cloud-flow dependencies, activation order, required environment variables, and missing environment-variable values.
 6. **Solution Service Inspector** - an inventory helper for reviewing solutions, apps, flows, connected services, SharePoint URLs, sharing signals, and non-authoritative migration signals.
+7. **Business Unit Configuration** - a filtered, sortable user list for previewing and batch-moving users between business units with optional permission cloning.
 
 All tools are designed to run as **Dataverse HTML web resources** so they can use the signed-in admin's Dataverse context and `Xrm.WebApi`.
 
@@ -22,6 +23,9 @@ All tools are designed to run as **Dataverse HTML web resources** so they can us
 | Dataverse HTML Tools Suite | [Installer](DataverseHTMLToolsSuite.md) |
 | Dataverse HTML Tools Suite unmanaged solution | [ZIP](../packages/dataverse-html-tools-suite/DataverseHTMLToolsSuite.zip) |
 | Dataverse HTML Tools Suite managed solution | [ZIP](../packages/dataverse-html-tools-suite/DataverseHTMLToolsSuite_managed.zip) |
+| Business Unit Configuration | [HTML web resource](../tools/business-unit-configuration/src/BusinessUnitConfiguration.html) |
+| Business Unit Configuration unmanaged solution | [ZIP](../packages/business-unit-configuration/DataverseHtmlToolsBusinessUnitConfiguration.zip) |
+| Business Unit Configuration managed solution | [ZIP](../packages/business-unit-configuration/DataverseHtmlToolsBusinessUnitConfiguration_managed.zip) |
 | User Effective Security Roles | [HTML web resource](../tools/user-effective-security-roles/src/UserEffectiveSecurityRoles.html) |
 | User Record Access | [HTML web resource](../tools/user-effective-security-roles/src/UserRecordAccess.html) |
 | Role Table Permission Copier | [HTML web resource](../tools/role-table-permission-copier/src/RoleTablePermissionCopier.html) |

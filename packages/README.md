@@ -23,3 +23,4 @@ Use an individual package only when the target environment needs a specific tool
 | Team Role and People Manager | [Unmanaged ZIP](team-role-people-manager/TeamRolePeopleManagerSolution.zip) | [Managed ZIP](team-role-people-manager/TeamRolePeopleManagerSolution_managed.zip) |
 | Flow Dependency Viewer | [Unmanaged ZIP](flow-dependency-viewer/FlowDependencyViewerSolution.zip) | [Managed ZIP](flow-dependency-viewer/FlowDependencyViewerSolution_managed.zip) |
 | Solution Service Inspector | [Unmanaged ZIP](solution-service-inspector/SolutionServiceInspectorSolution.zip) | [Managed ZIP](solution-service-inspector/SolutionServiceInspectorSolution_managed.zip) |
+| Business Unit Configuration | [Unmanaged ZIP](business-unit-configuration/DataverseHtmlToolsBusinessUnitConfiguration.zip) | [Managed ZIP](business-unit-configuration/DataverseHtmlToolsBusinessUnitConfiguration_managed.zip) |

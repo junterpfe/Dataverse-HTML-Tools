@@ -6,25 +6,52 @@
   <title>Power Platform Solution Service Inspector</title>
   <script>
     (() => {
-      const params = new URLSearchParams(window.location.search);
-      const nestedData = params.get("data");
-      const dataParams = nestedData ? new URLSearchParams(safeDecode(nestedData)) : new URLSearchParams();
-      const themeOption = params.get("themeOption") || dataParams.get("themeOption") || params.get("scoutTheme") || dataParams.get("scoutTheme");
-      if (themeOption && /darkmode|dark/i.test(themeOption)) {
-        document.documentElement.setAttribute("data-theme", "dark");
-      } else if (themeOption && /lightmode|light/i.test(themeOption)) {
-        document.documentElement.setAttribute("data-theme", "light");
-      } else {
-        const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-        document.documentElement.setAttribute("data-theme", systemTheme);
+      const theme = hasDarkModeFlag() ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", theme);
+
+      function hasDarkModeFlag() {
+        return getUrlCandidates().some(urlHasDarkModeFlag);
       }
 
-      function safeDecode(value) {
+      function getUrlCandidates() {
+        const urls = [window.location.href, document.referrer];
+
         try {
-          return decodeURIComponent(value);
-        } catch (_error) {
-          return value;
+          urls.push(window.parent.location.href);
+        } catch (error) {
+          // Parent can be cross-origin in some host shells.
         }
+
+        try {
+          urls.push(window.top.location.href);
+        } catch (error) {
+          // Top can be cross-origin in some host shells.
+        }
+
+        return urls.filter(Boolean);
+      }
+
+      function urlHasDarkModeFlag(url) {
+        const text = normalizeUrlText(url);
+        return text.includes("themeoption=darkmode") || text.includes("themeoption%3ddarkmode");
+      }
+
+      function normalizeUrlText(value) {
+        let text = String(value || "").toLowerCase();
+
+        for (let index = 0; index < 3; index += 1) {
+          try {
+            const decoded = decodeURIComponent(text);
+            if (decoded === text) {
+              break;
+            }
+            text = decoded;
+          } catch (error) {
+            break;
+          }
+        }
+
+        return text;
       }
     })();
   </script>
@@ -565,9 +592,9 @@
           <span class="badge">Commercial + GCC + GCC High + DoD</span>
         </div>
         <p class="subhead">
-          Load solutions or environment-level apps and flows, select one, and scan cloud flows,
-          canvas apps, connection references, custom connectors, and environment variables for
-          connected services and SharePoint URLs.
+          Load solutions, individual assets, or a bulk environment inventory, then scan apps and
+          cloud flows for connected services, SharePoint URLs, sharing signals, and migration review
+          signals without relying on the Default Solution.
         </p>
       </div>
       <button id="themeToggle" class="button" type="button">Toggle theme</button>
@@ -592,6 +619,7 @@
           <label for="inspectionMode">Inspect</label>
           <select id="inspectionMode">
             <option value="solution">Solution</option>
+            <option value="environment">Environment inventory</option>
             <option value="target">App or cloud flow</option>
           </select>
         </div>
@@ -680,6 +708,7 @@
                 <tr>
                   <th>Asset</th>
                   <th>Type</th>
+                  <th>Custom solutions</th>
                   <th>Owner</th>
                   <th>Status</th>
                   <th>Modified</th>
@@ -810,7 +839,7 @@
   </main>
 
   <script>
-    const APP_VERSION = "2026.08.28.1114";
+    const APP_VERSION = "2026.09.09.1210";
 
     const COMPONENT_TYPES = new Map([
       [1, "Table"],
@@ -1009,7 +1038,9 @@
     }
 
     function getInspectionMode() {
-      return elements.inspectionMode.value === "target" ? "target" : "solution";
+      if (elements.inspectionMode.value === "target") return "target";
+      if (elements.inspectionMode.value === "environment") return "environment";
+      return "solution";
     }
 
     function handleInspectionModeChange() {
@@ -1021,21 +1052,25 @@
       state.lastResult = null;
       elements.results.classList.add("hidden");
 
-      const targetMode = getInspectionMode() === "target";
-      elements.targetSelectLabel.textContent = targetMode ? "App or cloud flow" : "Solution";
-      elements.loadSolutionsButton.textContent = targetMode ? "Load apps/flows" : "Load solutions";
-      elements.analyzeButton.textContent = targetMode ? "Analyze target" : "Analyze solution";
-      elements.visibleOnlyToggle.disabled = targetMode;
-      elements.includeManagedToggle.disabled = targetMode;
+      const mode = getInspectionMode();
+      const targetMode = mode === "target";
+      const environmentMode = mode === "environment";
+      elements.targetSelectLabel.textContent = environmentMode ? "Scope" : targetMode ? "App or cloud flow" : "Solution";
+      elements.loadSolutionsButton.textContent = environmentMode ? "Load environment" : targetMode ? "Load apps/flows" : "Load solutions";
+      elements.analyzeButton.textContent = environmentMode ? "Analyze inventory" : targetMode ? "Analyze target" : "Analyze solution";
+      elements.visibleOnlyToggle.disabled = targetMode || environmentMode;
+      elements.includeManagedToggle.disabled = targetMode || environmentMode;
       renderSelectionOptions();
       updateAnalyzeState();
-      setStatus(targetMode
+      setStatus(environmentMode
+        ? "Ready. Load environment inventory to scan apps/flows directly without enumerating the Default Solution."
+        : targetMode
         ? "Ready. Load environment apps/flows to inspect records that are not in a custom solution."
         : "Ready. Load solutions to begin.");
     }
 
     async function loadCurrentList() {
-      if (getInspectionMode() === "target") {
+      if (getInspectionMode() === "target" || getInspectionMode() === "environment") {
         await loadEnvironmentTargets();
         return;
       }
@@ -1043,6 +1078,10 @@
     }
 
     async function analyzeCurrentSelection() {
+      if (getInspectionMode() === "environment") {
+        await analyzeEnvironmentInventory();
+        return;
+      }
       if (getInspectionMode() === "target") {
         await analyzeSelectedEnvironmentTarget();
         return;
@@ -1081,6 +1120,7 @@
 
     async function loadEnvironmentTargets() {
       const clientUrl = getClientUrl();
+      const environmentMode = getInspectionMode() === "environment";
       setBusy(true, `Loading environment apps and cloud flows from ${getUrlHost(clientUrl)}...`);
       const warnings = [];
 
@@ -1141,7 +1181,9 @@
 
       renderSelectionOptions();
       const warningSuffix = warnings.length ? ` Warnings: ${warnings.join(" ")}` : "";
-      setBusy(false, `Loaded ${state.environmentTargets.length} apps/flows from ${getUrlHost(clientUrl)}.${warningSuffix}`);
+      setBusy(false, environmentMode
+        ? `Loaded ${state.environmentTargets.length} apps/flows for environment inventory from ${getUrlHost(clientUrl)}.${warningSuffix}`
+        : `Loaded ${state.environmentTargets.length} apps/flows from ${getUrlHost(clientUrl)}.${warningSuffix}`);
     }
 
     async function analyzeSelectedSolution() {
@@ -1149,6 +1191,9 @@
       const solution = state.solutions.find((item) => normalizeGuid(item.solutionid) === normalizeGuid(solutionId));
       if (!solution) {
         throw new Error("Select a solution before analyzing.");
+      }
+      if (isDefaultSolution(solution)) {
+        throw new Error("The Default Solution is too large for reliable full-component inventory. Use Inspect = Environment inventory to scan apps and cloud flows directly without enumerating Default Solution components.");
       }
 
       state.selectedSolution = solution;
@@ -1228,6 +1273,63 @@
       renderResults();
       elements.results.classList.remove("hidden");
       setBusy(false, `Analysis complete. Found ${result.services.length} services and ${result.sharePointUrls.length} SharePoint URLs.`);
+    }
+
+    async function analyzeEnvironmentInventory() {
+      if (!state.environmentTargetsLoaded || !state.environmentTargets.length) {
+        throw new Error("Load the environment inventory before analyzing.");
+      }
+
+      state.selectedSolution = null;
+      state.lastResult = null;
+      elements.results.classList.add("hidden");
+      setBusy(true, `Reading full app and cloud flow metadata for ${state.environmentTargets.length} environment assets...`);
+
+      const warnings = [];
+      const { canvasApps, modelDrivenApps, workflows } = await fetchEnvironmentInventoryRecords(warnings);
+      setBusy(true, `Checking visible non-default solution membership for ${canvasApps.length + modelDrivenApps.length + workflows.length} assets...`);
+
+      const membership = await fetchVisibleCustomSolutionMembership(warnings);
+      applySolutionMembership(canvasApps, "canvasappid", membership);
+      applySolutionMembership(modelDrivenApps, "appmoduleid", membership);
+      applySolutionMembership(workflows, "workflowid", membership);
+
+      const components = [
+        ...workflows.map((record) => toComponentReference("environment-workflow", 29, record.workflowid)),
+        ...modelDrivenApps.map((record) => toComponentReference("environment-appmodule", 80, record.appmoduleid)),
+        ...canvasApps.map((record) => toComponentReference("environment-canvasapp", 300, record.canvasappid))
+      ];
+
+      const result = buildInspectionResult({
+        mode: "environment",
+        target: {
+          kind: "environment",
+          name: "Environment inventory",
+          count: components.length
+        },
+        solution: {
+          friendlyname: "Environment inventory",
+          uniquename: "All apps and cloud flows",
+          version: "",
+          ismanaged: false,
+          modifiedon: ""
+        },
+        components,
+        workflows,
+        canvasApps,
+        modelDrivenApps,
+        connectionReferences: [],
+        connectors: [],
+        environmentDefinitions: [],
+        environmentValues: [],
+        warnings
+      });
+
+      await enrichInventory(result);
+      state.lastResult = result;
+      renderResults();
+      elements.results.classList.remove("hidden");
+      setBusy(false, `Environment inventory complete. Scanned ${result.scannedCount} assets without loading the Default Solution.`);
     }
 
     async function analyzeSelectedEnvironmentTarget() {
@@ -1328,6 +1430,100 @@
         environmentDefinitionIds: idsFor([380]),
         environmentValueIds: idsFor([381]),
         byType
+      };
+    }
+
+    async function fetchEnvironmentInventoryRecords(warnings) {
+      const [canvasApps, modelDrivenApps, workflowRecords] = await Promise.all([
+        fetchEntityList("canvasapps", [
+          { select: "canvasappid,name,displayname,connectionreferences,authorizationreferences,appcomponents,cdsdependencies,databasereferences,description,createdtime,lastmodifiedtime,lastpublishtime,appversion,status,modifiedon,_ownerid_value,_createdby_value,_modifiedby_value", query: `$orderby=${encodeURIComponent("displayname asc")}` },
+          { select: "canvasappid,name,displayname,connectionreferences,authorizationreferences,appcomponents,description,lastmodifiedtime,lastpublishtime,status,_ownerid_value", query: `$orderby=${encodeURIComponent("name asc")}` },
+          { select: "canvasappid,name,displayname,connectionreferences" }
+        ], warnings),
+        fetchEntityList("appmodules", [
+          { select: "appmoduleid,name,uniquename,description,appmodulexml,configxml,createdon,modifiedon,statecode,statuscode,_createdby_value,_modifiedby_value", query: `$orderby=${encodeURIComponent("name asc")}` },
+          { select: "appmoduleid,name,uniquename,description,createdon,modifiedon,statecode,statuscode" },
+          { select: "appmoduleid,name,uniquename" }
+        ], warnings),
+        fetchEntityList("workflows", [
+          { select: "workflowid,name,category,type,clientdata,description,mode,statecode,statuscode,primaryentity,createdon,modifiedon,_ownerid_value,_createdby_value,_modifiedby_value", query: `$filter=${encodeURIComponent("category eq 5")}&$orderby=${encodeURIComponent("name asc")}` },
+          { select: "workflowid,name,category,clientdata,description,statecode,statuscode,createdon,modifiedon,_ownerid_value", query: `$orderby=${encodeURIComponent("name asc")}` },
+          { select: "workflowid,name,category,clientdata" }
+        ], warnings)
+      ]);
+
+      return {
+        canvasApps: canvasApps.filter((record) => record.canvasappid),
+        modelDrivenApps: modelDrivenApps.filter((record) => record.appmoduleid),
+        workflows: workflowRecords.filter((record) => record.workflowid && looksLikeCloudFlow(record))
+      };
+    }
+
+    async function fetchVisibleCustomSolutionMembership(warnings) {
+      const membership = new Map();
+      const solutions = await fetchVisibleCustomSolutions(warnings);
+      const solutionNamesById = new Map(solutions.map((solution) => [
+        normalizeGuid(solution.solutionid),
+        displaySolutionName(solution)
+      ]));
+
+      for (const chunk of chunkArray(solutions.map((solution) => normalizeGuid(solution.solutionid)).filter(Boolean), 8)) {
+        const solutionFilter = chunk.map((id) => `_solutionid_value eq ${id}`).join(" or ");
+        const typeFilter = "(componenttype eq 29 or componenttype eq 80 or componenttype eq 300)";
+        try {
+          const rows = await retrieveAll(`solutioncomponents?$select=componenttype,objectid,_solutionid_value&$filter=${encodeURIComponent(`(${solutionFilter}) and ${typeFilter}`)}`);
+          for (const row of rows) {
+            const objectId = normalizeGuid(row.objectid);
+            const solutionId = normalizeGuid(row._solutionid_value);
+            if (!objectId || !solutionNamesById.has(solutionId)) continue;
+            if (!membership.has(objectId)) membership.set(objectId, new Set());
+            membership.get(objectId).add(solutionNamesById.get(solutionId));
+          }
+        } catch (error) {
+          warnings.push(`Could not read non-default solution membership for one solution batch: ${error.message}`);
+        }
+      }
+
+      return membership;
+    }
+
+    async function fetchVisibleCustomSolutions(warnings) {
+      const attempts = [
+        `solutions?$select=solutionid,uniquename,friendlyname,ismanaged,isvisible&$filter=${encodeURIComponent("isvisible eq true and uniquename ne 'Default'")}`,
+        `solutions?$select=solutionid,uniquename,friendlyname,ismanaged&$filter=${encodeURIComponent("uniquename ne 'Default'")}`,
+        "solutions?$select=solutionid,uniquename,friendlyname,ismanaged"
+      ];
+
+      for (let index = 0; index < attempts.length; index += 1) {
+        try {
+          const solutions = await retrieveAll(attempts[index]);
+          return solutions
+            .filter((solution) => solution.solutionid && !isDefaultSolution(solution))
+            .filter((solution) => solution.isvisible !== false);
+        } catch (error) {
+          if (index === attempts.length - 1) {
+            warnings.push(`Could not read visible non-default solutions for package membership: ${error.message}`);
+          }
+        }
+      }
+
+      return [];
+    }
+
+    function applySolutionMembership(records, idField, membership) {
+      for (const record of records) {
+        const memberships = membership.get(normalizeGuid(record[idField]));
+        record._inspectorSolutionNames = memberships ? Array.from(memberships).sort() : [];
+      }
+    }
+
+    function toComponentReference(prefix, componenttype, objectid) {
+      const id = normalizeGuid(objectid);
+      return {
+        solutioncomponentid: `${prefix}-${id}`,
+        componenttype,
+        objectid: id,
+        ismetadata: false
       };
     }
 
@@ -1544,6 +1740,7 @@
         status: lifecycle,
         version: record.appversion || "",
         primaryEntity: record.primaryentity || "",
+        customSolutions: Array.isArray(record._inspectorSolutionNames) ? record._inspectorSolutionNames : [],
         type
       };
     }
@@ -1652,6 +1849,9 @@
       if (result.mode === "target") {
         risks.push({ severity: "medium", label: "Not solution-scoped" });
       }
+      if (result.mode === "environment" && isInventoryAssetType(row.type) && !row.metadata.customSolutions.length) {
+        risks.push({ severity: "medium", label: "Not in visible custom solution" });
+      }
       if (row.sharePointUrls.length) {
         risks.push({ severity: "medium", label: "SharePoint URL dependency" });
       }
@@ -1692,6 +1892,8 @@
       const rows = result.components;
 
       addFindingIf(findings, result.mode === "target", "medium", "Packaging", "Selected asset was inspected outside a custom solution.", "Add the app/flow and dependencies to a dedicated unmanaged solution before migration/rebuild analysis.", rows.map((row) => row.component));
+      const unpackagedRows = rows.filter((row) => result.mode === "environment" && isInventoryAssetType(row.type) && !row.metadata.customSolutions.length);
+      addFindingIf(findings, unpackagedRows.length > 0, "medium", "Packaging", `${unpackagedRows.length} app/flow asset${unpackagedRows.length === 1 ? "" : "s"} not found in visible non-default solutions.`, "Add assets that should migrate together to a dedicated solution, then validate their dependencies from that solution before export/import.", unpackagedRows.map((row) => row.component));
       addFindingIf(findings, result.sharePointUrls.length > 0, "medium", "Data locations", `${result.sharePointUrls.length} SharePoint URL${result.sharePointUrls.length === 1 ? "" : "s"} detected.`, "Confirm each site/list exists in the target tenant/environment and replace hard-coded URLs with environment variables where possible.", result.sharePointUrls.flatMap((entry) => entry.components));
       addFindingIf(findings, result.rawUrls.length > 0, "medium", "External dependencies", `${result.rawUrls.length} non-platform URL dependenc${result.rawUrls.length === 1 ? "y" : "ies"} detected.`, "Validate endpoint availability, authentication, firewall rules, and cloud boundary constraints before migration.", result.rawUrls.flatMap((entry) => entry.components));
 
@@ -1755,6 +1957,10 @@
 
     function isProbablyInactive(status) {
       return /inactive|disabled|draft|suspended|off/i.test(status || "");
+    }
+
+    function isInventoryAssetType(type) {
+      return /Canvas app|Model-driven app|Workflow|cloud flow/i.test(type || "");
     }
 
     function isStale(value, days) {
@@ -2180,6 +2386,10 @@
     }
 
     function renderSelectionOptions() {
+      if (getInspectionMode() === "environment") {
+        renderEnvironmentInventoryOptions();
+        return;
+      }
       if (getInspectionMode() === "target") {
         renderEnvironmentTargetOptions();
         return;
@@ -2202,6 +2412,20 @@
         appendOption(elements.solutionSelect, normalizeGuid(solution.solutionid), label);
       }
       elements.solutionSelect.disabled = false;
+      updateAnalyzeState();
+    }
+
+    function renderEnvironmentInventoryOptions() {
+      elements.solutionSelect.innerHTML = "";
+      if (!state.environmentTargets.length) {
+        appendOption(elements.solutionSelect, "", state.environmentTargetsLoaded ? "No apps or cloud flows found" : "Load environment first");
+        elements.solutionSelect.disabled = true;
+        elements.analyzeButton.disabled = true;
+        return;
+      }
+
+      appendOption(elements.solutionSelect, "environment:all", `All loaded apps and cloud flows (${state.environmentTargets.length})`);
+      elements.solutionSelect.disabled = true;
       updateAnalyzeState();
     }
 
@@ -2235,7 +2459,13 @@
       const filteredAssessment = result.assessment.filter((row) => matchesQuery(row, query));
 
       elements.selectedSolutionTitle.textContent = displaySolutionName(result.solution);
-      elements.selectedSolutionMeta.textContent = result.mode === "target"
+      elements.selectedSolutionMeta.textContent = result.mode === "environment"
+        ? [
+            "environment-level inventory",
+            "direct app/flow table scan",
+            "Default Solution not enumerated"
+          ].join(" | ")
+        : result.mode === "target"
         ? [
             result.solution.uniquename,
             "environment-level inspection",
@@ -2249,7 +2479,7 @@
           ].filter(Boolean).join(" | ");
 
       elements.metricComponents.textContent = String(result.componentCount);
-      elements.metricComponentsLabel.textContent = result.mode === "target" ? "selected target" : "solution components";
+      elements.metricComponentsLabel.textContent = result.mode === "environment" ? "environment assets" : result.mode === "target" ? "selected target" : "solution components";
       elements.metricScanned.textContent = String(result.scannedCount);
       elements.metricServices.textContent = String(result.services.length);
       elements.metricSharePoint.textContent = String(result.sharePointUrls.length);
@@ -2273,7 +2503,7 @@
     function renderInventoryTable(rows) {
       clearNode(elements.inventoryBody);
       if (!rows.length) {
-        appendEmptyRow(elements.inventoryBody, 8, "No matching inventory rows.");
+        appendEmptyRow(elements.inventoryBody, 9, "No matching inventory rows.");
         return;
       }
 
@@ -2281,6 +2511,7 @@
         const tr = document.createElement("tr");
         appendCell(tr, row.component, "strong");
         appendCell(tr, row.type);
+        appendBadgeCell(tr, row.metadata.customSolutions, "accent", "None found");
         appendCell(tr, row.metadata.owner || "Unknown");
         appendCell(tr, row.metadata.status || "Unknown");
         appendCell(tr, formatDate(row.metadata.modified));
@@ -2390,6 +2621,14 @@
             result.target && result.target.kind === "appmodule" ? "appmodules" : "",
             "selected record metadata"
           ].filter(Boolean)
+        : result && result.mode === "environment"
+        ? [
+            "canvasapps",
+            "appmodules",
+            "workflows",
+            "visible non-default solutioncomponents",
+            "Default Solution not enumerated"
+          ]
         : [
             "solutioncomponents",
             "workflows",
@@ -2410,6 +2649,8 @@
       const notes = [
         result.mode === "target"
           ? "Standalone app/flow mode bypasses custom solution membership and reads the selected environment record directly. Every component still appears somewhere in Dataverse, often the Default Solution."
+          : result.mode === "environment"
+          ? "Environment inventory mode avoids the Default Solution. It reads apps and cloud flows directly from their Dataverse tables, then uses visible non-default solution components only to label custom solution membership."
           : "Solution mode starts from solutioncomponents, then reads the component records referenced by the selected solution.",
         "Direct share counts are best-effort from Dataverse PrincipalObjectAccess. Group membership, security role access, and some canvas app run-only sharing may require Power Platform Admin APIs or PowerShell to fully enumerate.",
         "Connection references reliably identify connector/service usage, but URLs are usually found in flow definitions, app metadata, or environment variables.",
@@ -2544,6 +2785,10 @@
     }
 
     function updateAnalyzeState() {
+      if (getInspectionMode() === "environment") {
+        elements.analyzeButton.disabled = state.isBusy || !state.environmentTargetsLoaded || !state.environmentTargets.length;
+        return;
+      }
       elements.analyzeButton.disabled = !elements.solutionSelect.value || state.isBusy;
     }
 
@@ -2587,10 +2832,11 @@
     function exportCsv() {
       if (!state.lastResult) return;
       const rows = [
-        ["Component", "Type", "Owner", "Status", "Modified", "Shared Users", "Shared Teams", "Shared Other", "Total Shares", "Risk Signals", "Services", "SharePoint URLs", "Sources"],
+        ["Component", "Type", "Custom Solutions", "Owner", "Status", "Modified", "Shared Users", "Shared Teams", "Shared Other", "Total Shares", "Risk Signals", "Services", "SharePoint URLs", "Sources"],
         ...state.lastResult.components.map((row) => [
           row.component,
           row.type,
+          row.metadata.customSolutions.join("; "),
           row.metadata.owner,
           row.metadata.status,
           row.metadata.modified,
@@ -2611,8 +2857,9 @@
     async function copySummary() {
       if (!state.lastResult) return;
       const result = state.lastResult;
+      const scopeLabel = result.mode === "environment" ? "Environment inventory" : result.mode === "target" ? "Asset" : "Solution";
       const summary = [
-        `Solution: ${displaySolutionName(result.solution)} (${result.solution.uniquename})`,
+        `${scopeLabel}: ${displaySolutionName(result.solution)} (${result.solution.uniquename})`,
         `Components: ${result.componentCount}`,
         `Scanned records: ${result.scannedCount}`,
         `Direct shares: ${result.shareSummary.totalDirectShares}${result.shareSummary.unknownComponents ? ` (${result.shareSummary.unknownComponents} unknown)` : ""}`,
@@ -2638,7 +2885,9 @@
     }
 
     function makeExportName(extension) {
-      const uniqueName = state.lastResult && state.lastResult.mode === "target"
+      const uniqueName = state.lastResult && state.lastResult.mode === "environment"
+        ? "environment-inventory"
+        : state.lastResult && state.lastResult.mode === "target"
         ? `${state.lastResult.target.kind}-${state.lastResult.target.name}`
         : state.lastResult && state.lastResult.solution
           ? state.lastResult.solution.uniquename
@@ -2690,6 +2939,12 @@
 
     function displaySolutionName(solution) {
       return solution.friendlyname || solution.uniquename || "(unnamed solution)";
+    }
+
+    function isDefaultSolution(solution) {
+      const uniqueName = String(solution && solution.uniquename || "").toLowerCase();
+      const friendlyName = String(solution && solution.friendlyname || "").toLowerCase();
+      return uniqueName === "default" || friendlyName === "default solution";
     }
 
     function getComponentTypeLabel(type) {

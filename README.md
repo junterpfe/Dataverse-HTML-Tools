@@ -15,6 +15,7 @@ Install an individual solution only when the target environment needs a specific
 | Tool | Source | Documentation |
 |---|---|---|
 | [Dataverse HTML Tools Suite](tools/dataverse-html-tools-suite/README.md) | [Installable solution](packages/dataverse-html-tools-suite) | [Suite docs](docs/DataverseHTMLToolsSuite.md) |
+| [Business Unit Configuration](tools/business-unit-configuration/README.md) | [HTML web resource](tools/business-unit-configuration/src/BusinessUnitConfiguration.html) | [Docs](tools/business-unit-configuration/README.md) |
 | [User Effective Security Roles](tools/user-effective-security-roles/README.md) | [HTML web resource](tools/user-effective-security-roles/src/UserEffectiveSecurityRoles.html) | [Docs](tools/user-effective-security-roles/README.md) |
 | User Record Access | [HTML web resource](tools/user-effective-security-roles/src/UserRecordAccess.html) | [Docs](tools/user-effective-security-roles/README.md) |
 | [Role Table Permission Copier](tools/role-table-permission-copier/README.md) | [HTML web resource](tools/role-table-permission-copier/src/RoleTablePermissionCopier.html) | [Docs](tools/role-table-permission-copier/README.md) |

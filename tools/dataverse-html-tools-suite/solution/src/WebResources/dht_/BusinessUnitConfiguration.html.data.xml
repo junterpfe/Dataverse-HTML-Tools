@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WebResource xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <WebResourceId>{7f1c2d9e-5e3b-4e93-9f5f-2d3e9d7e4f20}</WebResourceId>
+  <Name>dht_/BusinessUnitConfiguration.html</Name>
+  <DisplayName>Business Unit Configuration</DisplayName>
+  <LanguageCode>1033</LanguageCode>
+  <WebResourceType>1</WebResourceType>
+  <IntroducedVersion>1.0.0.0</IntroducedVersion>
+  <IsEnabledForMobileClient>0</IsEnabledForMobileClient>
+  <IsAvailableForMobileOffline>0</IsAvailableForMobileOffline>
+  <DependencyXml>&lt;Dependencies&gt;&lt;/Dependencies&gt;</DependencyXml>
+  <IsCustomizable>1</IsCustomizable>
+  <CanBeDeleted>1</CanBeDeleted>
+  <IsHidden>0</IsHidden>
+  <FileName>/WebResources/dht_BusinessUnitConfigurationhtml7F1C2D9E-5E3B-4E93-9F5F-2D3E9D7E4F20</FileName>
+</WebResource>
