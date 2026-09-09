@@ -194,6 +194,16 @@
       align-items: end;
     }
 
+    .admin-import-controls {
+      align-items: end;
+      border-top: 1px solid var(--cp-border);
+      display: grid;
+      gap: 12px;
+      grid-template-columns: minmax(240px, 1fr) auto;
+      margin-top: 14px;
+      padding-top: 14px;
+    }
+
     .field {
       display: grid;
       gap: 6px;
@@ -692,6 +702,7 @@
     @media (max-width: 1000px) {
       .hero,
       .toolbar,
+      .admin-import-controls,
       .search-row,
       .details-grid {
         grid-template-columns: 1fr;
@@ -760,6 +771,7 @@
           <select id="inspectionMode">
             <option value="solution">Solution</option>
             <option value="environment">Environment inventory</option>
+            <option value="adminExport">Admin export JSON</option>
             <option value="target">App or cloud flow</option>
           </select>
         </div>
@@ -773,6 +785,14 @@
         </div>
         <button id="loadSolutionsButton" class="button" type="button">Load solutions</button>
         <button id="analyzeButton" class="button primary" type="button" disabled>Analyze solution</button>
+      </div>
+      <div id="adminImportControls" class="admin-import-controls hidden">
+        <div class="field">
+          <label for="adminImportFile">Admin export JSON</label>
+          <input id="adminImportFile" type="file" accept=".json,application/json">
+          <small id="adminImportHint" class="field-hint">Import JSON generated from Get-AdminPowerApp and Get-AdminFlow.</small>
+        </div>
+        <button id="copyAdminScriptButton" class="button" type="button">Copy export script</button>
       </div>
       <div class="toggle-row">
         <div class="toggle">
@@ -995,7 +1015,7 @@
   </div>
 
   <script>
-    const APP_VERSION = "2026.09.09.1328";
+    const APP_VERSION = "2026.09.09.1349";
     const MAX_SELECT_OPTIONS = 500;
     const FETCHXML_PAGE_SIZE = 5000;
     const MAX_FETCHXML_PAGES = 200;
@@ -1072,8 +1092,15 @@
     const state = {
       solutions: [],
       environmentTargets: [],
+      adminImport: {
+        apps: [],
+        flows: [],
+        sourceName: "",
+        environmentName: ""
+      },
       solutionsLoaded: false,
       environmentTargetsLoaded: false,
+      adminImportLoaded: false,
       selectionFilterText: "",
       selectedSolution: null,
       lastResult: null,
@@ -1090,6 +1117,10 @@
       selectionFilter: document.getElementById("selectionFilter"),
       selectionHint: document.getElementById("selectionHint"),
       solutionSelect: document.getElementById("solutionSelect"),
+      adminImportControls: document.getElementById("adminImportControls"),
+      adminImportFile: document.getElementById("adminImportFile"),
+      adminImportHint: document.getElementById("adminImportHint"),
+      copyAdminScriptButton: document.getElementById("copyAdminScriptButton"),
       loadSolutionsButton: document.getElementById("loadSolutionsButton"),
       analyzeButton: document.getElementById("analyzeButton"),
       visibleOnlyToggle: document.getElementById("visibleOnlyToggle"),
@@ -1159,6 +1190,8 @@
       elements.exportJsonButton.addEventListener("click", exportJson);
       elements.exportCsvButton.addEventListener("click", exportCsv);
       elements.copySummaryButton.addEventListener("click", () => runSafely(copySummary));
+      elements.copyAdminScriptButton.addEventListener("click", () => runSafely(copyAdminExportScript));
+      elements.adminImportFile.addEventListener("change", resetAdminImportState);
       elements.componentDetailCloseButton.addEventListener("click", closeComponentDetails);
       elements.componentDetailOverlay.addEventListener("click", (event) => {
         if (event.target === elements.componentDetailOverlay) {
@@ -1223,14 +1256,22 @@
     function getInspectionMode() {
       if (elements.inspectionMode.value === "target") return "target";
       if (elements.inspectionMode.value === "environment") return "environment";
+      if (elements.inspectionMode.value === "adminExport") return "adminExport";
       return "solution";
     }
 
     function handleInspectionModeChange() {
       state.solutions = [];
       state.environmentTargets = [];
+      state.adminImport = {
+        apps: [],
+        flows: [],
+        sourceName: "",
+        environmentName: ""
+      };
       state.solutionsLoaded = false;
       state.environmentTargetsLoaded = false;
+      state.adminImportLoaded = false;
       state.selectionFilterText = "";
       state.selectedSolution = null;
       state.lastResult = null;
@@ -1242,15 +1283,19 @@
       const mode = getInspectionMode();
       const targetMode = mode === "target";
       const environmentMode = mode === "environment";
-      elements.targetSelectLabel.textContent = environmentMode ? "Scope" : targetMode ? "App or cloud flow" : "Solution";
-      elements.loadSolutionsButton.textContent = environmentMode ? "Load environment" : targetMode ? "Load apps/flows" : "Load solutions";
-      elements.analyzeButton.textContent = environmentMode ? "Analyze inventory" : targetMode ? "Analyze target" : "Analyze solution";
-      elements.visibleOnlyToggle.disabled = targetMode || environmentMode;
-      elements.includeManagedToggle.disabled = targetMode || environmentMode;
+      const adminExportMode = mode === "adminExport";
+      elements.targetSelectLabel.textContent = environmentMode || adminExportMode ? "Scope" : targetMode ? "App or cloud flow" : "Solution";
+      elements.loadSolutionsButton.textContent = adminExportMode ? "Load export" : environmentMode ? "Load environment" : targetMode ? "Load apps/flows" : "Load solutions";
+      elements.analyzeButton.textContent = adminExportMode ? "Analyze export" : environmentMode ? "Analyze inventory" : targetMode ? "Analyze target" : "Analyze solution";
+      elements.visibleOnlyToggle.disabled = targetMode || environmentMode || adminExportMode;
+      elements.includeManagedToggle.disabled = targetMode || environmentMode || adminExportMode;
+      elements.adminImportControls.classList.toggle("hidden", !adminExportMode);
       updateSelectionFilterState();
       renderSelectionOptions();
       updateAnalyzeState();
-      setStatus(environmentMode
+      setStatus(adminExportMode
+        ? "Ready. Choose an Admin export JSON file generated from Get-AdminPowerApp/Get-AdminFlow."
+        : environmentMode
         ? "Ready. Load environment inventory to scan apps/flows directly without enumerating the Default Solution."
         : targetMode
         ? "Ready. Load environment apps/flows to inspect records that are not in a custom solution."
@@ -1258,6 +1303,10 @@
     }
 
     async function loadCurrentList() {
+      if (getInspectionMode() === "adminExport") {
+        await loadAdminExport();
+        return;
+      }
       if (getInspectionMode() === "target" || getInspectionMode() === "environment") {
         await loadEnvironmentTargets();
         return;
@@ -1266,6 +1315,10 @@
     }
 
     async function analyzeCurrentSelection() {
+      if (getInspectionMode() === "adminExport") {
+        await analyzeAdminExport();
+        return;
+      }
       if (getInspectionMode() === "environment") {
         await analyzeEnvironmentInventory();
         return;
@@ -1510,6 +1563,79 @@
       renderResults();
       elements.results.classList.remove("hidden");
       setBusy(false, `Environment inventory complete. Scanned ${result.scannedCount} assets without loading the Default Solution.`);
+    }
+
+    async function loadAdminExport() {
+      const file = elements.adminImportFile.files && elements.adminImportFile.files[0];
+      if (!file) {
+        throw new Error("Choose an Admin export JSON file before loading.");
+      }
+
+      setBusy(true, `Reading ${file.name}...`);
+      const text = await readFileAsText(file);
+      const parsed = parseAdminExportJson(text, file.name);
+      state.adminImport = parsed;
+      state.adminImportLoaded = true;
+      renderSelectionOptions();
+
+      const total = parsed.apps.length + parsed.flows.length;
+      setBusy(false, `Loaded ${total} admin-export assets from ${file.name}: ${parsed.apps.length} Power Apps, ${parsed.flows.length} flows.`);
+    }
+
+    async function analyzeAdminExport() {
+      if (!state.adminImportLoaded) {
+        throw new Error("Load an Admin export JSON file before analyzing.");
+      }
+
+      state.selectedSolution = null;
+      state.lastResult = null;
+      state.selectedComponentId = "";
+      closeComponentDetails();
+      elements.results.classList.add("hidden");
+      setBusy(true, `Analyzing ${state.adminImport.apps.length + state.adminImport.flows.length} admin-export assets...`);
+
+      const adminApps = state.adminImport.apps.map((item, index) => normalizeAdminAppRecord(item, index, state.adminImport.environmentName));
+      const adminFlows = state.adminImport.flows.map((item, index) => normalizeAdminFlowRecord(item, index, state.adminImport.environmentName));
+      const components = [
+        ...adminApps.map((record) => toComponentReference("admin-app", 300, record._inspectorAssetId)),
+        ...adminFlows.map((record) => toComponentReference("admin-flow", 29, record._inspectorAssetId))
+      ];
+      const warnings = [
+        "Admin export mode uses imported Power Platform admin data. It does not prove Dataverse solution membership unless the export contains that information."
+      ];
+
+      const result = buildInspectionResult({
+        mode: "adminExport",
+        target: {
+          kind: "adminExport",
+          name: state.adminImport.sourceName,
+          count: components.length
+        },
+        solution: {
+          friendlyname: "Admin export inventory",
+          uniquename: state.adminImport.environmentName || "Imported Power Platform admin export",
+          version: "",
+          ismanaged: false,
+          modifiedon: ""
+        },
+        components,
+        workflows: [],
+        canvasApps: [],
+        modelDrivenApps: [],
+        adminApps,
+        adminFlows,
+        connectionReferences: [],
+        connectors: [],
+        environmentDefinitions: [],
+        environmentValues: [],
+        warnings
+      });
+
+      await enrichInventory(result);
+      state.lastResult = result;
+      renderResults();
+      elements.results.classList.remove("hidden");
+      setBusy(false, `Admin export inventory complete. Scanned ${result.scannedCount} imported assets.`);
     }
 
     async function analyzeSelectedEnvironmentTarget() {
@@ -1835,6 +1961,12 @@
     function buildInspectionResult(input) {
       const warnings = [...input.warnings];
       const inspectableRecords = [
+        ...(input.adminApps || []).map((record) => toInspectableRecord(record._inspectorType || "Power Apps admin app", record._inspectorAssetId, record._inspectorDisplayName, record, [
+          "_inspectorAdminPayload"
+        ])),
+        ...(input.adminFlows || []).map((record) => toInspectableRecord("Power Automate admin flow", record._inspectorAssetId, record._inspectorDisplayName, record, [
+          "_inspectorAdminPayload"
+        ])),
         ...input.workflows.map((record) => toInspectableRecord("Workflow / cloud flow", record.workflowid, record.name, record, [
           "clientdata",
           "description",
@@ -2021,14 +2153,16 @@
     }
 
     function buildComponentMetadata(record, type) {
-      const modified = record.lastmodifiedtime || record.modifiedon || "";
-      const created = record.createdtime || record.createdon || "";
-      const published = record.lastpublishtime || "";
-      const owner = getLookupName(record, "_ownerid_value")
+      const modified = record._inspectorModified || record.lastmodifiedtime || record.modifiedon || "";
+      const created = record._inspectorCreated || record.createdtime || record.createdon || "";
+      const published = record._inspectorPublished || record.lastpublishtime || "";
+      const owner = record._inspectorOwner
+        || getLookupName(record, "_ownerid_value")
         || getLookupName(record, "_createdby_value")
         || getLookupName(record, "_modifiedby_value")
         || "";
-      const status = getFormattedValue(record, "status")
+      const status = record._inspectorStatus
+        || getFormattedValue(record, "status")
         || getFormattedValue(record, "statuscode")
         || getFormattedValue(record, "statecode")
         || valueLabel(record.status)
@@ -2048,10 +2182,11 @@
         modified,
         published,
         status: lifecycle,
-        version: record.appversion || "",
-        primaryEntity: record.primaryentity || "",
+        version: record._inspectorVersion || record.appversion || "",
+        primaryEntity: record._inspectorPrimaryEntity || record.primaryentity || "",
         customSolutions: Array.isArray(record._inspectorSolutionNames) ? record._inspectorSolutionNames : [],
-        assetLinks: buildAssetLinks(record, type),
+        assetLinks: record._inspectorAssetLinks || buildAssetLinks(record, type),
+        adminSharing: record._inspectorSharing || null,
         type
       };
     }
@@ -2067,6 +2202,331 @@
     function valueLabel(value) {
       if (value === undefined || value === null || value === "") return "";
       return String(value);
+    }
+
+    function readFileAsText(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(reader.error || new Error("Could not read selected file."));
+        reader.readAsText(file);
+      });
+    }
+
+    function parseAdminExportJson(text, sourceName) {
+      let payload;
+      try {
+        payload = JSON.parse(text);
+      } catch (error) {
+        throw new Error(`The selected file is not valid JSON: ${error.message}`);
+      }
+
+      const environmentName = firstScalarValue(payload, [
+        "EnvironmentName",
+        "environmentName",
+        "EnvironmentId",
+        "environmentId",
+        "environment.name",
+        "properties.environment.name"
+      ]) || "";
+      const appItems = extractArrayByNames(payload, ["PowerApps", "powerApps", "Apps", "apps", "PowerApp", "powerApp"]);
+      const flowItems = extractArrayByNames(payload, ["Flows", "flows", "Flow", "flow", "PowerAutomateFlows", "powerAutomateFlows"]);
+
+      if (!appItems.length && !flowItems.length) {
+        const items = Array.isArray(payload) ? payload : [payload];
+        for (const item of items) {
+          if (!item || typeof item !== "object") continue;
+          if (looksLikeAdminFlowItem(item)) {
+            flowItems.push(item);
+          } else if (looksLikeAdminAppItem(item)) {
+            appItems.push(item);
+          }
+        }
+      }
+
+      if (!appItems.length && !flowItems.length) {
+        throw new Error("No Power Apps or flows were found in the JSON. Export an object with PowerApps and Flows arrays, or a raw Get-AdminPowerApp/Get-AdminFlow JSON array.");
+      }
+
+      return {
+        apps: appItems,
+        flows: flowItems,
+        sourceName: sourceName || "Admin export JSON",
+        environmentName
+      };
+    }
+
+    function normalizeAdminAppRecord(item, index, defaultEnvironmentName) {
+      const assetId = firstScalarValue(item, [
+        "AppName",
+        "appName",
+        "Name",
+        "name",
+        "AppId",
+        "appId",
+        "Id",
+        "id",
+        "properties.appName",
+        "properties.name",
+        "properties.appId",
+        "Internal.name",
+        "Internal.properties.name",
+        "Internal.properties.appName"
+      ]) || `admin-app-${index + 1}`;
+      const displayName = firstScalarValue(item, [
+        "DisplayName",
+        "displayName",
+        "properties.displayName",
+        "Internal.properties.displayName",
+        "name",
+        "Name"
+      ]) || assetId;
+      const environmentName = firstScalarValue(item, [
+        "EnvironmentName",
+        "environmentName",
+        "EnvironmentId",
+        "environmentId",
+        "properties.environment.name",
+        "properties.environmentName",
+        "Internal.properties.environment.name",
+        "Internal.properties.environmentName"
+      ]) || defaultEnvironmentName || "";
+      const appType = firstScalarValue(item, [
+        "AppType",
+        "appType",
+        "properties.appType",
+        "Internal.properties.appType",
+        "properties.appTypeName"
+      ]) || "Power Apps app";
+      const normalizedType = /model/i.test(appType) ? "Model-driven app (admin export)" : "Power Apps admin app";
+      const owner = formatPrincipal(firstObjectValue(item, [
+        "Owner",
+        "owner",
+        "CreatedBy",
+        "createdBy",
+        "properties.owner",
+        "properties.createdBy",
+        "Internal.properties.owner",
+        "Internal.properties.createdBy"
+      ])) || firstScalarValue(item, [
+        "Owner",
+        "owner",
+        "CreatedBy",
+        "createdBy",
+        "OwnerEmail",
+        "ownerEmail",
+        "CreatedByEmail",
+        "createdByEmail"
+      ]) || "";
+
+      return {
+        ...item,
+        _inspectorAssetId: String(assetId),
+        _inspectorDisplayName: String(displayName),
+        _inspectorType: normalizedType,
+        _inspectorEnvironmentName: environmentName,
+        _inspectorOwner: owner,
+        _inspectorCreated: firstScalarValue(item, ["CreatedTime", "createdTime", "CreatedOn", "createdOn", "properties.createdTime", "Internal.properties.createdTime"]) || "",
+        _inspectorModified: firstScalarValue(item, ["LastModifiedTime", "lastModifiedTime", "ModifiedTime", "modifiedTime", "properties.lastModifiedTime", "Internal.properties.lastModifiedTime"]) || "",
+        _inspectorPublished: firstScalarValue(item, ["LastPublishTime", "lastPublishTime", "properties.lastPublishTime", "Internal.properties.lastPublishTime"]) || "",
+        _inspectorStatus: firstScalarValue(item, ["Status", "status", "AppType", "appType", "properties.status", "properties.appType", "Internal.properties.status", "Internal.properties.appType"]) || normalizedType,
+        _inspectorVersion: firstScalarValue(item, ["AppVersion", "appVersion", "properties.appVersion", "Internal.properties.appVersion"]) || "",
+        _inspectorSharing: extractAdminSharing(item),
+        _inspectorAssetLinks: buildAdminAssetLinks("app", assetId, environmentName, item),
+        _inspectorAdminPayload: JSON.stringify(item)
+      };
+    }
+
+    function normalizeAdminFlowRecord(item, index, defaultEnvironmentName) {
+      const assetId = firstScalarValue(item, [
+        "FlowName",
+        "flowName",
+        "Name",
+        "name",
+        "FlowId",
+        "flowId",
+        "Id",
+        "id",
+        "properties.flowName",
+        "properties.name",
+        "Internal.name",
+        "Internal.properties.name"
+      ]) || `admin-flow-${index + 1}`;
+      const displayName = firstScalarValue(item, [
+        "DisplayName",
+        "displayName",
+        "properties.displayName",
+        "Internal.properties.displayName",
+        "name",
+        "Name"
+      ]) || assetId;
+      const environmentName = firstScalarValue(item, [
+        "EnvironmentName",
+        "environmentName",
+        "EnvironmentId",
+        "environmentId",
+        "properties.environment.name",
+        "properties.environmentName",
+        "Internal.properties.environment.name",
+        "Internal.properties.environmentName"
+      ]) || defaultEnvironmentName || "";
+      const owner = formatPrincipal(firstObjectValue(item, [
+        "CreatedBy",
+        "createdBy",
+        "Owner",
+        "owner",
+        "properties.createdBy",
+        "properties.owner",
+        "Internal.properties.createdBy",
+        "Internal.properties.owner"
+      ])) || firstScalarValue(item, [
+        "CreatedBy",
+        "createdBy",
+        "Owner",
+        "owner",
+        "CreatedByEmail",
+        "createdByEmail",
+        "OwnerEmail",
+        "ownerEmail"
+      ]) || "";
+
+      return {
+        ...item,
+        _inspectorAssetId: String(assetId),
+        _inspectorDisplayName: String(displayName),
+        _inspectorType: "Power Automate admin flow",
+        _inspectorEnvironmentName: environmentName,
+        _inspectorOwner: owner,
+        _inspectorCreated: firstScalarValue(item, ["CreatedTime", "createdTime", "CreatedOn", "createdOn", "properties.createdTime", "Internal.properties.createdTime"]) || "",
+        _inspectorModified: firstScalarValue(item, ["LastModifiedTime", "lastModifiedTime", "ModifiedTime", "modifiedTime", "properties.lastModifiedTime", "Internal.properties.lastModifiedTime"]) || "",
+        _inspectorStatus: firstScalarValue(item, ["State", "state", "Status", "status", "properties.state", "properties.status", "Internal.properties.state", "Internal.properties.status"]) || "Power Automate admin flow",
+        _inspectorSharing: extractAdminSharing(item),
+        _inspectorAssetLinks: buildAdminAssetLinks("flow", assetId, environmentName, item),
+        _inspectorAdminPayload: JSON.stringify(item)
+      };
+    }
+
+    function extractArrayByNames(payload, names) {
+      if (!payload || typeof payload !== "object") return [];
+      for (const name of names) {
+        const value = payload[name];
+        if (Array.isArray(value)) return value;
+        if (value && typeof value === "object" && Array.isArray(value.value)) return value.value;
+      }
+      return [];
+    }
+
+    function looksLikeAdminAppItem(item) {
+      return Boolean(firstScalarValue(item, ["AppName", "appName", "AppId", "appId", "properties.appName", "properties.appId"]));
+    }
+
+    function looksLikeAdminFlowItem(item) {
+      return Boolean(firstScalarValue(item, ["FlowName", "flowName", "FlowId", "flowId", "properties.flowName"]));
+    }
+
+    function firstScalarValue(item, paths) {
+      for (const path of paths) {
+        const value = getPathValue(item, path);
+        if (value === undefined || value === null || value === "") continue;
+        if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+          return String(value);
+        }
+      }
+      return "";
+    }
+
+    function firstObjectValue(item, paths) {
+      for (const path of paths) {
+        const value = getPathValue(item, path);
+        if (value && typeof value === "object") return value;
+      }
+      return null;
+    }
+
+    function getPathValue(item, path) {
+      return String(path).split(".").reduce((current, part) => {
+        if (current === undefined || current === null) return undefined;
+        return current[part];
+      }, item);
+    }
+
+    function formatPrincipal(value) {
+      if (!value) return "";
+      if (typeof value === "string") return value;
+      return firstScalarValue(value, [
+        "displayName",
+        "DisplayName",
+        "userPrincipalName",
+        "UserPrincipalName",
+        "email",
+        "Email",
+        "id",
+        "Id"
+      ]);
+    }
+
+    function extractAdminSharing(item) {
+      const users = firstNumberValue(item, ["SharedUsersCount", "sharedUsersCount", "UserShareCount", "userShareCount", "properties.sharedUsersCount"]);
+      const teams = firstNumberValue(item, ["SharedGroupsCount", "sharedGroupsCount", "TeamShareCount", "teamShareCount", "properties.sharedGroupsCount"]);
+      const total = firstNumberValue(item, ["SharedCount", "sharedCount", "TotalShareCount", "totalShareCount", "properties.sharedCount"]);
+      if (users === null && teams === null && total === null) return null;
+      const safeUsers = users || 0;
+      const safeTeams = teams || 0;
+      const safeTotal = total === null ? safeUsers + safeTeams : total;
+      return {
+        status: "available",
+        users: safeUsers,
+        teams: safeTeams,
+        other: Math.max(0, safeTotal - safeUsers - safeTeams),
+        total: safeTotal
+      };
+    }
+
+    function firstNumberValue(item, paths) {
+      for (const path of paths) {
+        const value = Number(getPathValue(item, path));
+        if (Number.isFinite(value)) return value;
+      }
+      return null;
+    }
+
+    function buildAdminAssetLinks(kind, assetId, environmentName, item) {
+      const links = [];
+      const clientUrl = tryGetClientUrl();
+      const appOpenUri = firstScalarValue(item, ["AppOpenUri", "appOpenUri", "properties.appOpenUri", "Internal.properties.appOpenUri"]);
+      if (kind === "app" && appOpenUri) {
+        links.push({ label: "Open app", url: normalizeUrl(appOpenUri) });
+      }
+      if (environmentName && assetId && clientUrl) {
+        links.push({
+          label: kind === "flow" ? "Open flow in maker" : "Open app in maker",
+          url: `${getMakerBaseUrl(kind === "flow" ? "flow" : "powerapps", clientUrl)}/environments/${encodeURIComponent(environmentName)}/${kind === "flow" ? "flows" : "apps"}/${encodeURIComponent(assetId)}/details`
+        });
+      }
+      return uniqueLinks(links);
+    }
+
+    async function copyAdminExportScript() {
+      const environmentName = getEnvironmentNameFromContext() || "<environment-id-or-name>";
+      const script = [
+        "$ErrorActionPreference = 'Stop'",
+        "Install-Module Microsoft.PowerApps.Administration.PowerShell -Scope CurrentUser -Force",
+        "Install-Module Microsoft.PowerApps.PowerShell -Scope CurrentUser -AllowClobber -Force",
+        "Add-PowerAppsAccount",
+        `$EnvironmentName = '${environmentName}'`,
+        "$Apps = @(Get-AdminPowerApp -EnvironmentName $EnvironmentName)",
+        "$Flows = @(Get-AdminFlow -EnvironmentName $EnvironmentName)",
+        "$Output = [pscustomobject]@{",
+        "  ExportedAt = (Get-Date).ToString('o')",
+        "  EnvironmentName = $EnvironmentName",
+        "  PowerApps = $Apps",
+        "  Flows = $Flows",
+        "}",
+        "$Output | ConvertTo-Json -Depth 100 | Set-Content -Path .\\power-platform-admin-inventory.json -Encoding UTF8",
+        "Write-Host 'Created power-platform-admin-inventory.json'"
+      ].join("\n");
+      await navigator.clipboard.writeText(script);
+      setStatus("Copied PowerShell admin export script to clipboard.", "success");
     }
 
     function buildAssetLinks(record, type) {
@@ -2221,10 +2681,16 @@
 
     async function enrichInventory(result) {
       const context = { shareWarningAdded: false };
-      for (const batch of chunkArray(result.components, 8)) {
-        await Promise.all(batch.map(async (row) => {
-          row.sharing = await fetchDirectShareCounts(row.id, context, result.warnings);
-        }));
+      if (result.mode === "adminExport") {
+        for (const row of result.components) {
+          row.sharing = row.metadata.adminSharing || { status: "unknown", users: null, teams: null, other: null, total: null };
+        }
+      } else {
+        for (const batch of chunkArray(result.components, 8)) {
+          await Promise.all(batch.map(async (row) => {
+            row.sharing = await fetchDirectShareCounts(row.id, context, result.warnings);
+          }));
+        }
       }
 
       result.shareSummary = {
@@ -2303,6 +2769,9 @@
       if (result.mode === "environment" && isInventoryAssetType(row.type) && !row.metadata.customSolutions.length) {
         risks.push({ severity: "medium", label: "Not in visible custom solution" });
       }
+      if (result.mode === "adminExport") {
+        risks.push({ severity: "low", label: "Imported admin record" });
+      }
       if (row.sharePointUrls.length) {
         risks.push({ severity: "medium", label: "SharePoint URL dependency" });
       }
@@ -2345,6 +2814,7 @@
       addFindingIf(findings, result.mode === "target", "medium", "Packaging", "Selected asset was inspected outside a custom solution.", "Add the app/flow and dependencies to a dedicated unmanaged solution before migration/rebuild analysis.", rows.map((row) => row.component));
       const unpackagedRows = rows.filter((row) => result.mode === "environment" && isInventoryAssetType(row.type) && !row.metadata.customSolutions.length);
       addFindingIf(findings, unpackagedRows.length > 0, "medium", "Packaging", `${unpackagedRows.length} app/flow asset${unpackagedRows.length === 1 ? "" : "s"} not found in visible non-default solutions.`, "Add assets that should migrate together to a dedicated solution, then validate their dependencies from that solution before export/import.", unpackagedRows.map((row) => row.component));
+      addFindingIf(findings, result.mode === "adminExport", "low", "Source", "Inventory was created from imported Power Platform admin data.", "Use this for full Admin Center coverage, then cross-check Dataverse solution membership and richer dependency metadata where needed.", rows.map((row) => row.component));
       addFindingIf(findings, result.sharePointUrls.length > 0, "medium", "Data locations", `${result.sharePointUrls.length} SharePoint URL${result.sharePointUrls.length === 1 ? "" : "s"} detected.`, "Confirm each site/list exists in the target tenant/environment and replace hard-coded URLs with environment variables where possible.", result.sharePointUrls.flatMap((entry) => entry.components));
       addFindingIf(findings, result.rawUrls.length > 0, "medium", "External dependencies", `${result.rawUrls.length} non-platform URL dependenc${result.rawUrls.length === 1 ? "y" : "ies"} detected.`, "Validate endpoint availability, authentication, firewall rules, and cloud boundary constraints before migration.", result.rawUrls.flatMap((entry) => entry.components));
 
@@ -2411,7 +2881,7 @@
     }
 
     function isInventoryAssetType(type) {
-      return /Canvas app|Model-driven app|Workflow|cloud flow/i.test(type || "");
+      return /Canvas app|Model-driven app|Workflow|cloud flow|Power Apps admin app|Power Automate admin flow/i.test(type || "");
     }
 
     function isStale(value, days) {
@@ -2554,6 +3024,7 @@
       const normalized = normalizeUrl(url);
       const host = getUrlHost(normalized);
       const path = getUrlPath(normalized);
+      const clientUrl = tryGetClientUrl();
 
       if (!host) return true;
       if (/\/providers\/Microsoft\.PowerApps\//i.test(path)) return true;
@@ -2581,7 +3052,7 @@
         || /(?:^|\.)usgovcloud-static\.microsoft$/i.test(host)
         || /(?:^|\.)usgovcloud-usercontent\.microsoft$/i.test(host)
         || /(?:^|\.)usgovcloud\.microsoft$/i.test(host)
-        || host === getUrlHost(getClientUrl());
+        || Boolean(clientUrl && host === getUrlHost(clientUrl));
     }
 
     function cleanSharePointUrl(url) {
@@ -2922,7 +3393,30 @@
       updateEnvironmentHint();
     }
 
+    function resetAdminImportState() {
+      state.adminImport = {
+        apps: [],
+        flows: [],
+        sourceName: "",
+        environmentName: ""
+      };
+      state.adminImportLoaded = false;
+      state.lastResult = null;
+      state.selectedComponentId = "";
+      elements.results.classList.add("hidden");
+      closeComponentDetails();
+      renderSelectionOptions();
+      const file = elements.adminImportFile.files && elements.adminImportFile.files[0];
+      elements.adminImportHint.textContent = file
+        ? `Selected ${file.name}. Click Load export to import it.`
+        : "Import JSON generated from Get-AdminPowerApp and Get-AdminFlow.";
+    }
+
     function renderSelectionOptions() {
+      if (getInspectionMode() === "adminExport") {
+        renderAdminExportOptions();
+        return;
+      }
       if (getInspectionMode() === "environment") {
         renderEnvironmentInventoryOptions();
         return;
@@ -2984,6 +3478,23 @@
       updateAnalyzeState();
     }
 
+    function renderAdminExportOptions() {
+      elements.solutionSelect.innerHTML = "";
+      if (!state.adminImportLoaded) {
+        appendOption(elements.solutionSelect, "", "Load admin export first");
+        elements.solutionSelect.disabled = true;
+        elements.analyzeButton.disabled = true;
+        updateSelectionHint(0, 0, false);
+        return;
+      }
+
+      const total = state.adminImport.apps.length + state.adminImport.flows.length;
+      appendOption(elements.solutionSelect, "adminExport:all", `All imported assets (${total})`);
+      elements.solutionSelect.disabled = true;
+      updateSelectionHint(total, total, true);
+      updateAnalyzeState();
+    }
+
     function renderEnvironmentTargetOptions() {
       elements.solutionSelect.innerHTML = "";
       if (!state.environmentTargets.length) {
@@ -3030,7 +3541,13 @@
       const filteredAssessment = result.assessment.filter((row) => matchesQuery(row, query));
 
       elements.selectedSolutionTitle.textContent = displaySolutionName(result.solution);
-      elements.selectedSolutionMeta.textContent = result.mode === "environment"
+      elements.selectedSolutionMeta.textContent = result.mode === "adminExport"
+        ? [
+            "Power Platform admin export",
+            state.adminImport.sourceName || "imported JSON",
+            result.solution.uniquename
+          ].filter(Boolean).join(" | ")
+        : result.mode === "environment"
         ? [
             "environment-level inventory",
             "direct app/flow table scan",
@@ -3050,7 +3567,7 @@
           ].filter(Boolean).join(" | ");
 
       elements.metricComponents.textContent = String(result.componentCount);
-      elements.metricComponentsLabel.textContent = result.mode === "environment" ? "environment assets" : result.mode === "target" ? "selected target" : "solution components";
+      elements.metricComponentsLabel.textContent = result.mode === "adminExport" ? "imported assets" : result.mode === "environment" ? "environment assets" : result.mode === "target" ? "selected target" : "solution components";
       elements.metricScanned.textContent = String(result.scannedCount);
       elements.metricServices.textContent = String(result.services.length);
       elements.metricSharePoint.textContent = String(result.sharePointUrls.length);
@@ -3198,6 +3715,13 @@
             result.target && result.target.kind === "appmodule" ? "appmodules" : "",
             "selected record metadata"
           ].filter(Boolean)
+        : result && result.mode === "adminExport"
+        ? [
+            "Get-AdminPowerApp export",
+            "Get-AdminFlow export",
+            "imported JSON metadata",
+            "Dataverse not queried for missing admin-only apps"
+          ]
         : result && result.mode === "environment"
         ? [
             "canvasapps",
@@ -3226,6 +3750,8 @@
       const notes = [
         result.mode === "target"
           ? "Standalone app/flow mode bypasses custom solution membership and reads the selected environment record directly. Every component still appears somewhere in Dataverse, often the Default Solution."
+          : result.mode === "adminExport"
+          ? "Admin export mode inventories imported Power Platform admin data. Use it when the Maker/Admin app list has assets that do not appear in Dataverse-visible canvasapp/appmodule/workflow tables."
           : result.mode === "environment"
           ? "Environment inventory mode avoids the Default Solution. It reads Dataverse-visible apps and cloud flows directly from their Dataverse tables, then uses visible non-default solution components only to label custom solution membership. If Power Platform Admin Center shows more apps than this page, those require admin APIs/PowerShell or an app-registration inventory process."
           : "Solution mode starts from solutioncomponents, then reads the component records referenced by the selected solution.",
@@ -3584,8 +4110,11 @@
 
     function updateSelectionFilterState() {
       const environmentMode = getInspectionMode() === "environment";
-      elements.selectionFilter.disabled = environmentMode;
-      elements.selectionFilter.placeholder = environmentMode
+      const adminExportMode = getInspectionMode() === "adminExport";
+      elements.selectionFilter.disabled = environmentMode || adminExportMode;
+      elements.selectionFilter.placeholder = adminExportMode
+        ? "Admin export scans all imported assets"
+        : environmentMode
         ? "Environment inventory scans all loaded assets"
         : getInspectionMode() === "target"
         ? "Search loaded apps and cloud flows"
@@ -3594,6 +4123,12 @@
 
     function updateSelectionHint(matchCount, totalCount, loaded) {
       updateSelectionFilterState();
+      if (getInspectionMode() === "adminExport") {
+        elements.selectionHint.textContent = loaded
+          ? `Admin export will scan all ${totalCount} imported apps and flows.`
+          : "Choose a JSON file, then click Load export.";
+        return;
+      }
       if (getInspectionMode() === "environment") {
         elements.selectionHint.textContent = loaded
           ? `Environment inventory will scan all ${totalCount} loaded apps and cloud flows.`
@@ -3640,6 +4175,10 @@
     }
 
     function updateAnalyzeState() {
+      if (getInspectionMode() === "adminExport") {
+        elements.analyzeButton.disabled = state.isBusy || !state.adminImportLoaded || !(state.adminImport.apps.length + state.adminImport.flows.length);
+        return;
+      }
       if (getInspectionMode() === "environment") {
         elements.analyzeButton.disabled = state.isBusy || !state.environmentTargetsLoaded || !state.environmentTargets.length;
         return;
@@ -3713,7 +4252,7 @@
     async function copySummary() {
       if (!state.lastResult) return;
       const result = state.lastResult;
-      const scopeLabel = result.mode === "environment" ? "Environment inventory" : result.mode === "target" ? "Asset" : "Solution";
+      const scopeLabel = result.mode === "adminExport" ? "Admin export inventory" : result.mode === "environment" ? "Environment inventory" : result.mode === "target" ? "Asset" : "Solution";
       const summary = [
         `${scopeLabel}: ${displaySolutionName(result.solution)} (${result.solution.uniquename})`,
         `Components: ${result.componentCount}`,
@@ -3741,7 +4280,9 @@
     }
 
     function makeExportName(extension) {
-      const uniqueName = state.lastResult && state.lastResult.mode === "environment"
+      const uniqueName = state.lastResult && state.lastResult.mode === "adminExport"
+        ? "admin-export-inventory"
+        : state.lastResult && state.lastResult.mode === "environment"
         ? "environment-inventory"
         : state.lastResult && state.lastResult.mode === "target"
         ? `${state.lastResult.target.kind}-${state.lastResult.target.name}`
