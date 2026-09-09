@@ -995,8 +995,10 @@
   </div>
 
   <script>
-    const APP_VERSION = "2026.09.09.1301";
+    const APP_VERSION = "2026.09.09.1328";
     const MAX_SELECT_OPTIONS = 500;
+    const FETCHXML_PAGE_SIZE = 5000;
+    const MAX_FETCHXML_PAGES = 200;
 
     const COMPONENT_TYPES = new Map([
       [1, "Table"],
@@ -1311,21 +1313,9 @@
       const warnings = [];
 
       const [canvasApps, modelDrivenApps, workflows] = await Promise.all([
-        fetchEntityList("canvasapps", [
-          { select: "canvasappid,name,displayname,modifiedon", query: `$orderby=${encodeURIComponent("displayname asc")}` },
-          { select: "canvasappid,name,displayname,modifiedon", query: `$orderby=${encodeURIComponent("name asc")}` },
-          { select: "canvasappid,name,displayname" }
-        ], warnings),
-        fetchEntityList("appmodules", [
-          { select: "appmoduleid,name,uniquename,modifiedon", query: `$orderby=${encodeURIComponent("name asc")}` },
-          { select: "appmoduleid,name,uniquename" },
-          { select: "appmoduleid,name" }
-        ], warnings),
-        fetchEntityList("workflows", [
-          { select: "workflowid,name,category,statecode,statuscode,modifiedon", query: `$filter=${encodeURIComponent("category eq 5")}&$orderby=${encodeURIComponent("name asc")}` },
-          { select: "workflowid,name,category,statecode,statuscode,modifiedon", query: `$orderby=${encodeURIComponent("name asc")}` },
-          { select: "workflowid,name,category" }
-        ], warnings)
+        fetchCanvasAppList(warnings),
+        fetchModelDrivenAppList(warnings),
+        fetchCloudFlowList(warnings)
       ]);
 
       const appTargets = canvasApps
@@ -1368,8 +1358,8 @@
       renderSelectionOptions();
       const warningSuffix = warnings.length ? ` Warnings: ${warnings.join(" ")}` : "";
       setBusy(false, environmentMode
-        ? `Loaded ${state.environmentTargets.length} apps/flows for environment inventory from ${getUrlHost(clientUrl)}.${warningSuffix}`
-        : `Loaded ${state.environmentTargets.length} apps/flows from ${getUrlHost(clientUrl)}.${warningSuffix}`);
+        ? `Loaded ${state.environmentTargets.length} Dataverse-visible assets for environment inventory: ${appTargets.length} canvas apps, ${modelDrivenAppTargets.length} model-driven apps, ${flowTargets.length} cloud flows.${warningSuffix}`
+        : `Loaded ${state.environmentTargets.length} apps/flows: ${appTargets.length} canvas apps, ${modelDrivenAppTargets.length} model-driven apps, ${flowTargets.length} cloud flows.${warningSuffix}`);
     }
 
     async function analyzeSelectedSolution() {
@@ -1627,21 +1617,9 @@
 
     async function fetchEnvironmentInventoryRecords(warnings) {
       const [canvasApps, modelDrivenApps, workflowRecords] = await Promise.all([
-        fetchEntityList("canvasapps", [
-          { select: "canvasappid,name,displayname,connectionreferences,authorizationreferences,appcomponents,cdsdependencies,databasereferences,description,createdtime,lastmodifiedtime,lastpublishtime,appversion,status,modifiedon,_ownerid_value,_createdby_value,_modifiedby_value", query: `$orderby=${encodeURIComponent("displayname asc")}` },
-          { select: "canvasappid,name,displayname,connectionreferences,authorizationreferences,appcomponents,description,lastmodifiedtime,lastpublishtime,status,_ownerid_value", query: `$orderby=${encodeURIComponent("name asc")}` },
-          { select: "canvasappid,name,displayname,connectionreferences" }
-        ], warnings),
-        fetchEntityList("appmodules", [
-          { select: "appmoduleid,name,uniquename,description,appmodulexml,configxml,createdon,modifiedon,statecode,statuscode,_createdby_value,_modifiedby_value", query: `$orderby=${encodeURIComponent("name asc")}` },
-          { select: "appmoduleid,name,uniquename,description,createdon,modifiedon,statecode,statuscode" },
-          { select: "appmoduleid,name,uniquename" }
-        ], warnings),
-        fetchEntityList("workflows", [
-          { select: "workflowid,name,category,type,clientdata,description,mode,statecode,statuscode,primaryentity,createdon,modifiedon,_ownerid_value,_createdby_value,_modifiedby_value", query: `$filter=${encodeURIComponent("category eq 5")}&$orderby=${encodeURIComponent("name asc")}` },
-          { select: "workflowid,name,category,clientdata,description,statecode,statuscode,createdon,modifiedon,_ownerid_value", query: `$orderby=${encodeURIComponent("name asc")}` },
-          { select: "workflowid,name,category,clientdata" }
-        ], warnings)
+        fetchCanvasAppDetails(warnings),
+        fetchModelDrivenAppDetails(warnings),
+        fetchCloudFlowDetails(warnings)
       ]);
 
       return {
@@ -1649,6 +1627,141 @@
         modelDrivenApps: modelDrivenApps.filter((record) => record.appmoduleid),
         workflows: workflowRecords.filter((record) => record.workflowid && looksLikeCloudFlow(record))
       };
+    }
+
+    async function fetchCanvasAppList(warnings) {
+      return fetchEntityList("canvasapps", [
+        {
+          label: "canvas app list",
+          fetchXml: createFetchXmlBuilder("canvasapp", ["canvasappid", "name", "displayname", "modifiedon"], {
+            order: [{ attribute: "displayname" }, { attribute: "name" }]
+          })
+        },
+        { select: "canvasappid,name,displayname,modifiedon", query: `$orderby=${encodeURIComponent("displayname asc")}` },
+        { select: "canvasappid,name,displayname,modifiedon", query: `$orderby=${encodeURIComponent("name asc")}` },
+        { select: "canvasappid,name,displayname" }
+      ], warnings);
+    }
+
+    async function fetchCanvasAppDetails(warnings) {
+      return fetchEntityList("canvasapps", [
+        {
+          label: "canvas app details",
+          fetchXml: createFetchXmlBuilder("canvasapp", [
+            "canvasappid",
+            "name",
+            "displayname",
+            "appopenuri",
+            "connectionreferences",
+            "authorizationreferences",
+            "appcomponents",
+            "cdsdependencies",
+            "databasereferences",
+            "description",
+            "createdtime",
+            "lastmodifiedtime",
+            "lastpublishtime",
+            "appversion",
+            "status",
+            "modifiedon",
+            "ownerid",
+            "createdby",
+            "modifiedby"
+          ], {
+            order: [{ attribute: "displayname" }, { attribute: "name" }]
+          })
+        },
+        { select: "canvasappid,name,displayname,connectionreferences,authorizationreferences,appcomponents,cdsdependencies,databasereferences,description,createdtime,lastmodifiedtime,lastpublishtime,appversion,status,modifiedon,_ownerid_value,_createdby_value,_modifiedby_value", query: `$orderby=${encodeURIComponent("displayname asc")}` },
+        { select: "canvasappid,name,displayname,connectionreferences,authorizationreferences,appcomponents,description,lastmodifiedtime,lastpublishtime,status,_ownerid_value", query: `$orderby=${encodeURIComponent("name asc")}` },
+        { select: "canvasappid,name,displayname,connectionreferences" }
+      ], warnings);
+    }
+
+    async function fetchModelDrivenAppList(warnings) {
+      return fetchEntityList("appmodules", [
+        {
+          label: "model-driven app list",
+          fetchXml: createFetchXmlBuilder("appmodule", ["appmoduleid", "name", "uniquename", "modifiedon"], {
+            order: [{ attribute: "name" }]
+          })
+        },
+        { select: "appmoduleid,name,uniquename,modifiedon", query: `$orderby=${encodeURIComponent("name asc")}` },
+        { select: "appmoduleid,name,uniquename" },
+        { select: "appmoduleid,name" }
+      ], warnings);
+    }
+
+    async function fetchModelDrivenAppDetails(warnings) {
+      return fetchEntityList("appmodules", [
+        {
+          label: "model-driven app details",
+          fetchXml: createFetchXmlBuilder("appmodule", [
+            "appmoduleid",
+            "name",
+            "uniquename",
+            "description",
+            "appmodulexml",
+            "configxml",
+            "createdon",
+            "modifiedon",
+            "statecode",
+            "statuscode",
+            "createdby",
+            "modifiedby"
+          ], {
+            order: [{ attribute: "name" }]
+          })
+        },
+        { select: "appmoduleid,name,uniquename,description,appmodulexml,configxml,createdon,modifiedon,statecode,statuscode,_createdby_value,_modifiedby_value", query: `$orderby=${encodeURIComponent("name asc")}` },
+        { select: "appmoduleid,name,uniquename,description,createdon,modifiedon,statecode,statuscode" },
+        { select: "appmoduleid,name,uniquename" }
+      ], warnings);
+    }
+
+    async function fetchCloudFlowList(warnings) {
+      return fetchEntityList("workflows", [
+        {
+          label: "cloud flow list",
+          fetchXml: createFetchXmlBuilder("workflow", ["workflowid", "name", "category", "statecode", "statuscode", "modifiedon"], {
+            filter: [{ attribute: "category", operator: "eq", value: "5" }],
+            order: [{ attribute: "name" }]
+          })
+        },
+        { select: "workflowid,name,category,statecode,statuscode,modifiedon", query: `$filter=${encodeURIComponent("category eq 5")}&$orderby=${encodeURIComponent("name asc")}` },
+        { select: "workflowid,name,category,statecode,statuscode,modifiedon", query: `$orderby=${encodeURIComponent("name asc")}` },
+        { select: "workflowid,name,category" }
+      ], warnings);
+    }
+
+    async function fetchCloudFlowDetails(warnings) {
+      return fetchEntityList("workflows", [
+        {
+          label: "cloud flow details",
+          fetchXml: createFetchXmlBuilder("workflow", [
+            "workflowid",
+            "name",
+            "category",
+            "type",
+            "clientdata",
+            "description",
+            "mode",
+            "statecode",
+            "statuscode",
+            "primaryentity",
+            "createdon",
+            "modifiedon",
+            "ownerid",
+            "createdby",
+            "modifiedby"
+          ], {
+            filter: [{ attribute: "category", operator: "eq", value: "5" }],
+            order: [{ attribute: "name" }]
+          })
+        },
+        { select: "workflowid,name,category,type,clientdata,description,mode,statecode,statuscode,primaryentity,createdon,modifiedon,_ownerid_value,_createdby_value,_modifiedby_value", query: `$filter=${encodeURIComponent("category eq 5")}&$orderby=${encodeURIComponent("name asc")}` },
+        { select: "workflowid,name,category,clientdata,description,statecode,statuscode,createdon,modifiedon,_ownerid_value", query: `$orderby=${encodeURIComponent("name asc")}` },
+        { select: "workflowid,name,category,clientdata" }
+      ], warnings);
     }
 
     async function fetchVisibleCustomSolutionMembership(warnings) {
@@ -2605,6 +2718,9 @@
       for (let index = 0; index < attempts.length; index += 1) {
         const attempt = attempts[index];
         try {
+          if (attempt.fetchXml) {
+            return await retrieveAllFetchXml(entitySet, attempt.fetchXml, attempt.label || entitySet, warnings);
+          }
           const query = `${entitySet}?$select=${attempt.select}${attempt.query ? `&${attempt.query}` : ""}`;
           return await retrieveAll(query);
         } catch (error) {
@@ -2615,6 +2731,79 @@
       }
 
       return [];
+    }
+
+    async function retrieveAllFetchXml(entitySet, buildFetchXml, label, warnings) {
+      const values = [];
+      let page = 1;
+      let pagingCookie = "";
+      let totalRecordCount = null;
+      let totalRecordCountLimitExceeded = false;
+
+      while (page <= MAX_FETCHXML_PAGES) {
+        const fetchXml = buildFetchXml({
+          page,
+          count: FETCHXML_PAGE_SIZE,
+          pagingCookie
+        });
+        const response = await dataverseGet(`${entitySet}?fetchXml=${encodeURIComponent(fetchXml)}`);
+        const pageValues = response.value || [];
+        values.push(...pageValues);
+
+        if (page === 1) {
+          totalRecordCount = response["@Microsoft.Dynamics.CRM.totalrecordcount"];
+          totalRecordCountLimitExceeded = Boolean(response["@Microsoft.Dynamics.CRM.totalrecordcountlimitexceeded"]);
+        }
+
+        pagingCookie = response["@Microsoft.Dynamics.CRM.fetchxmlpagingcookie"] || "";
+        if (!pagingCookie || pageValues.length === 0) {
+          if (pageValues.length === FETCHXML_PAGE_SIZE && warnings) {
+            warnings.push(`${label} returned exactly ${FETCHXML_PAGE_SIZE} rows without a paging cookie; results may be incomplete due to an environment/API limit.`);
+          }
+          const numericTotalRecordCount = Number(totalRecordCount);
+          if (Number.isFinite(numericTotalRecordCount) && numericTotalRecordCount > values.length && warnings) {
+            warnings.push(`${label} returned ${values.length} rows but Dataverse reported ${numericTotalRecordCount}; results may be incomplete.`);
+          }
+          if (totalRecordCountLimitExceeded && warnings) {
+            warnings.push(`${label} exceeded Dataverse's total-count limit. Paging still completed, but the displayed server count may be approximate.`);
+          }
+          return values;
+        }
+
+        page += 1;
+      }
+
+      throw new Error(`${label} exceeded ${MAX_FETCHXML_PAGES} FetchXML pages. Narrow the inventory scope or use an admin export/API process.`);
+    }
+
+    function createFetchXmlBuilder(entityName, attributes, options = {}) {
+      return ({ page, count, pagingCookie }) => {
+        const paging = pagingCookie ? ` paging-cookie="${xmlAttribute(pagingCookie)}"` : "";
+        const attributeXml = attributes.map((attribute) => `<attribute name="${xmlAttribute(attribute)}" />`).join("");
+        const orderXml = (options.order || [])
+          .map((order) => `<order attribute="${xmlAttribute(order.attribute)}"${order.descending ? ' descending="true"' : ""} />`)
+          .join("");
+        const filterXml = (options.filter || []).length
+          ? `<filter type="and">${options.filter.map(fetchXmlCondition).join("")}</filter>`
+          : "";
+
+        return `<fetch version="1.0" mapping="logical" returntotalrecordcount="true" count="${count}" page="${page}"${paging}><entity name="${xmlAttribute(entityName)}">${attributeXml}${orderXml}${filterXml}</entity></fetch>`;
+      };
+    }
+
+    function fetchXmlCondition(condition) {
+      const value = condition.value === undefined || condition.value === null
+        ? ""
+        : ` value="${xmlAttribute(condition.value)}"`;
+      return `<condition attribute="${xmlAttribute(condition.attribute)}" operator="${xmlAttribute(condition.operator)}"${value} />`;
+    }
+
+    function xmlAttribute(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
     }
 
     function looksLikeCloudFlow(record) {
@@ -2628,9 +2817,15 @@
       while (nextUrl) {
         const page = await dataverseGet(nextUrl);
         values.push(...(page.value || []));
-        nextUrl = page["@odata.nextLink"] || "";
+        nextUrl = normalizeNextLink(page["@odata.nextLink"] || "");
       }
       return values;
+    }
+
+    function normalizeNextLink(nextLink) {
+      if (!nextLink) return "";
+      if (/^https?:\/\//i.test(nextLink)) return nextLink;
+      return nextLink.replace(/^\/api\/data\/v[0-9.]+\//i, "");
     }
 
     async function dataverseGet(relativeOrAbsoluteUrl) {
@@ -2647,7 +2842,7 @@
           "Content-Type": "application/json; charset=utf-8",
           "OData-MaxVersion": "4.0",
           "OData-Version": "4.0",
-          "Prefer": "odata.include-annotations=\"OData.Community.Display.V1.FormattedValue\""
+          "Prefer": "odata.include-annotations=\"OData.Community.Display.V1.FormattedValue\",odata.maxpagesize=5000"
         }
       });
 
@@ -3032,7 +3227,7 @@
         result.mode === "target"
           ? "Standalone app/flow mode bypasses custom solution membership and reads the selected environment record directly. Every component still appears somewhere in Dataverse, often the Default Solution."
           : result.mode === "environment"
-          ? "Environment inventory mode avoids the Default Solution. It reads apps and cloud flows directly from their Dataverse tables, then uses visible non-default solution components only to label custom solution membership."
+          ? "Environment inventory mode avoids the Default Solution. It reads Dataverse-visible apps and cloud flows directly from their Dataverse tables, then uses visible non-default solution components only to label custom solution membership. If Power Platform Admin Center shows more apps than this page, those require admin APIs/PowerShell or an app-registration inventory process."
           : "Solution mode starts from solutioncomponents, then reads the component records referenced by the selected solution.",
         "Direct share counts are best-effort from Dataverse PrincipalObjectAccess. Group membership, security role access, and some canvas app run-only sharing may require Power Platform Admin APIs or PowerShell to fully enumerate.",
         "Connection references reliably identify connector/service usage, but URLs are usually found in flow definitions, app metadata, or environment variables.",

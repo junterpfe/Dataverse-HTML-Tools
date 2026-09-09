@@ -51,10 +51,12 @@ The **Inspect** selector supports:
 | Mode | What it scans |
 |---|---|
 | Solution | Starts from `solutioncomponents`, then reads referenced app, flow, connector, connection reference, and environment variable records |
-| Environment inventory | Reads `canvasapps`, `appmodules`, and cloud-flow `workflows` directly, then checks visible non-default solution membership for those asset types |
+| Environment inventory | Reads Dataverse-visible `canvasapps`, `appmodules`, and cloud-flow `workflows` directly, then checks visible non-default solution membership for those asset types |
 | App or cloud flow | Lists environment-level canvas apps, model-driven apps, and cloud flows directly so assets outside a custom solution can be inspected |
 
 Use **Environment inventory** instead of selecting the Default Solution. The Default Solution can contain tens of thousands of components, which makes browser-based full-component enumeration slow, partial, or throttled. Environment inventory avoids that path and scans the asset tables directly.
+
+If Power Platform Admin Center shows more apps than Environment inventory returns, those extra assets are not visible through this same-environment Dataverse web resource. A complete tenant/admin inventory requires Power Platform admin APIs or PowerShell, such as `Get-AdminPowerApp`, with appropriate admin permissions.
 
 ### Inventory table
 
@@ -136,6 +138,7 @@ The tool does not bypass Dataverse, Power Platform, or tenant security.
 
 - The no-app-registration version is same-environment only.
 - The Default Solution is intentionally not used for environment-wide inventory; use **Environment inventory** for apps/flows outside custom solutions.
+- Environment inventory is Dataverse-visible inventory, not a replacement for Power Platform Admin Center tenant/admin inventory.
 - Migration signals are heuristic and based only on metadata readable by the current user.
 - Direct share counts are best-effort from Dataverse `PrincipalObjectAccess`; group membership, security role access, and some canvas app run-only sharing may require Power Platform Admin APIs or PowerShell.
 - Runtime usage, flow run history, licensing detail, DLP policy impact, and business criticality are not fully determined by this page.

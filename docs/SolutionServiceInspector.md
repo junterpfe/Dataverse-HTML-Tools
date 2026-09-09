@@ -19,9 +19,11 @@ See the tool documentation: [tools/solution-service-inspector/README.md](../tool
 
 ## Environment inventory
 
-Use **Environment inventory** for broad app/flow discovery. It reads apps and cloud flows directly from `canvasapps`, `appmodules`, and cloud-flow `workflows`, then checks visible non-default solution membership for those asset types.
+Use **Environment inventory** for broad app/flow discovery. It reads Dataverse-visible apps and cloud flows directly from `canvasapps`, `appmodules`, and cloud-flow `workflows`, then checks visible non-default solution membership for those asset types.
 
 Do not use the Default Solution as a full-environment inventory source. It can contain tens of thousands of components, which makes browser-based enumeration slow, partial, or throttled.
+
+If Power Platform Admin Center shows more apps than this page returns, those additional assets require Power Platform admin APIs or PowerShell with appropriate admin permissions.
 
 ## Component details
 
