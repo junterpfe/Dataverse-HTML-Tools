@@ -12,6 +12,7 @@ It is designed for scenarios like:
 - Inspecting canvas apps, model-driven apps, and cloud flows that are not in a custom solution
 - Extracting connected services and SharePoint URLs from readable Dataverse metadata
 - Showing owner, status, modified date, direct-share counts, and heuristic migration signals
+- Opening a per-component details view from inventory rows, component rows, and component badges
 - Exporting inventory results to JSON or CSV
 
 ## Files
@@ -65,6 +66,8 @@ The inventory view shows:
 - Last modified date
 - Best-effort direct user/team share counts
 - Heuristic risk signals
+
+Asset names are clickable. Selecting an asset opens a details panel with package membership, metadata, share counts, connected services, SharePoint URLs, non-platform dependency URLs, risk signals, and the source fields used by the scanner.
 
 ### Service and URL detection
 

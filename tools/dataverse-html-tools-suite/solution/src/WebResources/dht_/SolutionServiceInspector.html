@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:,">
   <title>Power Platform Solution Service Inspector</title>
   <script>
     (() => {
@@ -475,6 +476,38 @@
       border-color: var(--cp-danger);
     }
 
+    .badge-button {
+      cursor: pointer;
+    }
+
+    .badge-button:hover {
+      border-color: var(--cp-accent);
+    }
+
+    .link-button {
+      background: transparent;
+      border: 0;
+      color: var(--cp-link);
+      cursor: pointer;
+      font-weight: 700;
+      padding: 0;
+      text-align: left;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .link-button:hover {
+      color: var(--cp-accent);
+    }
+
+    .clickable-row {
+      cursor: pointer;
+    }
+
+    .clickable-row:hover td {
+      background: var(--cp-accent-soft);
+    }
+
     .truncate {
       overflow: hidden;
       text-overflow: ellipsis;
@@ -549,6 +582,103 @@
       white-space: pre-wrap;
     }
 
+    .detail-overlay {
+      align-items: stretch;
+      background: var(--cp-overlay);
+      display: flex;
+      inset: 0;
+      justify-content: flex-end;
+      padding: 24px;
+      position: fixed;
+      z-index: 20;
+    }
+
+    .detail-panel {
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      box-shadow: var(--cp-shadow);
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 48px);
+      max-width: 860px;
+      overflow: hidden;
+      width: min(860px, 100%);
+    }
+
+    .detail-header {
+      align-items: flex-start;
+      border-bottom: 1px solid var(--cp-border);
+      display: flex;
+      gap: 16px;
+      justify-content: space-between;
+      padding: 18px;
+    }
+
+    .detail-header h2 {
+      font-size: 22px;
+      margin: 0 0 4px;
+    }
+
+    .detail-header p {
+      color: var(--cp-text-muted);
+      margin: 0;
+    }
+
+    .detail-body {
+      display: grid;
+      gap: 14px;
+      overflow: auto;
+      padding: 18px;
+    }
+
+    .detail-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .detail-field {
+      background: var(--cp-bg-elevated);
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      min-width: 0;
+      padding: 10px;
+    }
+
+    .detail-label {
+      color: var(--cp-text-muted);
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      margin-bottom: 4px;
+    }
+
+    .detail-value {
+      overflow-wrap: anywhere;
+    }
+
+    .detail-section {
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .detail-section h3 {
+      font-size: 16px;
+      margin: 0 0 10px;
+    }
+
+    .detail-link-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    body.detail-open {
+      overflow: hidden;
+    }
+
     .hidden {
       display: none !important;
     }
@@ -563,6 +693,10 @@
 
       .stats-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .detail-grid {
+        grid-template-columns: 1fr;
       }
 
       .secondary-actions {
@@ -838,8 +972,22 @@
     </section>
   </main>
 
+  <div id="componentDetailOverlay" class="detail-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="componentDetailTitle">
+    <section class="detail-panel">
+      <header class="detail-header">
+        <div>
+          <p class="eyebrow">Component details</p>
+          <h2 id="componentDetailTitle">Component</h2>
+          <p id="componentDetailSubtitle"></p>
+        </div>
+        <button id="componentDetailCloseButton" class="button" type="button">Close</button>
+      </header>
+      <div id="componentDetailBody" class="detail-body"></div>
+    </section>
+  </div>
+
   <script>
-    const APP_VERSION = "2026.09.09.1210";
+    const APP_VERSION = "2026.09.09.1232";
 
     const COMPONENT_TYPES = new Map([
       [1, "Table"],
@@ -917,6 +1065,7 @@
       environmentTargetsLoaded: false,
       selectedSolution: null,
       lastResult: null,
+      selectedComponentId: "",
       detectedClientUrl: "",
       isBusy: false
     };
@@ -956,6 +1105,11 @@
       scanScopeBadges: document.getElementById("scanScopeBadges"),
       notes: document.getElementById("notes"),
       appVersion: document.getElementById("appVersion"),
+      componentDetailOverlay: document.getElementById("componentDetailOverlay"),
+      componentDetailTitle: document.getElementById("componentDetailTitle"),
+      componentDetailSubtitle: document.getElementById("componentDetailSubtitle"),
+      componentDetailBody: document.getElementById("componentDetailBody"),
+      componentDetailCloseButton: document.getElementById("componentDetailCloseButton"),
       exportJsonButton: document.getElementById("exportJsonButton"),
       exportCsvButton: document.getElementById("exportCsvButton"),
       copySummaryButton: document.getElementById("copySummaryButton"),
@@ -987,6 +1141,17 @@
       elements.exportJsonButton.addEventListener("click", exportJson);
       elements.exportCsvButton.addEventListener("click", exportCsv);
       elements.copySummaryButton.addEventListener("click", () => runSafely(copySummary));
+      elements.componentDetailCloseButton.addEventListener("click", closeComponentDetails);
+      elements.componentDetailOverlay.addEventListener("click", (event) => {
+        if (event.target === elements.componentDetailOverlay) {
+          closeComponentDetails();
+        }
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !elements.componentDetailOverlay.classList.contains("hidden")) {
+          closeComponentDetails();
+        }
+      });
       elements.themeToggle.addEventListener("click", toggleTheme);
 
       for (const button of document.querySelectorAll(".tab-button")) {
@@ -1050,6 +1215,8 @@
       state.environmentTargetsLoaded = false;
       state.selectedSolution = null;
       state.lastResult = null;
+      state.selectedComponentId = "";
+      closeComponentDetails();
       elements.results.classList.add("hidden");
 
       const mode = getInspectionMode();
@@ -1198,6 +1365,8 @@
 
       state.selectedSolution = solution;
       state.lastResult = null;
+      state.selectedComponentId = "";
+      closeComponentDetails();
       elements.results.classList.add("hidden");
       setBusy(true, `Reading components for ${displaySolutionName(solution)}...`);
 
@@ -1282,6 +1451,8 @@
 
       state.selectedSolution = null;
       state.lastResult = null;
+      state.selectedComponentId = "";
+      closeComponentDetails();
       elements.results.classList.add("hidden");
       setBusy(true, `Reading full app and cloud flow metadata for ${state.environmentTargets.length} environment assets...`);
 
@@ -1341,6 +1512,8 @@
 
       state.selectedSolution = null;
       state.lastResult = null;
+      state.selectedComponentId = "";
+      closeComponentDetails();
       elements.results.classList.add("hidden");
       setBusy(true, `Reading ${getTargetKindLabel(target.kind)} ${target.name}...`);
 
@@ -1626,11 +1799,16 @@
           rawUrls.set(normalized, entry);
         }
 
+        const metadata = buildComponentMetadata(record.raw, record.type);
+        if (!metadata.customSolutions.length && input.mode === "solution" && input.solution) {
+          metadata.customSolutions = [displaySolutionName(input.solution)];
+        }
+
         const row = {
           id: record.id,
           component: record.name,
           type: record.type,
-          metadata: buildComponentMetadata(record.raw, record.type),
+          metadata,
           sharing: {
             status: "not checked",
             users: null,
@@ -2380,6 +2558,8 @@
       state.environmentTargetsLoaded = false;
       state.selectedSolution = null;
       state.lastResult = null;
+      state.selectedComponentId = "";
+      closeComponentDetails();
       elements.results.classList.add("hidden");
       renderSelectionOptions();
       updateEnvironmentHint();
@@ -2498,6 +2678,10 @@
 
       renderScanScope();
       renderNotes(result);
+      if (state.selectedComponentId && !elements.componentDetailOverlay.classList.contains("hidden")) {
+        const selected = findComponentRow(state.selectedComponentId);
+        if (selected) renderComponentDetails(selected);
+      }
     }
 
     function renderInventoryTable(rows) {
@@ -2509,7 +2693,8 @@
 
       for (const row of rows) {
         const tr = document.createElement("tr");
-        appendCell(tr, row.component, "strong");
+        makeComponentRowClickable(tr, row);
+        appendComponentLinkCell(tr, row);
         appendCell(tr, row.type);
         appendBadgeCell(tr, row.metadata.customSolutions, "accent", "None found");
         appendCell(tr, row.metadata.owner || "Unknown");
@@ -2535,7 +2720,7 @@
         appendCell(tr, row.area);
         appendCell(tr, row.finding);
         appendCell(tr, row.recommendation);
-        appendBadgeCell(tr, row.components, "accent", "Overall finding");
+        appendComponentBadgeCell(tr, row.components, "accent", "Overall finding");
         elements.assessmentBody.appendChild(tr);
       }
     }
@@ -2549,7 +2734,8 @@
 
       for (const row of rows) {
         const tr = document.createElement("tr");
-        appendCell(tr, row.component, "strong");
+        makeComponentRowClickable(tr, row);
+        appendComponentLinkCell(tr, row);
         appendCell(tr, row.type);
         appendBadgeCell(tr, row.services.map((service) => service.name), "accent");
         const urls = includeRawUrls ? [...row.sharePointUrls, ...row.rawUrls] : row.sharePointUrls;
@@ -2570,7 +2756,7 @@
         const tr = document.createElement("tr");
         appendLinkCell(tr, row.url);
         appendCell(tr, row.host, "mono");
-        appendBadgeCell(tr, row.components, "accent");
+        appendComponentBadgeCell(tr, row.components, "accent");
         appendBadgeCell(tr, row.sources);
         elements.sharepointBody.appendChild(tr);
       }
@@ -2587,7 +2773,7 @@
         const tr = document.createElement("tr");
         appendCell(tr, row.service, "strong");
         appendCell(tr, row.connector, "mono");
-        appendBadgeCell(tr, row.components, "accent");
+        appendComponentBadgeCell(tr, row.components, "accent");
         appendCell(tr, String(row.count), "mono");
         elements.servicesBody.appendChild(tr);
       }
@@ -2666,6 +2852,154 @@
       }
     }
 
+    function openComponentDetails(componentRef) {
+      const component = findComponentRow(componentRef);
+      if (!component) {
+        setStatus("Component details are not available for the selected item.", "error");
+        return;
+      }
+
+      state.selectedComponentId = component.id;
+      renderComponentDetails(component);
+      elements.componentDetailOverlay.classList.remove("hidden");
+      document.body.classList.add("detail-open");
+      elements.componentDetailCloseButton.focus();
+    }
+
+    function closeComponentDetails() {
+      state.selectedComponentId = "";
+      elements.componentDetailOverlay.classList.add("hidden");
+      document.body.classList.remove("detail-open");
+    }
+
+    function findComponentRow(componentRef) {
+      if (!state.lastResult || !componentRef) return null;
+      const lookup = String(componentRef).toLowerCase();
+      return state.lastResult.components.find((row) => row.id === lookup)
+        || state.lastResult.components.find((row) => String(row.component || "").toLowerCase() === lookup)
+        || null;
+    }
+
+    function renderComponentDetails(row) {
+      elements.componentDetailTitle.textContent = row.component;
+      elements.componentDetailSubtitle.textContent = `${row.type} | ${row.id}`;
+      clearNode(elements.componentDetailBody);
+
+      const summary = document.createElement("div");
+      summary.className = "detail-grid";
+      appendDetailField(summary, "Type", row.type);
+      appendDetailField(summary, "Record ID", row.id, true);
+      appendDetailField(summary, "Owner", row.metadata.owner || "Unknown");
+      appendDetailField(summary, "Status", row.metadata.status || "Unknown");
+      appendDetailField(summary, "Created", formatDate(row.metadata.created));
+      appendDetailField(summary, "Modified", formatDate(row.metadata.modified));
+      appendDetailField(summary, "Published", formatDate(row.metadata.published));
+      appendDetailField(summary, "Version", row.metadata.version || "Unknown");
+      appendDetailField(summary, "Primary table", row.metadata.primaryEntity || "Not detected");
+      appendDetailField(summary, "Direct shares", formatShareSummary(row.sharing));
+      elements.componentDetailBody.appendChild(summary);
+
+      appendDetailBadgeSection("Custom solution membership", row.metadata.customSolutions, "accent", "None found in visible non-default solutions");
+      appendDetailBadgeSection("Risk signals", row.risks.map(formatRisk), row.risks.length ? severityToBadgeVariant(highestSeverity(row.risks)) : "", "None detected");
+      appendDetailBadgeSection("Connected services", row.services.map(formatService), "accent", "No services detected");
+      appendDetailLinkSection("SharePoint URLs", row.sharePointUrls, "No SharePoint URLs detected");
+      appendDetailLinkSection("Non-platform dependency URLs", row.rawUrls, "No non-platform dependency URLs detected");
+      appendDetailBadgeSection("Scanned source fields", row.sources, "", "No source fields recorded");
+    }
+
+    function appendDetailField(container, label, value, mono) {
+      const field = document.createElement("div");
+      field.className = "detail-field";
+      const labelElement = document.createElement("span");
+      labelElement.className = "detail-label";
+      labelElement.textContent = label;
+      const valueElement = document.createElement("div");
+      valueElement.className = `detail-value${mono ? " mono" : ""}`;
+      valueElement.textContent = value || "Unknown";
+      field.appendChild(labelElement);
+      field.appendChild(valueElement);
+      container.appendChild(field);
+    }
+
+    function appendDetailBadgeSection(title, values, variant, emptyText) {
+      const section = createDetailSection(title);
+      const cleanValues = unique((values || []).filter(Boolean));
+      if (!cleanValues.length) {
+        appendMutedText(section, emptyText);
+      } else {
+        const list = document.createElement("div");
+        list.className = "badge-list";
+        for (const value of cleanValues) {
+          list.appendChild(createBadge(value, variant));
+        }
+        section.appendChild(list);
+      }
+      elements.componentDetailBody.appendChild(section);
+    }
+
+    function appendDetailLinkSection(title, urls, emptyText) {
+      const section = createDetailSection(title);
+      const cleanUrls = unique((urls || []).filter(Boolean));
+      if (!cleanUrls.length) {
+        appendMutedText(section, emptyText);
+      } else {
+        const list = document.createElement("div");
+        list.className = "detail-link-list";
+        for (const url of cleanUrls) {
+          const link = document.createElement("a");
+          link.href = url;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.className = "mono";
+          link.textContent = url;
+          list.appendChild(link);
+        }
+        section.appendChild(list);
+      }
+      elements.componentDetailBody.appendChild(section);
+    }
+
+    function createDetailSection(title) {
+      const section = document.createElement("section");
+      section.className = "detail-section";
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      section.appendChild(heading);
+      return section;
+    }
+
+    function appendMutedText(container, text) {
+      const p = document.createElement("p");
+      p.className = "muted";
+      p.textContent = text;
+      container.appendChild(p);
+    }
+
+    function formatRisk(risk) {
+      return `${titleCase(risk.severity)}: ${risk.label}`;
+    }
+
+    function formatService(service) {
+      return `${service.name}${service.connector ? ` (${service.connector})` : ""}`;
+    }
+
+    function formatShareSummary(sharing) {
+      if (!sharing || sharing.status === "unknown") return "Unknown";
+      const other = Number(sharing.other) || 0;
+      const parts = [
+        `${Number(sharing.total) || 0} total`,
+        `${Number(sharing.users) || 0} users`,
+        `${Number(sharing.teams) || 0} teams`
+      ];
+      if (other) parts.push(`${other} other`);
+      return parts.join(" | ");
+    }
+
+    function highestSeverity(risks) {
+      const highest = [...(risks || [])].sort((a, b) => severityRank(b.severity) - severityRank(a.severity))[0];
+      return highest ? highest.severity : "";
+    }
+
     function matchesQuery(row, query) {
       if (!query) return true;
       return JSON.stringify(row).toLowerCase().includes(query);
@@ -2684,9 +3018,39 @@
       row.appendChild(cell);
     }
 
+    function appendComponentLinkCell(row, componentRow) {
+      const cell = document.createElement("td");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "link-button";
+      button.textContent = componentRow.component || "(unnamed component)";
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openComponentDetails(componentRow.id);
+      });
+      cell.appendChild(button);
+      row.appendChild(cell);
+    }
+
+    function makeComponentRowClickable(tableRow, componentRow) {
+      tableRow.classList.add("clickable-row");
+      tableRow.tabIndex = 0;
+      tableRow.setAttribute("role", "button");
+      tableRow.setAttribute("aria-label", `Open details for ${componentRow.component}`);
+      tableRow.addEventListener("click", (event) => {
+        if (event.target.closest("a, button")) return;
+        openComponentDetails(componentRow.id);
+      });
+      tableRow.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        openComponentDetails(componentRow.id);
+      });
+    }
+
     function appendRiskCell(row, risks) {
       const values = (risks || []).map((risk) => risk.label);
-      const highest = (risks || []).sort((a, b) => severityRank(b.severity) - severityRank(a.severity))[0];
+      const highest = [...(risks || [])].sort((a, b) => severityRank(b.severity) - severityRank(a.severity))[0];
       appendBadgeCell(row, values, highest ? severityToBadgeVariant(highest.severity) : "", "None detected");
     }
 
@@ -2730,12 +3094,48 @@
       row.appendChild(cell);
     }
 
+    function appendComponentBadgeCell(row, values, variant, emptyText = "None detected") {
+      const cell = document.createElement("td");
+      const list = document.createElement("div");
+      list.className = "badge-list";
+
+      const cleanValues = unique((values || []).filter(Boolean));
+      if (!cleanValues.length) {
+        const span = document.createElement("span");
+        span.className = "muted";
+        span.textContent = emptyText;
+        cell.appendChild(span);
+      } else {
+        for (const value of cleanValues) {
+          const component = findComponentRow(value);
+          if (component) {
+            list.appendChild(createComponentBadge(component, variant));
+          } else {
+            list.appendChild(createBadge(value, variant));
+          }
+        }
+        cell.appendChild(list);
+      }
+
+      row.appendChild(cell);
+    }
+
     function createBadge(value, variant) {
       const span = document.createElement("span");
       span.className = `badge${variant ? ` ${variant}` : ""}`;
       span.textContent = value;
       span.title = value;
       return span;
+    }
+
+    function createComponentBadge(componentRow, variant) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `badge badge-button${variant ? ` ${variant}` : ""}`;
+      button.textContent = componentRow.component;
+      button.title = `Open details for ${componentRow.component}`;
+      button.addEventListener("click", () => openComponentDetails(componentRow.id));
+      return button;
     }
 
     function appendEmptyRow(body, colSpan, message) {

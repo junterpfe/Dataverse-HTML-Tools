@@ -10,6 +10,7 @@ Use it when you need a lightweight, same-environment view of:
 - Connected services and SharePoint URLs
 - Owner/status/modified metadata
 - Best-effort direct share counts
+- Clickable per-component details
 - Non-authoritative migration signals for migration or rebuild planning
 
 See the tool documentation: [tools/solution-service-inspector/README.md](../tools/solution-service-inspector/README.md).
@@ -19,6 +20,10 @@ See the tool documentation: [tools/solution-service-inspector/README.md](../tool
 Use **Environment inventory** for broad app/flow discovery. It reads apps and cloud flows directly from `canvasapps`, `appmodules`, and cloud-flow `workflows`, then checks visible non-default solution membership for those asset types.
 
 Do not use the Default Solution as a full-environment inventory source. It can contain tens of thousands of components, which makes browser-based enumeration slow, partial, or throttled.
+
+## Component details
+
+Inventory rows, component rows, and component badges are clickable. The details panel shows the selected asset's metadata, visible custom solution membership, direct-share counts, connected services, detected URLs, risk signals, and scanned source fields.
 
 ## Display theme
 
