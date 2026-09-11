@@ -42,11 +42,12 @@ If you need to recreate the packaged flow manually:
 4. Initialize an array variable named `FlowDetails` to `[]`.
 5. Add **Get Apps as Admin**.
 6. Add **List Flows as Admin (V2)**.
-7. Turn on pagination in both list actions and set a threshold above the expected app/flow count.
-8. Optional: for each listed flow, call **Get Flow as Admin** with **Include Flow Definition = Yes**, then append the body to `FlowDetails`.
-9. Compose a JSON object with `EnvironmentName`, `PowerApps`, and `Flows`.
-10. Create a `.json` file in OneDrive or SharePoint.
-11. Load that file in Solution Service Inspector.
+7. Configure **Get Apps as Admin** with API Version `2025-04-01`, page size `1100`, and pagination threshold `100000`.
+8. Configure **List Flows as Admin (V2)** with top count `250` and pagination threshold `100000`.
+9. Optional: for each listed flow, call **Get Flow as Admin** with **Include Flow Definition = Yes**, then append the body to `FlowDetails`.
+10. Compose a JSON object with `EnvironmentName`, `PowerApps`, and `Flows`.
+11. Create a `.json` file in OneDrive or SharePoint.
+12. Load that file in Solution Service Inspector.
 
 ## Expected JSON shape
 

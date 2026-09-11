@@ -118,9 +118,15 @@
             },
             "parameters": {
               "environment": "@triggerBody()?['EnvironmentName']",
-              "$top": 5000
+              "api-version": "2025-04-01",
+              "$top": 1100
             },
             "authentication": "@parameters('$authentication')"
+          },
+          "runtimeConfiguration": {
+            "paginationPolicy": {
+              "minimumItemCount": 100000
+            }
           }
         },
         "List_flows_as_Admin_V2": {
@@ -138,11 +144,16 @@
             },
             "parameters": {
               "environmentName": "@triggerBody()?['EnvironmentName']",
-              "$top": 5000,
+              "$top": 250,
               "expandSuspensionInfo": true,
               "includeSoftDeletedFlows": false
             },
             "authentication": "@parameters('$authentication')"
+          },
+          "runtimeConfiguration": {
+            "paginationPolicy": {
+              "minimumItemCount": 100000
+            }
           }
         },
         "Condition_Include_Flow_Definitions": {
