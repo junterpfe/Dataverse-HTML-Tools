@@ -142,9 +142,9 @@
     .hero {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
-      gap: 24px;
+      gap: 16px;
       align-items: start;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
 
     .eyebrow {
@@ -157,16 +157,16 @@
     }
 
     h1 {
-      font-size: clamp(28px, 4vw, 44px);
+      font-size: clamp(28px, 3.4vw, 40px);
       line-height: 1.08;
-      margin: 0 0 12px;
+      margin: 0 0 10px;
       max-width: 860px;
     }
 
     .subhead {
       color: var(--cp-text-muted);
       font-size: 16px;
-      margin: 0;
+      margin: 8px 0 0;
       max-width: 900px;
     }
 
@@ -179,8 +179,8 @@
     }
 
     .panel {
-      padding: 18px;
-      margin-bottom: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
     }
 
     .card {
@@ -189,7 +189,7 @@
 
     .toolbar {
       display: grid;
-      grid-template-columns: minmax(280px, 1fr) minmax(220px, 0.7fr) minmax(460px, 1.45fr) auto;
+      grid-template-columns: minmax(260px, 1fr) minmax(180px, 0.7fr) minmax(420px, 1.35fr) minmax(292px, auto);
       gap: 16px;
       align-items: start;
     }
@@ -230,7 +230,7 @@
       color: var(--cp-text-muted);
       font-size: 12px;
       line-height: 1.35;
-      min-height: 32px;
+      min-height: 20px;
     }
 
     .field-hint.warning {
@@ -259,14 +259,14 @@
     .selection-pair {
       display: grid;
       gap: 8px;
-      grid-template-columns: minmax(180px, 0.9fr) minmax(220px, 1.1fr);
+      grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
     }
 
     .action-field {
       display: grid;
       gap: 6px;
       justify-content: end;
-      min-width: max-content;
+      min-width: 0;
     }
 
     .action-buttons {
@@ -276,7 +276,7 @@
     }
 
     .action-buttons .button {
-      min-width: 140px;
+      min-width: 132px;
     }
 
     .field input:focus,
@@ -336,7 +336,7 @@
       display: flex;
       flex-wrap: wrap;
       gap: 12px 20px;
-      margin-top: 12px;
+      margin-top: 10px;
     }
 
     .toggle {
@@ -357,7 +357,7 @@
       display: flex;
       font-size: 13px;
       gap: 10px;
-      margin-top: 12px;
+      margin-top: 10px;
       min-height: 22px;
     }
 
@@ -732,7 +732,32 @@
       display: none !important;
     }
 
-    @media (max-width: 1000px) {
+    @media (max-width: 1200px) {
+      .hero {
+        gap: 12px;
+      }
+
+      h1 {
+        font-size: clamp(28px, 3.3vw, 34px);
+        max-width: 720px;
+      }
+
+      .toolbar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .action-field,
+      .action-buttons {
+        justify-content: stretch;
+      }
+
+      .action-buttons .button {
+        flex: 1 1 0;
+        min-width: 0;
+      }
+    }
+
+    @media (max-width: 720px) {
       .hero,
       .toolbar,
       .admin-import-controls,
@@ -740,6 +765,10 @@
       .search-row,
       .details-grid {
         grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: clamp(26px, 8vw, 32px);
       }
 
       .stats-grid {
@@ -752,11 +781,6 @@
 
       .secondary-actions {
         justify-content: flex-start;
-      }
-
-      .action-field,
-      .action-buttons {
-        justify-content: stretch;
       }
 
       .action-buttons {
@@ -1067,7 +1091,7 @@
   </div>
 
   <script>
-    const APP_VERSION = "2026.09.09.1440";
+    const APP_VERSION = "2026.09.11.1041";
     const MAX_SELECT_OPTIONS = 500;
     const FETCHXML_PAGE_SIZE = 5000;
     const MAX_FETCHXML_PAGES = 200;
