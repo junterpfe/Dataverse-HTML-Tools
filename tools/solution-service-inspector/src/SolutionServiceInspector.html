@@ -576,6 +576,13 @@
       margin-bottom: 12px;
     }
 
+    .render-info {
+      color: var(--cp-text-muted);
+      font-size: 13px;
+      margin: -4px 0 12px;
+      min-height: 18px;
+    }
+
     .notice {
       background: var(--cp-accent-soft);
       border: 1px solid var(--cp-border);
@@ -927,6 +934,7 @@
           <input id="resultFilter" class="search-box" type="search" placeholder="Filter by component, service, connector, URL, or source">
           <button id="clearFilterButton" class="button" type="button">Clear filter</button>
         </div>
+        <div id="renderInfo" class="render-info"></div>
 
         <nav class="tabs" aria-label="Result views">
           <button class="tab-button active" type="button" data-tab="inventoryPanel">Inventory</button>
@@ -1090,8 +1098,11 @@
   </div>
 
   <script>
-    const APP_VERSION = "2026.09.11.1050";
+    const APP_VERSION = "2026.09.11.1110";
     const MAX_SELECT_OPTIONS = 500;
+    const MAX_RENDER_ROWS = 500;
+    const MAX_BADGES_PER_CELL = 80;
+    const MAX_FINDING_COMPONENTS = 500;
     const FETCHXML_PAGE_SIZE = 5000;
     const MAX_FETCHXML_PAGES = 200;
 
@@ -1214,6 +1225,7 @@
       metricWarnings: document.getElementById("metricWarnings"),
       resultFilter: document.getElementById("resultFilter"),
       clearFilterButton: document.getElementById("clearFilterButton"),
+      renderInfo: document.getElementById("renderInfo"),
       inventoryBody: document.getElementById("inventoryBody"),
       assessmentBody: document.getElementById("assessmentBody"),
       componentsBody: document.getElementById("componentsBody"),
@@ -2907,12 +2919,19 @@
 
     function addFindingIf(findings, condition, severity, area, finding, recommendation, components) {
       if (!condition) return;
+      const uniqueComponents = unique((components || []).filter(Boolean)).sort();
+      const omittedComponentCount = Math.max(0, uniqueComponents.length - MAX_FINDING_COMPONENTS);
+      const displayComponents = uniqueComponents.slice(0, MAX_FINDING_COMPONENTS);
+      if (omittedComponentCount) {
+        displayComponents.push(`+${omittedComponentCount} more components not shown`);
+      }
       findings.push({
         severity,
         area,
         finding,
         recommendation,
-        components: unique((components || []).filter(Boolean)).sort()
+        components: displayComponents,
+        omittedComponentCount
       });
     }
 
@@ -3624,6 +3643,13 @@
       elements.metricShares.textContent = String(result.shareSummary.totalDirectShares);
       elements.metricWarnings.textContent = String(result.assessment.length);
 
+      renderRenderInfo({
+        components: filteredComponents.length,
+        sharePoint: filteredSharePoint.length,
+        services: filteredServices.length,
+        connections: filteredConnections.length,
+        assessment: filteredAssessment.length
+      });
       renderInventoryTable(filteredComponents);
       renderAssessmentTable(filteredAssessment);
       renderComponentsTable(filteredComponents, includeRawUrls);
@@ -3642,6 +3668,25 @@
       }
     }
 
+    function renderRenderInfo(counts) {
+      const rowHeavyCounts = [
+        counts.components,
+        counts.sharePoint,
+        counts.connections,
+        counts.assessment
+      ];
+      const maxCount = Math.max(...rowHeavyCounts);
+      const query = elements.resultFilter.value.trim();
+      if (maxCount > MAX_RENDER_ROWS) {
+        elements.renderInfo.textContent = `Large result set: rendering the first ${MAX_RENDER_ROWS} matching rows per tab for responsiveness. ${query ? "Narrow the filter further" : "Use the filter"} or export JSON/CSV for the full data.`;
+        return;
+      }
+
+      elements.renderInfo.textContent = query
+        ? `Filter matched ${counts.components} assets, ${counts.sharePoint} SharePoint URLs, ${counts.services} services, ${counts.connections} connection references, and ${counts.assessment} signals.`
+        : "";
+    }
+
     function renderInventoryTable(rows) {
       clearNode(elements.inventoryBody);
       if (!rows.length) {
@@ -3649,7 +3694,8 @@
         return;
       }
 
-      for (const row of rows) {
+      const visibleRows = rows.slice(0, MAX_RENDER_ROWS);
+      for (const row of visibleRows) {
         const tr = document.createElement("tr");
         makeComponentRowClickable(tr, row);
         appendComponentLinkCell(tr, row);
@@ -3663,6 +3709,7 @@
         appendRiskCell(tr, row.risks);
         elements.inventoryBody.appendChild(tr);
       }
+      appendTruncationRow(elements.inventoryBody, 9, rows.length);
     }
 
     function renderAssessmentTable(rows) {
@@ -3672,7 +3719,8 @@
         return;
       }
 
-      for (const row of rows) {
+      const visibleRows = rows.slice(0, MAX_RENDER_ROWS);
+      for (const row of visibleRows) {
         const tr = document.createElement("tr");
         appendBadgeCell(tr, [titleCase(row.severity)], severityToBadgeVariant(row.severity));
         appendCell(tr, row.area);
@@ -3681,6 +3729,7 @@
         appendComponentBadgeCell(tr, row.components, "accent", "Overall finding");
         elements.assessmentBody.appendChild(tr);
       }
+      appendTruncationRow(elements.assessmentBody, 5, rows.length);
     }
 
     function renderComponentsTable(rows, includeRawUrls) {
@@ -3690,7 +3739,8 @@
         return;
       }
 
-      for (const row of rows) {
+      const visibleRows = rows.slice(0, MAX_RENDER_ROWS);
+      for (const row of visibleRows) {
         const tr = document.createElement("tr");
         makeComponentRowClickable(tr, row);
         appendComponentLinkCell(tr, row);
@@ -3701,6 +3751,7 @@
         appendBadgeCell(tr, row.sources);
         elements.componentsBody.appendChild(tr);
       }
+      appendTruncationRow(elements.componentsBody, 5, rows.length);
     }
 
     function renderSharePointTable(rows) {
@@ -3710,7 +3761,8 @@
         return;
       }
 
-      for (const row of rows) {
+      const visibleRows = rows.slice(0, MAX_RENDER_ROWS);
+      for (const row of visibleRows) {
         const tr = document.createElement("tr");
         appendLinkCell(tr, row.url);
         appendCell(tr, row.host, "mono");
@@ -3718,6 +3770,7 @@
         appendBadgeCell(tr, row.sources);
         elements.sharepointBody.appendChild(tr);
       }
+      appendTruncationRow(elements.sharepointBody, 4, rows.length);
     }
 
     function renderServicesTable(rows) {
@@ -3744,7 +3797,8 @@
         return;
       }
 
-      for (const row of rows) {
+      const visibleRows = rows.slice(0, MAX_RENDER_ROWS);
+      for (const row of visibleRows) {
         const tr = document.createElement("tr");
         appendCell(tr, row.name, "strong");
         appendCell(tr, row.logicalName, "mono");
@@ -3753,6 +3807,7 @@
         appendBadgeCell(tr, row.sharePointUrls, "warning", "None detected");
         elements.connectionsBody.appendChild(tr);
       }
+      appendTruncationRow(elements.connectionsBody, 5, rows.length);
     }
 
     function renderScanScope() {
@@ -4075,9 +4130,10 @@
         span.textContent = emptyText;
         cell.appendChild(span);
       } else {
-        for (const value of cleanValues) {
+        for (const value of cleanValues.slice(0, MAX_BADGES_PER_CELL)) {
           list.appendChild(createBadge(value, variant));
         }
+        appendMoreBadge(list, cleanValues.length);
         cell.appendChild(list);
       }
 
@@ -4096,7 +4152,7 @@
         span.textContent = emptyText;
         cell.appendChild(span);
       } else {
-        for (const value of cleanValues) {
+        for (const value of cleanValues.slice(0, MAX_BADGES_PER_CELL)) {
           const component = findComponentRow(value);
           if (component) {
             list.appendChild(createComponentBadge(component, variant));
@@ -4104,10 +4160,18 @@
             list.appendChild(createBadge(value, variant));
           }
         }
+        appendMoreBadge(list, cleanValues.length);
         cell.appendChild(list);
       }
 
       row.appendChild(cell);
+    }
+
+    function appendMoreBadge(list, totalCount) {
+      if (totalCount <= MAX_BADGES_PER_CELL) return;
+      const badge = createBadge(`+${totalCount - MAX_BADGES_PER_CELL} more`, "");
+      badge.classList.add("muted");
+      list.appendChild(badge);
     }
 
     function createBadge(value, variant) {
@@ -4138,6 +4202,11 @@
       cell.appendChild(div);
       row.appendChild(cell);
       body.appendChild(row);
+    }
+
+    function appendTruncationRow(body, colSpan, totalRows) {
+      if (totalRows <= MAX_RENDER_ROWS) return;
+      appendEmptyRow(body, colSpan, `Showing first ${MAX_RENDER_ROWS} of ${totalRows} matching rows. Use the filter to narrow results or export for the full dataset.`);
     }
 
     function appendOption(select, value, label, disabled) {

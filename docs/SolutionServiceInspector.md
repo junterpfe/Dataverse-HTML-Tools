@@ -32,6 +32,8 @@ Inventory rows, component rows, and component badges are clickable. The details 
 
 The panel also includes asset links. When the page can infer enough environment context, links open the app or flow in the relevant maker/player experience; otherwise the panel shows a Dataverse record link.
 
+For large customer inventories, the page keeps the browser responsive by rendering the first 500 matching rows per tab. Exports still include the full loaded dataset.
+
 ## Display theme
 
 The page defaults to light mode, matching the other HTML tools. It switches to dark mode when Dataverse supplies `themeOption=darkmode`, including when that value is encoded in the web resource URL or a parent host URL.

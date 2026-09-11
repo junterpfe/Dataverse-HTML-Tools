@@ -87,6 +87,8 @@ Asset names are clickable. Selecting an asset opens a details panel with package
 
 The details panel also includes asset links. Where enough context is available, these open the app or flow in the maker/player experience; otherwise a Dataverse record link is shown as a fallback.
 
+For very large imports, table views render the first 500 matching rows per tab to keep the browser responsive. Use the filter to narrow the visible set, or export JSON/CSV for the full inventory.
+
 ### Searchable selection
 
 After loading solutions or apps/flows, use the filter box above the selector to narrow the dropdown. The selector displays at most the first 500 matches to keep large environments responsive, so continue typing when thousands of assets match.
