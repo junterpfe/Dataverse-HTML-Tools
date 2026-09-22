@@ -8,7 +8,7 @@
     <Descriptions>
       <Description description="User form helpers for reviewing effective roles, record shares, field security profiles, and hierarchy context." languagecode="1033" />
     </Descriptions>
-    <Version>1.0.11.0</Version>
+    <Version>1.0.12.0</Version>
     <Managed>2</Managed>
     <Publisher>
       <UniqueName>DataverseHTMLTools</UniqueName>

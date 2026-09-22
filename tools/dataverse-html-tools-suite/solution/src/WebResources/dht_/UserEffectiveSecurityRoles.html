@@ -224,6 +224,21 @@
       text-decoration: underline;
     }
 
+    .copy-value {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: var(--cp-link);
+      cursor: pointer;
+      padding: 0;
+      text-align: left;
+    }
+
+    .copy-value:hover,
+    .copy-value:focus-visible {
+      text-decoration: underline;
+    }
+
     .stats {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -973,6 +988,7 @@
       function init() {
         initThemeSelector();
         document.addEventListener("click", handleRecordLinkClick);
+        document.addEventListener("click", handleCopyValueClick);
         document.querySelectorAll("[data-sort-column]").forEach(function (button) {
           button.addEventListener("click", handleSortClick);
         });
@@ -1937,6 +1953,22 @@
         return rows.join("");
       }
 
+      function getAccessTeamSharesFetchXml(teamId) {
+        return [
+          "<fetch mapping=\"logical\">",
+          "  <entity name=\"principalobjectaccess\">",
+          "    <attribute name=\"objectid\" />",
+          "    <attribute name=\"objecttypecode\" />",
+          "    <attribute name=\"accessrightsmask\" />",
+          "    <filter type=\"and\">",
+          "      <condition attribute=\"principalid\" operator=\"eq\" value=\"" + teamId + "\" />",
+          "      <condition attribute=\"accessrightsmask\" operator=\"ne\" value=\"0\" />",
+          "    </filter>",
+          "  </entity>",
+          "</fetch>"
+        ].join("");
+      }
+
       async function retrieveAccessTeams(userId) {
         state.accessTeamLoadError = "";
 
@@ -2124,7 +2156,8 @@
         const resolved = [];
 
         for (const record of records) {
-          resolved.push(await resolveAccessTeam(record));
+          const accessTeamRows = await resolveAccessTeam(record);
+          resolved.push.apply(resolved, accessTeamRows);
         }
 
         return resolved.sort(function (left, right) {
@@ -2136,21 +2169,43 @@
 
       async function resolveAccessTeam(record) {
         const accessTeam = getAccessTeam(record);
-        const metadata = await resolveAccessTeamMetadata(accessTeam);
-        const recordInfo = metadata && accessTeam.recordId
-          ? await retrieveTargetRecordInfo(metadata, accessTeam.recordId)
+        if (!accessTeam.recordId && accessTeam.teamId) {
+          const shares = await retrieveAll("principalobjectaccess", getAccessTeamSharesFetchXml(accessTeam.teamId));
+          if (shares.length > 0) {
+            const rows = [];
+            for (const share of shares) {
+              rows.push(await resolveAccessTeamTarget(accessTeam, {
+                defaultAccessRightsMask: share.accessrightsmask,
+                objectTypeCode: share.objecttypecode,
+                recordId: cleanGuid(share.objectid),
+                regardingObjectType: String(share.objecttypecode || ""),
+                templateName: "(User-created access team)"
+              }));
+            }
+            return rows;
+          }
+        }
+
+        return [await resolveAccessTeamTarget(accessTeam, accessTeam)];
+      }
+
+      async function resolveAccessTeamTarget(accessTeam, target) {
+        const metadata = await resolveAccessTeamMetadata(target);
+        const recordInfo = metadata && target.recordId
+          ? await retrieveTargetRecordInfo(metadata, target.recordId)
           : null;
+        const rights = accessRightsFromMask(target.defaultAccessRightsMask);
 
         return {
-          recordId: accessTeam.recordId,
-          recordName: recordInfo ? recordInfo.name : "(Record unavailable)",
-          rights: accessRightsFromMask(accessTeam.defaultAccessRightsMask),
-          rightsText: accessRightsFromMask(accessTeam.defaultAccessRightsMask).join(", ") || "None",
-          tableLogicalName: metadata ? metadata.LogicalName : accessTeam.regardingObjectType || "",
-          tableName: metadata ? getMetadataDisplayName(metadata) : accessTeam.regardingObjectType || "(Unknown table)",
+          recordId: target.recordId,
+          recordName: recordInfo ? recordInfo.name : target.recordId ? "(Record unavailable)" : "(No explicit record grants)",
+          rights: rights,
+          rightsText: rights.join(", ") || "None",
+          tableLogicalName: metadata ? metadata.LogicalName : target.regardingObjectType || "",
+          tableName: metadata ? getMetadataDisplayName(metadata) : target.regardingObjectType || "(Unknown table)",
           teamId: accessTeam.teamId,
           teamName: accessTeam.teamName,
-          templateName: accessTeam.templateName || "(No template name)"
+          templateName: target.templateName || accessTeam.templateName || "(User-created access team)"
         };
       }
 
@@ -2415,7 +2470,9 @@
           return matchesAccessTeamSearch(row, searchText);
         });
 
-        document.getElementById("accessTeamCount").textContent = String(state.accessTeams.length);
+        document.getElementById("accessTeamCount").textContent = String(new Set(state.accessTeams.map(function (row) {
+          return row.teamId;
+        })).size);
         body.textContent = "";
 
         if (rows.length === 0) {
@@ -2879,14 +2936,10 @@
         const roleName = document.createElement("div");
         roleName.className = "role-name";
         roleName.appendChild(createRecordLink(row.roleName, "role", row.roleId));
-        const roleMeta = document.createElement("div");
-        roleMeta.className = "meta";
-        roleMeta.textContent = "roleid: " + row.roleId + " | root: " + row.rootRoleId;
         roleCell.appendChild(roleName);
-        roleCell.appendChild(roleMeta);
 
         const businessUnitCell = document.createElement("td");
-        businessUnitCell.textContent = row.businessUnitName;
+        businessUnitCell.appendChild(createCopyValue(row.businessUnitName, row.businessUnitId, "business unit GUID"));
 
         const sourceCell = document.createElement("td");
         const sourceChips = document.createElement("div");
@@ -2972,6 +3025,37 @@
         link.dataset.recordId = recordId;
         link.textContent = text;
         return link;
+      }
+
+      function createCopyValue(text, value, description) {
+        if (!value) {
+          const span = document.createElement("span");
+          span.textContent = text;
+          return span;
+        }
+
+        const button = document.createElement("button");
+        button.className = "copy-value";
+        button.type = "button";
+        button.dataset.copyValue = value;
+        button.dataset.copyDescription = description;
+        button.textContent = text;
+        button.title = value + " - click to copy";
+        return button;
+      }
+
+      async function handleCopyValueClick(event) {
+        const button = event.target.closest ? event.target.closest("button[data-copy-value]") : null;
+        if (!button) {
+          return;
+        }
+
+        try {
+          await navigator.clipboard.writeText(button.dataset.copyValue);
+          setMessage("Copied " + button.dataset.copyDescription + ".", "success");
+        } catch (error) {
+          setMessage("Could not copy " + button.dataset.copyDescription + ".", "error");
+        }
       }
 
       function getEntraGroupLink(groupId) {

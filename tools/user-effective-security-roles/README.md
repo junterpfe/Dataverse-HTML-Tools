@@ -115,10 +115,10 @@ For each access team membership, the page attempts to show:
 - Target record name and clickable record link
 - Target table display/logical name
 - Access team name
-- Access team template name
-- Access rights from the template, such as Read, Write, Append, Append To, Delete, Share, and Assign
+- Access team template name or a user-created access-team label
+- Access rights from the template or explicit record share, such as Read, Write, Append, Append To, Delete, Share, and Assign
 
-The page resolves access-team target records dynamically from `team.regardingobjectid` and the team template/object type metadata. If a record or metadata cannot be read by the current admin, the row still appears where possible with an unavailable-record indicator.
+For template-generated access teams, the page resolves the target record from `team.regardingobjectid` and the team template/object type metadata. User-created access teams do not have a regarding record or template, so the page lists their explicitly shared records from `principalobjectaccess`. If a record or metadata cannot be read by the current admin, the row still appears where possible with an unavailable-record indicator.
 
 ### User Record Access
 
