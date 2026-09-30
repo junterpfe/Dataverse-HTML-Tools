@@ -1,0 +1,80 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": { "runtimeSource": "embedded", "connection": { "connectionReferenceLogicalName": "dht_sharedcommondataserviceforapps_conn" }, "api": { "name": "shared_commondataserviceforapps" } },
+      "shared_powerappsforappmakers": { "runtimeSource": "embedded", "connection": { "connectionReferenceLogicalName": "dht_sharedpowerappsforappmakers_cha" }, "api": { "name": "shared_powerappsforappmakers" } }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": { "$connections": { "defaultValue": {}, "type": "Object" }, "$authentication": { "defaultValue": {}, "type": "SecureObject" } },
+      "triggers": {
+        "When_a_row_is_added": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": { "connectionName": "shared_commondataserviceforapps", "operationId": "SubscribeWebhookTrigger", "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps" },
+            "parameters": { "subscriptionRequest/entityname": "dht_connectionaudit", "subscriptionRequest/scope": 4, "subscriptionRequest/message": 1 },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "Set_running": {
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": { "connectionName": "shared_commondataserviceforapps", "operationId": "UpdateOnlyRecord", "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps" },
+            "parameters": { "entityName": "dht_connectionaudits", "recordId": "@triggerOutputs()?['body/dht_connectionauditid']", "item/dht_status": "Running" },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Discover_environments": {
+          "runAfter": { "Set_running": [ "Succeeded" ] },
+          "type": "If",
+          "expression": { "empty": [ "@triggerOutputs()?['body/dht_environmentid']" ] },
+          "actions": {
+            "Get_Environments": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": { "connectionName": "shared_powerappsforappmakers", "operationId": "Get-Environments", "apiId": "/providers/Microsoft.PowerApps/apis/shared_powerappsforappmakers" },
+                "parameters": { "$top": 250, "api-version": "2022-11-01" },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Complete_environment_discovery": {
+              "runAfter": { "Get_Environments": [ "Succeeded" ] },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": { "connectionName": "shared_commondataserviceforapps", "operationId": "UpdateOnlyRecord", "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps" },
+                "parameters": { "entityName": "dht_connectionaudits", "recordId": "@triggerOutputs()?['body/dht_connectionauditid']", "item/dht_status": "Completed", "item/dht_totalconnections": 0, "item/dht_issuecount": 0, "item/dht_completedon": "@utcNow()", "item/dht_resultjson": "@string(json(concat('{\"environments\":', string(outputs('Get_Environments')?['body/value']), '}')))" },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          },
+          "else": {
+            "actions": {
+              "Get_connections": {
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "host": { "connectionName": "shared_powerappsforappmakers", "operationId": "Get-Connections", "apiId": "/providers/Microsoft.PowerApps/apis/shared_powerappsforappmakers" },
+                  "parameters": { "api-version": "2016-11-01", "$filter": "environment eq '@{triggerOutputs()?['body/dht_environmentid']}'", "$top": 1000 },
+                  "authentication": "@parameters('$authentication')"
+                }
+              },
+              "Complete_connection_audit": {
+                "runAfter": { "Get_connections": [ "Succeeded" ] },
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "host": { "connectionName": "shared_commondataserviceforapps", "operationId": "UpdateOnlyRecord", "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps" },
+                  "parameters": { "entityName": "dht_connectionaudits", "recordId": "@triggerOutputs()?['body/dht_connectionauditid']", "item/dht_status": "Completed", "item/dht_totalconnections": "@length(outputs('Get_connections')?['body/value'])", "item/dht_issuecount": 0, "item/dht_completedon": "@utcNow()", "item/dht_resultjson": "@string(json(concat('{\"connections\":', string(outputs('Get_connections')?['body/value']), ',\"redundancyGroups\":0}')))" },
+                  "authentication": "@parameters('$authentication')"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "templateName": ""
+  },
+  "schemaVersion": "1.0.0.0"
+}

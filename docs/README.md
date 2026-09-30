@@ -4,7 +4,7 @@ The recommended installation is [Dataverse HTML Tools Suite](DataverseHTMLToolsS
 
 Individual tool packages remain available for partial deployments where the Suite is not required.
 
-The Suite includes seven HTML web resources built to make Dataverse and Power Platform administration easier inside model-driven apps:
+The Suite includes eight HTML web resources built to make Dataverse and Power Platform administration easier inside model-driven apps:
 
 1. **User Effective Security Roles** - User form helpers for viewing and managing roles and team memberships, plus a read-only record-access view for shares, Field Security Profiles, and hierarchy context.
 2. **User Record Access** - a companion User form helper for reviewing explicit record shares, Field Security Profiles, and hierarchy context.
@@ -13,6 +13,7 @@ The Suite includes seven HTML web resources built to make Dataverse and Power Pl
 5. **Flow Dependency Viewer** - a solution-level helper for viewing cloud-flow dependencies, activation order, required environment variables, and missing environment-variable values.
 6. **Solution Service Inspector** - an inventory helper for reviewing solutions, apps, flows, connected services, SharePoint URLs, sharing signals, and non-authoritative migration signals.
 7. **Business Unit Configuration** - a filtered, sortable user list for previewing and batch-moving users between business units with optional permission cloning.
+8. **Connection Health Audit** - a flow-backed audit of connection health plus solution-aware connection-reference inventory and consolidation candidates.
 
 All tools are designed to run as **Dataverse HTML web resources** so they can use the signed-in admin's Dataverse context and `Xrm.WebApi`.
 
@@ -54,6 +55,7 @@ Screenshots use sanitized sample data.
 | Role Table Permission Copier | ![Role Table Permission Copier screenshot](assets/screenshots/role-table-permission-copier.png) |
 | Team Role and People Manager | ![Team Role and People Manager screenshot](assets/screenshots/team-role-people-manager.png) |
 | Flow Dependency Viewer | ![Flow Dependency Viewer screenshot](assets/screenshots/flow-dependency-viewer.png) |
+| Connection Health Audit | ![Connection Health Audit screenshot](assets/screenshots/connection-health-audit-light.png) |
 
 ## Recommended deployment
 
@@ -70,6 +72,7 @@ Recommended placement:
 | Team Role and People Manager | Team (`team`) form; pass the record ID |
 | Flow Dependency Viewer | Standalone admin app page/navigation item; optionally pass `solutionReference` |
 | Solution Service Inspector | Standalone admin app page/navigation item; same-environment solution/app/flow inventory |
+| Connection Health Audit | Standalone admin app page/navigation item; configure the collector flow connection references first |
 
 ## Security model
 
@@ -85,5 +88,3 @@ For Entra-backed teams, membership is shown read-only and managed through Micros
 - [Team Role and People Manager](TeamRolePeopleManager.md)
 - [Flow Dependency Viewer](FlowDependencyViewer.md)
 - [Solution Service Inspector](SolutionServiceInspector.md)
-- [LinkedIn article draft](articles/LinkedInArticle.md)
-- [LinkedIn copy/paste text](articles/LinkedInArticle_CopyPaste.txt)

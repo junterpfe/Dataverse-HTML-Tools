@@ -22,6 +22,7 @@ Install an individual solution only when the target environment needs a specific
 | [Team Role and People Manager](tools/team-role-people-manager/README.md) | [HTML web resource](tools/team-role-people-manager/src/TeamRolePeopleManager.html) | [Docs](tools/team-role-people-manager/README.md) |
 | [Flow Dependency Viewer](tools/flow-dependency-viewer/README.md) | [HTML web resource](tools/flow-dependency-viewer/solution/src/WebResources/fdv_/flowdependencyviewer.htm) | [Docs](tools/flow-dependency-viewer/README.md) |
 | [Solution Service Inspector](tools/solution-service-inspector/README.md) | [HTML web resource](tools/solution-service-inspector/src/SolutionServiceInspector.html) | [Docs](tools/solution-service-inspector/README.md) |
+| [Connection Health Audit](tools/connection-health-audit/README.md) | [HTML web resource](tools/connection-health-audit/src/ConnectionHealthAudit.html) | [Docs](tools/connection-health-audit/README.md) |
 
 ## Screenshots
 
@@ -35,10 +36,15 @@ Screenshots use sanitized sample data.
 |---|---|
 | ![Team Role and People Manager screenshot](docs/assets/screenshots/team-role-people-manager.png) | ![Flow Dependency Viewer screenshot](docs/assets/screenshots/flow-dependency-viewer.png) |
 
+| Connection Health Audit |
+|---|
+| ![Connection Health Audit screenshot](docs/assets/screenshots/connection-health-audit-light.png) |
+
 ## Individual Packages
 
 | Tool | Unmanaged package | Managed package |
 |---|---|---|
+| Business Unit Configuration | [Unmanaged ZIP](packages/business-unit-configuration/DataverseHtmlToolsBusinessUnitConfiguration.zip) | [Managed ZIP](packages/business-unit-configuration/DataverseHtmlToolsBusinessUnitConfiguration_managed.zip) |
 | User Effective Security Roles | [Unmanaged ZIP](packages/user-effective-security-roles/UserEffectiveSecurityRolesSolution.zip) | [Managed ZIP](packages/user-effective-security-roles/UserEffectiveSecurityRolesSolution_managed.zip) |
 | Role Table Permission Copier | [Unmanaged ZIP](packages/role-table-permission-copier/RoleTablePermissionCopierSolution.zip) | [Managed ZIP](packages/role-table-permission-copier/RoleTablePermissionCopierSolution_managed.zip) |
 | Team Role and People Manager | [Unmanaged ZIP](packages/team-role-people-manager/TeamRolePeopleManagerSolution.zip) | [Managed ZIP](packages/team-role-people-manager/TeamRolePeopleManagerSolution_managed.zip) |

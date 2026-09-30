@@ -1,6 +1,6 @@
 # Dataverse HTML Tools Suite
 
-The Suite is the single installable option for the complete admin-tool set. It contains the `Admin Tools` model-driven app and all six HTML web resources.
+The Suite is the single installable option for the complete admin-tool set. It contains the `Admin Tools` model-driven app and all eight HTML web resources.
 
 ## Admin Tools app
 
@@ -11,6 +11,8 @@ Opening a Team record uses only the `Admin Tools Team` form. That form keeps the
 Opening a User record uses only the `Admin Tools User` form. That form keeps the standard User tabs and adds `Effective Security Roles` and `User Record Access` tabs.
 
 The app also contains standalone navigation pages for Flow Dependency Viewer, Role Table Permission Copier, and Solution Service Inspector.
+
+The app also includes Connection Health Audit. It loads saved audit runs, can start a new collector run, reports connection health, and analyzes connection references across visible solutions. The reference analyzer groups references by connector, preserves bound connections and account identities where available, and flags same-connector references as consolidation candidates.
 
 ## Install
 

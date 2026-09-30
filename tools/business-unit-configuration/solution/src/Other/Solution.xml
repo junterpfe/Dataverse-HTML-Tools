@@ -4,7 +4,7 @@
     <UniqueName>DataverseHtmlToolsBusinessUnitConfiguration</UniqueName>
     <LocalizedNames><LocalizedName description="Business Unit Configuration" languagecode="1033" /></LocalizedNames>
     <Descriptions><Description description="Filter users and batch move them between business units with optional permission cloning." languagecode="1033" /></Descriptions>
-    <Version>1.0.7.0</Version>
+    <Version>1.0.8.0</Version>
     <Managed>2</Managed>
     <Publisher>
       <UniqueName>DataverseHTMLTools</UniqueName>

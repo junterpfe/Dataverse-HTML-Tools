@@ -10,8 +10,11 @@
 - `Admin Tools Team` form, preserving standard tabs and adding `Team Role and People Manager`.
 - Standalone navigation pages for Flow Dependency Viewer, Role Table Permission Copier, and Solution Service Inspector.
 - Standalone navigation page for Business Unit Configuration.
+- Standalone navigation page for Connection Health Audit.
 
 Business Unit Configuration filters and sorts users, previews batch business-unit moves, calls the supported Dataverse `SetBusinessSystemUser` action, requires a record-reassignment principal, and can optionally clone destination-business-unit role matches and owner-team memberships from a source user.
+
+Connection Health Audit creates a Dataverse audit request, invokes the included Power Apps for Makers collector flow, and displays connection status and authentication errors without a file download/upload step. Configure the Suite's `Connection Health Audit - Dataverse` and `Connection Health Audit - Power Apps for Makers` connection references after import.
 
 The included User tool supports direct-role, owner-team, and optional record-specific access-team copying with `Add` and `Clone` modes. The User and Team tools identify group-backed Dataverse teams and link available Entra group IDs to the correct Commercial, GCC, GCC High, or DoD Entra admin center.
 

@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Connection Health Audit</title>
+  <style>
+    :root { color-scheme: light; --bg:#f7f4ef; --surface:#fff; --head:#eef2f6; --text:#242424; --muted:#5c5c5c; --border:#dedede; --accent:#b11f4b; --accent-fg:#fff; --danger:#b42318; --success:#067647; --warn:#a15c00; }
+    html[data-theme="dark"] { color-scheme:dark; --bg:#3d3b3a; --surface:#292929; --head:#343231; --text:#dedede; --muted:#b0b0b0; --border:#474747; --accent:#fd8ea1; --accent-fg:#1a1a1a; --danger:#f87171; --success:#4ade80; --warn:#fbbf24; }
+    * { box-sizing:border-box; } body { margin:0; padding:24px; background:var(--bg); color:var(--text); font:14px "Segoe UI",sans-serif; } main { max-width:1500px; margin:auto; }
+    h1 { margin:0 0 6px; font-size:24px; } h2 { margin:0; font-size:17px; } .muted { color:var(--muted); } .panel { margin-top:18px; padding:18px; background:var(--surface); border:1px solid var(--border); border-radius:6px; }
+    .toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:end; } label { display:flex; flex-direction:column; gap:5px; color:var(--muted); font-weight:600; font-size:12px; min-width:280px; flex:1; } input,select { min-height:36px; padding:8px 10px; border:1px solid var(--border); border-radius:4px; background:var(--surface); color:var(--text); font:inherit; }
+    button { min-height:36px; padding:8px 14px; border:1px solid var(--accent); border-radius:4px; background:var(--accent); color:var(--accent-fg); font:600 13px "Segoe UI",sans-serif; cursor:pointer; } button.secondary { background:transparent; color:var(--accent); } button:disabled { opacity:.5; cursor:not-allowed; }
+    .message { min-height:22px; margin-top:12px; color:var(--muted); } .message.error { color:var(--danger); } .message.success { color:var(--success); } .stats { display:flex; flex-wrap:wrap; gap:12px; margin-top:16px; } .stat { min-width:145px; padding:12px; border:1px solid var(--border); background:var(--head); border-radius:4px; } .stat strong { display:block; font-size:22px; }
+    .table-wrap { overflow:auto; margin-top:16px; border:1px solid var(--border); } .reference-table-wrap { max-height:520px; } table { width:100%; border-collapse:collapse; min-width:1000px; } th,td { padding:9px 10px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; } th { background:var(--head); color:var(--muted); font-size:12px; } .reference-table-wrap th { position:sticky; top:0; z-index:2; } th button.sort { border:0; background:transparent; color:inherit; padding:0; min-height:0; font:inherit; cursor:pointer; text-align:left; } .reference-link { display:block; padding:0; border:0; background:transparent; color:var(--accent); font:inherit; text-align:left; cursor:pointer; } .reference-link:hover { text-decoration:underline; } .status-error { color:var(--danger); font-weight:600; } .status-ok { color:var(--success); font-weight:600; } .status-unknown { color:var(--warn); font-weight:600; } .mono { font:12px Consolas,monospace; word-break:break-word; } .hidden { display:none; } .stat { cursor:pointer; color:var(--text); text-align:left; } .stat:hover,.stat.active { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent); } .stat.active { background:var(--accent); color:var(--accent-fg); } tr.redundant { background:rgba(245,158,11,.16); } tr.redundant td:first-child { border-left:4px solid var(--warn); } .reference-list { display:grid; gap:6px; } .reference-item { padding:6px 8px; border:1px solid var(--border); border-radius:4px; background:var(--surface); } .reference-name { font-weight:600; } .reference-logical { display:block; color:var(--muted); font:11px Consolas,monospace; margin-top:2px; }
+  </style>
+  <style>
+    .connection-table-wrap { max-height:520px; }
+    .connection-table-wrap th { position:sticky; top:0; z-index:2; }
+    #results td:first-child { color:var(--accent); cursor:pointer; }
+    #results td:first-child:hover { text-decoration:underline; }
+  </style>
+  <script>
+    (() => { const urls = [window.location.href, document.referrer]; try { urls.push(window.parent.location.href); } catch (e) {} try { urls.push(window.top.location.href); } catch (e) {} const dark = urls.some(url => decodeURIComponent(String(url || '').toLowerCase()).includes('themeoption=darkmode')); document.documentElement.dataset.theme = dark ? 'dark' : 'light'; })();
+  </script>
+</head>
+<body>
+<main>
+  <h1>Connection Health Audit</h1>
+  <div class="muted">Check Power Platform connections, authentication errors, and duplicate connector usage through a background admin flow.</div>
+  <section class="panel">
+    <div class="toolbar"><label>Environment<select id="environment"><option value="">Loading environments...</option></select></label><label>Previous audit<select id="auditHistory" disabled><option value="">Select an environment first</option></select></label><button id="loadEnvironments" class="secondary" type="button">Reload environments</button><button id="run" type="button" disabled>Run connection audit</button><button id="analyzeReferences" class="secondary" type="button" disabled>Analyze references here</button></div>
+    <div id="message" class="message" role="status"></div>
+    <div id="stats" class="stats hidden"></div>
+  </section>
+  <section id="resultsPanel" class="panel hidden"><h2>Connections</h2><div class="toolbar" style="margin-top:12px"><label>Filter<input id="filter" type="search" placeholder="Connection, connector, owner, status, issue"></label></div><div class="table-wrap"><table><thead><tr><th><button class="sort" data-table="connections" data-column="name" type="button">Connection</button></th><th><button class="sort" data-table="connections" data-column="connector" type="button">Connector</button></th><th><button class="sort" data-table="connections" data-column="owner" type="button">Owner</button></th><th><button class="sort" data-table="connections" data-column="status" type="button">Status</button></th><th><button class="sort" data-table="connections" data-column="issue" type="button">Issue</button></th><th><button class="sort" data-table="connections" data-column="redundancy" type="button">Redundancy</button></th></tr></thead><tbody id="results"></tbody></table></div></section>
+  <section id="referencesPanel" class="panel hidden"><div class="toolbar"><div><h2>Connection reference consolidation candidates</h2><div class="muted">References are grouped by connector and bound connection. Same-connector references using the same or different accounts are shown as consolidation candidates; review solution dependencies before changing them.</div></div><button id="showAllReferences" class="secondary" type="button">Show all references</button><button id="exportReferences" class="secondary" type="button">Export CSV</button></div><div class="table-wrap reference-table-wrap"><table><thead><tr><th><button class="sort" data-table="references" data-column="connector" type="button">Connector</button></th><th><button class="sort" data-table="references" data-column="count" type="button">Reference count</button></th><th><button class="sort" data-table="references" data-column="references" type="button">References</button></th><th><button class="sort" data-table="references" data-column="connectionIds" type="button">Bound connection IDs</button></th><th><button class="sort" data-table="references" data-column="usages" type="button">Detected usage</button></th><th><button class="sort" data-table="references" data-column="solutions" type="button">Solutions</button></th><th><button class="sort" data-table="references" data-column="recommendation" type="button">Recommendation</button></th></tr></thead><tbody id="references"></tbody></table></div></section>
+</main>
+<script>
+(function () {
+  "use strict";
+  const state = { xrm: null, auditId: "", rows: [], referenceRows: [], allReferenceRows: [], showAllReferences: false, environmentUrls: {}, statFilter: "all", sort: { connections: { column: "name", direction: "asc" }, references: { column: "connector", direction: "asc" } } };
+  document.addEventListener("DOMContentLoaded", init);
+  document.addEventListener("DOMContentLoaded", () => { const results = document.getElementById("results"); results?.closest(".table-wrap")?.classList.add("connection-table-wrap"); results?.addEventListener("click", event => { const row = event.target.closest("tr"); if (!row || event.target.cellIndex !== 0) return; const connection = state.rows.find(item => item.name === event.target.textContent); if (connection) openPowerAutomateRecord("connection", connection.id || connection.name); }); });
+  document.addEventListener("DOMContentLoaded", () => { const timer = setInterval(() => { if (!state.rows.length) return; const flowRows = state.rows.filter(row => String(row.connector || "").toLowerCase().endsWith("/shared_logicflows")); if (!flowRows.length) { clearInterval(timer); return; } state.rows = state.rows.filter(row => !String(row.connector || "").toLowerCase().endsWith("/shared_logicflows")); render(); const issueCount = state.rows.filter(row => row.status !== "Healthy").length; const connectorCounts = state.rows.reduce((counts, row) => { counts[row.connector] = (counts[row.connector] || 0) + 1; return counts; }, {}); const stats = { all: state.rows.length, issues: issueCount, duplicates: Object.values(connectorCounts).filter(count => count > 1).length }; Object.entries(stats).forEach(([key, value]) => { const stat = document.querySelector(`[data-stat-filter="${key}"] strong`); if (stat) stat.textContent = String(value); }); }, 100); });
+  function init() { state.xrm = window.Xrm || window.parent?.Xrm || window.top?.Xrm; document.getElementById("run").addEventListener("click", start); document.getElementById("loadEnvironments").addEventListener("click", discoverEnvironments); document.getElementById("analyzeReferences").addEventListener("click", analyzeReferences); document.getElementById("showAllReferences").addEventListener("click", toggleAllReferences); document.getElementById("exportReferences").addEventListener("click", exportReferencesCsv); document.getElementById("environment").addEventListener("change", () => { clearReferenceAnalysis(); updateActions(); loadAuditHistory(); }); document.getElementById("auditHistory").addEventListener("change", loadSelectedAudit); document.getElementById("filter").addEventListener("input", render); document.querySelectorAll("button.sort").forEach(button => button.addEventListener("click", () => sortTable(button.dataset.table, button.dataset.column))); loadCachedEnvironments(); }
+  function sortTable(table, column) { const sort = state.sort[table]; sort.direction = sort.column === column && sort.direction === "asc" ? "desc" : "asc"; sort.column = column; if (table === "connections") { state.rows.sort((left, right) => compareValues(left[column], right[column], sort.direction)); render(); } else { renderReferenceRows(state.referenceRows); } }
+  async function loadAuditHistory() { const environment = document.getElementById("environment").value.trim(); const select = document.getElementById("auditHistory"); select.textContent = ""; select.disabled = true; if (!environment || !state.xrm?.WebApi) { select.add(new Option("Select an environment first", "")); return; } select.add(new Option("Loading previous audits...", "")); try { const audits = await retrieveAll("dht_connectionaudit", "?$select=dht_connectionauditid,dht_name,dht_completedon&$filter=dht_status eq 'Completed' and dht_environmentid eq '" + environment + "'&$orderby=createdon desc&$top=25"); select.textContent = ""; if (!audits.length) { select.add(new Option("No completed audits found", "")); return; } select.add(new Option("Select a previous audit", "")); audits.forEach(audit => select.add(new Option((audit.dht_completedon ? new Date(audit.dht_completedon).toLocaleString() : audit.dht_name || "Completed audit"), audit.dht_connectionauditid))); select.disabled = false; } catch (error) { select.textContent = ""; select.add(new Option("Unable to load audit history", "")); setMessage(error.message || String(error), "error"); } }
+  async function loadSelectedAudit() { const id = document.getElementById("auditHistory").value; if (!id || !state.xrm?.WebApi) return; setBusy(true); setMessage("Loading the selected previous audit...", ""); try { const record = await state.xrm.WebApi.retrieveRecord("dht_connectionaudit", id, "?$select=dht_status,dht_resultjson,dht_totalconnections,dht_issuecount,dht_completedon"); applyResult(record); setMessage("Loaded the selected previous audit.", "success"); } catch (error) { setMessage(error.message || String(error), "error"); } finally { setBusy(false); } }
+  function compareValues(left, right, direction) { const normalize = value => Array.isArray(value) ? value.map(item => typeof item === "object" ? item.label || item.name || "" : item).join(" ") : typeof value === "object" && value ? value.label || value.name || "" : String(value || ""); return normalize(left).localeCompare(normalize(right), undefined, { numeric: true, sensitivity: "base" }) * (direction === "asc" ? 1 : -1); }
+  async function loadCachedEnvironments() { if (!state.xrm?.WebApi) { setMessage("Open this page inside a model-driven app.", "error"); return; } setBusy(true); setMessage("Loading the last environment list...", ""); try { const result = await state.xrm.WebApi.retrieveMultipleRecords("dht_connectionaudit", "?$select=dht_resultjson,dht_completedon&$filter=dht_status eq 'Completed' and dht_environmentid eq null&$orderby=createdon desc&$top=1"); if (result.entities.length) { applyEnvironments(result.entities[0]); } else { setMessage("No saved environment list exists. Select Reload environments to load one.", ""); } } catch (error) { setMessage(error.message || String(error), "error"); } finally { setBusy(false); } }
+  async function discoverEnvironments() { if (!state.xrm?.WebApi) { setMessage("Open this page inside a model-driven app.", "error"); return; } setBusy(true); setMessage("Loading environments you can access...", ""); try { const record = await state.xrm.WebApi.createRecord("dht_connectionaudit", { dht_name: "Environment discovery " + new Date().toISOString(), dht_environmentid: "", dht_status: "Requested" }); state.auditId = record.id; await poll(true); } catch (error) { setMessage(error.message || String(error), "error"); setBusy(false); } }
+  async function start() { const environment = document.getElementById("environment").value.trim(); if (!environment) { setMessage("Enter an environment ID or name.", "error"); return; } if (!state.xrm?.WebApi) { setMessage("Open this page inside a model-driven app.", "error"); return; } clearReferenceAnalysis(); setBusy(true); try { const record = await state.xrm.WebApi.createRecord("dht_connectionaudit", { dht_name: "Connection audit " + new Date().toISOString(), dht_environmentid: environment, dht_status: "Requested" }); state.auditId = record.id; setMessage("Audit requested. Waiting for the collector flow...", ""); await poll(); } catch (error) { setMessage(error.message || String(error), "error"); setBusy(false); } }
+  async function poll(discovery) { for (let attempt = 0; attempt < 60; attempt += 1) { const record = await state.xrm.WebApi.retrieveRecord("dht_connectionaudit", state.auditId, "?$select=dht_status,dht_resultjson,dht_totalconnections,dht_issuecount,dht_completedon"); if (record.dht_status === "Completed") { discovery ? applyEnvironments(record) : applyResult(record); setBusy(false); return; } if (record.dht_status === "Failed") { setMessage("The connection collector failed: " + (record.dht_resultjson || "Unknown error"), "error"); setBusy(false); return; } setMessage((discovery ? "Environment discovery" : "Audit") + " status: " + (record.dht_status || "Waiting") + "...", ""); await new Promise(resolve => setTimeout(resolve, 5000)); } setMessage("The request is still running. Reload the page later to view the result.", "error"); setBusy(false); }
+  async function retrieveAll(entityName, options) { const rows = []; let nextOptions = options; while (nextOptions) { const result = await state.xrm.WebApi.retrieveMultipleRecords(entityName, nextOptions, 5000); rows.push(...(result.entities || [])); nextOptions = result.nextLink ? result.nextLink.substring(result.nextLink.indexOf("?")) : ""; } return rows; }
+  function applyEnvironments(record) { let payload; try { payload = JSON.parse(record.dht_resultjson || "{}"); } catch (error) { setMessage("Environment discovery completed, but its result could not be read.", "error"); return; } const select = document.getElementById("environment"); select.textContent = ""; state.environmentUrls = {}; const environments = Array.isArray(payload.environments) ? payload.environments : []; environments.sort((left, right) => String(left.properties?.displayName || left.name || "").localeCompare(String(right.properties?.displayName || right.name || ""))).forEach(environment => { const id = String(environment.name || environment.id || "").split("/").pop(); const label = environment.properties?.displayName || environment.name || id; if (id) { select.add(new Option(label + " (" + id + ")", id)); state.environmentUrls[id] = environment.properties?.linkedEnvironmentMetadata?.instanceUrl || environment.properties?.linkedEnvironmentMetadata?.instanceApiUrl || ""; } }); if (!environments.length) select.add(new Option("No accessible environments returned", "")); const loaded = record.dht_completedon ? new Date(record.dht_completedon).toLocaleString() : "unknown time"; setMessage(environments.length ? "Loaded " + environments.length + " accessible environments. Last loaded: " + loaded + "." : "No accessible environments were returned. Last loaded: " + loaded + ".", environments.length ? "success" : "error"); updateActions(); loadAuditHistory(); }
+  async function analyzeReferences() {
+    if (!state.xrm?.WebApi) { setMessage("Open this page inside a model-driven app.", "error"); return; }
+    const button = document.getElementById("analyzeReferences");
+    button.disabled = true;
+    setMessage("Analyzing references, visible solutions, and detectable app/flow usage...", "");
+    try {
+      const [references, components, assets] = await Promise.all([
+        retrieveAll("connectionreference", "?$select=connectionreferenceid,connectionreferencedisplayname,connectionreferencelogicalname,connectorid,connectionid,ismanaged,statecode,statuscode&$orderby=connectorid asc,connectionreferencedisplayname asc"),
+        retrieveAll("solutioncomponent", "?$select=objectid,_solutionid_value&$filter=componenttype eq 10133"),
+        loadReferenceUsageAssets()
+      ]);
+      const connectionIdentityMap = await loadConnectionIdentityMap();
+      const solutionIds = [...new Set(components.map(row => row._solutionid_value).filter(Boolean))];
+      const solutions = solutionIds.length ? await retrieveAll("solution", "?$select=solutionid,uniquename,friendlyname&$filter=" + solutionIds.map(id => "solutionid eq " + id).join(" or ")) : [];
+      const solutionMap = Object.fromEntries(solutions.map(solution => [solution.solutionid, solution.friendlyname || solution.uniquename]));
+      const componentMap = components.reduce((map, row) => { const key = normalizeId(row.objectid); (map[key] ||= []).push(solutionMap[row._solutionid_value] || "Unknown solution"); return map; }, {});
+      const grouped = {};
+      for (const reference of references) {
+        const connector = reference.connectorid || "Unknown connector";
+        const logicalName = reference.connectionreferencelogicalname || "";
+        const usage = logicalName ? assets.filter(asset => String(asset.searchText || "").toLowerCase().includes(logicalName.toLowerCase())) : [];
+        const boundId = reference.connectionid || "";
+        (grouped[connector] ||= []).push({
+          id: reference.connectionreferenceid,
+          connectorId: connector,
+          name: reference.connectionreferencedisplayname || logicalName || "Unnamed reference",
+          logicalName,
+          boundId,
+          connection: connectionIdentityMap[normalizeConnectionId(boundId)] || { label: normalizeConnectionId(boundId) || "Unbound connection", account: "Not mapped from a same-environment health audit", rawId: boundId },
+          account: (connectionIdentityMap[normalizeConnectionId(boundId)] || {}).account || "Not mapped from a same-environment health audit",
+          isManaged: reference.ismanaged === true,
+          state: reference.statecode === 0 ? "Active" : reference.statecode === 1 ? "Inactive" : "Unknown",
+          solutions: [...new Set(componentMap[normalizeId(reference.connectionreferenceid)] || [])],
+          usages: usage
+        });
+      }
+      state.allReferenceRows = Object.entries(grouped).map(([, items]) => {
+        const connector = items[0]?.connectorId || "Unknown connector";
+        const connectionIds = items.map(item => item.connection).filter(item => item && item.rawId).filter((item, index, values) => values.findIndex(value => normalizeId(value.rawId) === normalizeId(item.rawId)) === index);
+        const mappedAccounts = [...new Set(items.map(item => item.account).filter(account => account && account !== "Not mapped from a same-environment health audit"))];
+        const solutionNames = [...new Set(items.flatMap(item => item.solutions))];
+        const usageNames = items.flatMap(item => item.usages).filter((item, index, values) => values.findIndex(value => value.id === item.id) === index);
+        let recommendation = items.length === 1 ? "Single reference for this connector." : connectionIds.length === 1 ? "Multiple references share one bound connection. Candidate to consolidate into one reference after reviewing solution dependencies." : mappedAccounts.length > 1 ? "Same connector, different connection accounts detected. Review whether a shared connection can replace these without changing permissions or ownership." : "Same connector points to multiple connections. Review whether these references can be consolidated without changing permissions.";
+        return { connector: friendlyConnectorName(connector), count: items.length, referenceItems: items, connectionIds, solutions: solutionNames, usages: usageNames, recommendation, references: items.map(item => item.name).join(" ") };
+      });
+      renderReferenceRows(getVisibleReferenceRows());
+      document.getElementById("showAllReferences").textContent = state.showAllReferences ? "Show consolidation candidates" : "Show all references";
+      setMessage("Analyzed " + references.length + " references and detected usage across " + assets.length + " visible app/flow records.", "success");
+    } catch (error) { setMessage(error.message || String(error), "error"); }
+    finally { button.disabled = false; }
+  }
+  async function loadReferenceUsageAssets() {
+    const definitions = [
+      { entity: "workflow", select: "workflowid,name,clientdata,category", label: row => "Flow: " + (row.name || row.workflowid) },
+      { entity: "canvasapp", select: "canvasappid,name,displayname,connectionreferences,authorizationreferences", label: row => "Canvas app: " + (row.displayname || row.name || row.canvasappid) },
+      { entity: "appmodule", select: "appmoduleid,name,uniquename", label: row => "Model-driven app: " + (row.name || row.uniquename || row.appmoduleid) }
+    ];
+    const results = await Promise.all(definitions.map(async definition => {
+      try { return (await retrieveAll(definition.entity, "?$select=" + definition.select)).map(row => ({ entity: definition.entity, id: row[definition.entity + "id"], label: definition.label(row), searchText: JSON.stringify(row) })); }
+      catch (error) { return []; }
+    }));
+    return results.flat();
+  }
+  async function loadConnectionIdentityMap() {
+    const environmentId = document.getElementById("environment").value;
+    const selectedUrl = state.environmentUrls[environmentId];
+    const currentUrl = state.xrm?.Utility?.getGlobalContext?.().getClientUrl?.();
+    if (!environmentId || !selectedUrl || !currentUrl || new URL(selectedUrl).host.toLowerCase() !== new URL(currentUrl).host.toLowerCase()) return {};
+    try {
+      const audits = await retrieveAll("dht_connectionaudit", "?$select=dht_resultjson&$filter=dht_status eq 'Completed' and dht_environmentid eq '" + environmentId + "'&$orderby=createdon desc&$top=1");
+      const payload = audits.length ? JSON.parse(audits[0].dht_resultjson || "{}") : {};
+      const map = {};
+      (payload.connections || []).forEach(connection => {
+        const properties = connection.properties || {};
+        const ids = [connection.name, connection.id, properties.connectionParameters?.connectionId, ...Object.values(properties.connectionParameters?.$connections || {}).map(value => value?.connectionId)];
+        const account = properties.createdBy?.displayName || properties.createdBy?.email || "Account not reported";
+        const label = getConnectionLabel(connection, properties);
+        ids.map(normalizeConnectionId).filter(Boolean).forEach(id => { map[id] = { label, account, rawId: id }; });
+      });
+      return map;
+    } catch (error) { return {}; }
+  }
+  function getConnectionLabel(connection, properties) { const candidate = String(properties.displayName || "").trim(); if (candidate && !/^(upsert|create|update|delete|patch|get|list|connect|connection)$/i.test(candidate)) return candidate; const connector = friendlyConnectorName(properties.apiId || "Connection"); const rawId = normalizeConnectionId(connection.id || connection.name || properties.connectionId); return connector + (rawId ? " - " + rawId.slice(0, 12) : ""); }
+  function friendlyConnectorName(value) { const raw = String(value || ""); const key = raw.split("/").filter(Boolean).pop()?.toLowerCase() || ""; const known = { shared_commondataserviceforapps: "Dataverse", shared_commondataservice: "Dataverse", shared_logicflows: "Power Automate", shared_office365: "Office 365", shared_office365users: "Office 365 Users", shared_office365groups: "Office 365 Groups", shared_sharepointonline: "SharePoint", shared_teams: "Teams", shared_sql: "SQL Server", shared_excelonlinebusiness: "Excel Online", shared_onedriveforbusiness: "OneDrive", shared_approvals: "Approvals", shared_powerappsforappmakers: "Power Apps for Makers" }; return known[key] || key.replace(/^shared_/, "").replace(/onlinebusiness/g, " Online").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[-_]+/g, " ").replace(/\b\w/g, letter => letter.toUpperCase()) || raw; }
+  function normalizeConnectionId(value) { return String(value || "").split("/").filter(Boolean).pop()?.replace(/[{}]/g, "").toLowerCase() || ""; }
+  function normalizeId(value) { return String(value || "").replace(/[{}]/g, "").toLowerCase(); }
+  function clearReferenceAnalysis() { state.referenceRows = []; state.allReferenceRows = []; state.showAllReferences = true; document.getElementById("references").textContent = ""; document.getElementById("referencesPanel").classList.add("hidden"); document.getElementById("showAllReferences").textContent = "Show consolidation candidates"; }
+  function getVisibleReferenceRows() { return state.showAllReferences ? state.allReferenceRows : state.allReferenceRows.filter(row => row.count > 1); }
+  function toggleAllReferences() { state.showAllReferences = !state.showAllReferences; document.getElementById("showAllReferences").textContent = state.showAllReferences ? "Show consolidation candidates" : "Show all references"; renderReferenceRows(getVisibleReferenceRows()); }
+  function exportReferencesCsv() {
+    const rows = getVisibleReferenceRows();
+    const columns = ["Connector", "Reference count", "Reference display name", "Logical name", "Bound connection ID", "Account identity", "Managed", "State", "Solutions", "Detected usage", "Recommendation"];
+    const quote = value => '"' + String(value ?? "").replace(/"/g, '""') + '"';
+    const lines = [columns.map(quote).join(",")];
+    for (const group of rows) for (const item of group.referenceItems) lines.push([group.connector, group.count, item.name, item.logicalName, item.boundId, item.account, item.isManaged ? "Yes" : "No", item.state, item.solutions.join("; "), item.usages.map(usage => usage.label).join("; "), group.recommendation].map(quote).join(","));
+    const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = "connection-reference-consolidation.csv"; link.click(); URL.revokeObjectURL(link.href);
+  }
+  function renderReferenceRows(rows) {
+    state.referenceRows = rows;
+    const sort = state.sort.references;
+    const body = document.getElementById("references");
+    body.textContent = "";
+    const display = rows.slice().sort((left, right) => compareValues(left[sort.column], right[sort.column], sort.direction));
+    display.forEach(group => {
+      const tr = document.createElement("tr");
+      const cells = [group.connector, String(group.count)];
+      cells.forEach(value => { const td = document.createElement("td"); td.textContent = value; tr.append(td); });
+      const refsCell = document.createElement("td"), refList = document.createElement("div"); refList.className = "reference-list";
+      group.referenceItems.forEach(item => { const ref = document.createElement("div"); ref.className = "reference-item"; const name = document.createElement("button"); name.className = "reference-link reference-name"; name.type = "button"; name.textContent = item.name; name.title = "Open connection reference"; name.addEventListener("click", () => openDataverseRecord("connectionreference", item.id)); const logical = document.createElement("span"); logical.className = "reference-logical"; logical.textContent = item.logicalName || "(no logical name)"; const account = document.createElement("span"); account.className = "reference-logical"; account.textContent = "Account: " + item.account; ref.append(name, logical, account); refList.append(ref); });
+      refsCell.append(refList); tr.append(refsCell);
+      appendListCell(tr, group.connectionIds, "No bound connection ID is exposed");
+      appendListCell(tr, group.usages, "No direct usage detected in readable metadata");
+      appendListCell(tr, group.solutions, "Not present in visible solution components");
+      const recommendation = document.createElement("td"); recommendation.textContent = group.recommendation; tr.append(recommendation);
+      body.append(tr);
+    });
+    document.getElementById("referencesPanel").classList.remove("hidden");
+  }
+  function appendListCell(row, values, emptyText) { const cell = document.createElement("td"); const list = document.createElement("div"); list.className = "reference-list"; (values && values.length ? values : [emptyText]).forEach(value => { const item = document.createElement("div"); item.className = "reference-item"; if (value && typeof value === "object" && value.id) { const link = document.createElement("button"); link.className = "reference-link"; link.type = "button"; link.textContent = value.label; link.title = value.entity === "workflow" ? "Open flow details in a new tab" : "Open " + value.entity + " in a new tab"; link.addEventListener("click", () => value.entity === "workflow" ? openPowerAutomateRecord("flow", value.id) : openDataverseRecord(value.entity, value.id)); item.append(link); } else if (value && typeof value === "object" && value.rawId) { const link = document.createElement("button"); link.className = "reference-link"; link.type = "button"; link.textContent = value.label + " (" + value.account + ")"; link.title = "Open Power Automate Connections in a new tab"; link.addEventListener("click", () => openPowerAutomateRecord("connection", value.rawId)); item.append(link); } else { item.textContent = value; } list.append(item); }); cell.append(list); row.append(cell); }
+  function openDataverseRecord(entityName, id) { if (!id || !state.xrm?.Navigation?.openForm) { return; } state.xrm.Navigation.openForm({ entityName, entityId: normalizeId(id), openInNewWindow: true }); }
+  function openPowerAutomateRecord(type, id) { const environmentId = document.getElementById("environment").value; if (!environmentId) { return; } const baseUrl = "https://make.gov.powerautomate.us/environments/" + encodeURIComponent(environmentId); const url = type === "flow" && id ? baseUrl + "/flows/" + encodeURIComponent(normalizeId(id)) + "/details" : baseUrl + "/connections"; window.open(url, "_blank", "noopener,noreferrer"); }
+  function applyResult(record) { let payload; try { payload = JSON.parse(record.dht_resultjson || "{}"); } catch (error) { setMessage("Audit completed, but its result JSON could not be read.", "error"); return; } const rawRows = Array.isArray(payload.connections) ? payload.connections : []; const connectorCounts = rawRows.reduce((counts, row) => { const connector = row?.properties?.apiId || "Unknown"; counts[connector] = (counts[connector] || 0) + 1; return counts; }, {}); state.rows = rawRows.map(row => { const properties = row.properties || {}; const statusInfo = Array.isArray(properties.statuses) && properties.statuses.length ? properties.statuses[0] : {}; const connector = properties.apiId || "Unknown"; const status = statusInfo.status === "Connected" ? "Healthy" : statusInfo.status || "Unknown"; return { name: properties.displayName || row.name || "(Unnamed connection)", connector, owner: properties.createdBy?.displayName || "Unknown", status, issue: statusInfo.error?.message || "", redundant: connectorCounts[connector] > 1, redundancy: connectorCounts[connector] > 1 ? connectorCounts[connector] + " connections use this connector" : "" }; }); const issueCount = state.rows.filter(row => row.status !== "Healthy").length; const redundancyGroups = Object.values(connectorCounts).filter(count => count > 1).length; document.getElementById("resultsPanel").classList.remove("hidden"); document.getElementById("stats").innerHTML = [["all","Connections",state.rows.length],["issues","Issues",issueCount],["duplicates","Duplicate groups",redundancyGroups]].map(item => `<button class="stat${state.statFilter === item[0] ? " active" : ""}" type="button" data-stat-filter="${item[0]}"><strong>${escapeHtml(String(item[2]))}</strong><span>${escapeHtml(item[1])}</span></button>`).join(""); document.querySelectorAll("[data-stat-filter]").forEach(button => button.addEventListener("click", () => { state.statFilter = state.statFilter === button.dataset.statFilter ? "all" : button.dataset.statFilter; render(); applyStatState(); })); document.getElementById("stats").classList.remove("hidden"); setMessage("Audit completed " + (record.dht_completedon || "") + ".", "success"); render(); }
+  function applyStatState() { document.querySelectorAll("[data-stat-filter]").forEach(button => button.classList.toggle("active", button.dataset.statFilter === state.statFilter)); }
+  function render() { const query = document.getElementById("filter").value.trim().toLowerCase(); const body = document.getElementById("results"); body.textContent = ""; state.rows.filter(row => (state.statFilter === "all" || state.statFilter === "issues" && row.status !== "Healthy" || state.statFilter === "duplicates" && row.redundant) && (!query || [row.name,row.connector,row.owner,row.status,row.issue,row.redundancy].join(" ").toLowerCase().includes(query))).forEach(row => { const tr = document.createElement("tr"); if (row.redundant) tr.className = "redundant"; [row.name,row.connector,row.owner,row.status,row.issue || "",row.redundancy || ""].forEach((value, index) => { const td = document.createElement("td"); td.textContent = value || ""; if (index === 1 || index === 4) td.className = "mono"; if (index === 3) td.className = row.status === "Healthy" ? "status-ok" : row.status === "Unknown" ? "status-unknown" : "status-error"; tr.append(td); }); body.append(tr); }); }
+  function setBusy(value) { document.getElementById("run").disabled = value || !document.getElementById("environment").value; document.getElementById("loadEnvironments").disabled = value; if (value) document.getElementById("resultsPanel").classList.add("hidden"); }
+  function updateActions() { document.getElementById("run").disabled = !document.getElementById("environment").value || document.getElementById("run").disabled && document.getElementById("loadEnvironments").disabled; document.getElementById("analyzeReferences").disabled = !state.xrm?.WebApi; }
+  function setMessage(text, kind) { const element = document.getElementById("message"); element.textContent = text; element.className = "message " + kind; }
+  function escapeHtml(value) { return value.replace(/[&<>"']/g, character => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "\"":"&quot;", "'":"&#39;" }[character])); }
+})();
+</script>
+  <small aria-label="Page version" title="Connection Health Audit version" style="position:fixed;right:8px;bottom:5px;z-index:1000;opacity:.55;font-size:10px;pointer-events:none">v1.0.48.0</small>
+</body>
+</html>

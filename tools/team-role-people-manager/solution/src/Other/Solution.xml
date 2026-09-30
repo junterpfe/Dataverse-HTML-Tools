@@ -8,7 +8,7 @@
     <Descriptions>
       <Description description="Team form helper for managing team security roles and owner-team membership." languagecode="1033" />
     </Descriptions>
-    <Version>1.0.1.0</Version>
+    <Version>1.0.2.0</Version>
     <Managed>2</Managed>
     <Publisher>
       <UniqueName>DataverseHTMLTools</UniqueName>

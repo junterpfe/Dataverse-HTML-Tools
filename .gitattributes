@@ -1,2 +1,7 @@
 tools/flow-dependency-viewer/README.md whitespace=cr-at-eol
 tools/role-table-permission-copier/README.md whitespace=cr-at-eol
+tools/flow-dependency-viewer/solution/src/WebResources/fdv_/flowdependencyviewer.htm whitespace=cr-at-eol
+tools/role-table-permission-copier/src/RoleTablePermissionCopier.html whitespace=cr-at-eol
+tools/role-table-permission-copier/solution/src/WebResources/dht_/RoleTablePermissionCopier.html whitespace=cr-at-eol
+tools/flow-dependency-viewer/solution/src/Other/Solution.xml whitespace=cr-at-eol
+tools/role-table-permission-copier/solution/src/Other/Solution.xml whitespace=cr-at-eol
